@@ -12,11 +12,13 @@ export class PaymentService {
     private paymentRepository: Repository<Payment>,
   ) {}
 
+  // 새로 결제 정보를 생성하는 메서드
   async createPayment(paymentData: Partial<Payment>): Promise<Payment> {
     const payment = this.paymentRepository.create(paymentData);
     return this.paymentRepository.save(payment);
   }
 
+  // 토스페이먼츠 결제를 확인하는 메서드
   async confirmPayment(
     paymentKey: string,
     orderId: string,
@@ -53,6 +55,7 @@ export class PaymentService {
     }
   }
 
+  // 주문 ID로 결제 정보를 조회하는 메서드
   async getPaymentByOrderId(orderId: string): Promise<Payment | null> {
     return this.paymentRepository.findOne({ where: { orderId } });
   }
