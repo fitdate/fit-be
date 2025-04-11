@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { UserRole } from 'src/common/enum/user-role.enum';
+import { Like } from '../../like/entities/like.entity';
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
@@ -47,4 +49,10 @@ export class User {
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
+
+  @OneToMany(() => Like, (like) => like.user)
+  likes: Like[];
+
+  @OneToMany(() => Like, (like) => like.likedUser)
+  likedBy: Like[];
 }
