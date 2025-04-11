@@ -1,34 +1,49 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { TossPaymentResponse } from './types/toss-payment.types';
+import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
+import { Payment } from './entities/payment.entity';
 
+@ApiTags('결제')
 @Controller('payment')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentService.create(createPaymentDto);
+  @ApiOperation({
+    summary: '결제 확인',
+    description: '토스페이먼츠 결제를 확인합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '결제 확인 성공',
+    type: TossPaymentResponse,
+  })
+  @ApiResponse({ status: 400, description: '잘못된 요청' })
+  @ApiResponse({ status: 500, description: '서버 에러' })
+  @Post('confirm')
+  async confirmPayment(
+    @Query() confirmPaymentDto: ConfirmPaymentDto,
+  ): Promise<{ data: TossPaymentResponse }> {
+    return this.paymentService.confirmPayment(
+      confirmPaymentDto.paymentKey,
+      confirmPaymentDto.orderId,
+      confirmPaymentDto.amount,
+    );
   }
 
-  @Get()
-  findAll() {
-    return this.paymentService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentService.remove(+id);
+  @ApiOperation({
+    summary: '결제 조회',
+    description: '주문 ID로 결제 정보를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '결제 정보 조회 성공',
+    type: Payment,
+  })
+  @ApiResponse({ status: 404, description: '결제 정보를 찾을 수 없음' })
+  @Get(':orderId')
+  async getPayment(@Param('orderId') orderId: string) {
+    return this.paymentService.getPaymentByOrderId(orderId);
   }
 }
