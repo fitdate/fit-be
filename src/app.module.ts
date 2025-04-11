@@ -1,36 +1,43 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { ChatRoomModule } from './modules/chat-room/chat-room.module';
-import { LikeModule } from './modules/like/like.module';
+import { ProfileModule } from './modules/profile/profile.module';
 import { MatchModule } from './modules/match/match.module';
+import { LikeModule } from './modules/like/like.module';
+import { PassModule } from './modules/pass/pass.module';
+import { ChatRoomModule } from './modules/chat-room/chat-room.module';
 import { MessageModule } from './modules/message/message.module';
 import { NotificationModule } from './modules/notification/notification.module';
-import { PassModule } from './modules/pass/pass.module';
 import { PaymentModule } from './modules/payment/payment.module';
-import { ProfileModule } from './modules/profile/profile.module';
-import { UserModule } from './modules/user/user.module';
-import { FeedbackModule } from './modules/profile/feedback/feedback.module';
-import { InterestCategoryModule } from './modules/profile/interest-category/interest-category.module';
 import { InterestLocationModule } from './modules/profile/interest-location/interest-location.module';
-import { IntroductionModule } from './modules/profile/introduction/introduction.module';
+import { InterestCategoryModule } from './modules/profile/interest-category/interest-category.module';
 import { MbtiModule } from './modules/profile/mbti/mbti.module';
 import { ProfileImageModule } from './modules/profile/profile-image/profile-image.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { configuration } from './common/config/configuration';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AllConfig } from './common/config/config.types';
+import { FeedbackModule } from './modules/profile/feedback/feedback.module';
+import { IntroductionModule } from './modules/profile/introduction/introduction.module';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
-import { User } from './modules/user/entities/user.entity';
-import { InterestLocation } from './modules/profile/interest-location/entities/interest-location.entity';
-import { InterestCategory } from './modules/profile/interest-category/entities/interest-category.entity';
-import { ProfileImage } from './modules/profile/profile-image/entities/profile-image.entity';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
+import { RBACGuard } from './modules/auth/guard/rbac.guard';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { configuration } from './common/config/config';
+import { AllConfig } from './common/config/config.types';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './modules/auth/guard/jwt.guard';
+import { BearerTokenMiddleware } from './modules/auth/middleware/bearer-token.middleware';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
-
 @Module({
   imports: [
+    DevtoolsModule.register({
+      http: true,
+      port: 7001,
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -53,7 +60,7 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
         database: configService.getOrThrow('database.name', {
           infer: true,
         }),
-        entities: [User, InterestLocation, InterestCategory, ProfileImage],
+        entities: [join(__dirname, '/**/*.entity{.ts,.js}')],
         migrations: [join(__dirname, '/**/*.migration{.ts,.js}')],
         synchronize: true,
         logging: true,
@@ -64,23 +71,41 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
       http: process.env.dev !== 'production',
     }),
     AuthModule,
-    ChatRoomModule,
-    LikeModule,
+    ProfileModule,
     MatchModule,
+    LikeModule,
+    PassModule,
+    ChatRoomModule,
     MessageModule,
     NotificationModule,
-    PassModule,
     PaymentModule,
-    ProfileModule,
-    UserModule,
-    FeedbackModule,
-    InterestCategoryModule,
     InterestLocationModule,
-    IntroductionModule,
+    InterestCategoryModule,
     MbtiModule,
     ProfileImageModule,
+    FeedbackModule,
+    IntroductionModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RBACGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(BearerTokenMiddleware)
+      .exclude(
+        { path: 'auth/login', method: RequestMethod.POST },
+        { path: 'auth/register', method: RequestMethod.POST },
+      )
+      .forRoutes('*');
+  }
+}
