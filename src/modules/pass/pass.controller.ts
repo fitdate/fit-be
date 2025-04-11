@@ -1,34 +1,27 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Param, UseGuards, Get } from '@nestjs/common';
 import { PassService } from './pass.service';
-import { CreatePassDto } from './dto/create-pass.dto';
-import { UpdatePassDto } from './dto/update-pass.dto';
+import { User } from '../user/entities/user.entity';
+import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
-@Controller('pass')
+@Controller('passes')
+@UseGuards(JwtAuthGuard)
 export class PassController {
   constructor(private readonly passService: PassService) {}
 
-  @Post()
-  create(@Body() createPassDto: CreatePassDto) {
-    return this.passService.create(createPassDto);
+  @Post(':passedUserId')
+  async passUser(
+    @GetUser() user: User,
+    @Param('passedUserId') passedUserId: string,
+  ) {
+    return this.passService.passUser(user.id, parseInt(passedUserId));
   }
 
-  @Get()
-  findAll() {
-    return this.passService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.passService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePassDto: UpdatePassDto) {
-    return this.passService.update(+id, updatePassDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.passService.remove(+id);
+  @Get(':passedUserId/status')
+  async checkPassStatus(
+    @GetUser() user: User,
+    @Param('passedUserId') passedUserId: string,
+  ) {
+    return this.passService.checkPassStatus(user.id, parseInt(passedUserId));
   }
 }

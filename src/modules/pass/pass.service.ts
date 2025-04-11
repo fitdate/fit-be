@@ -1,26 +1,46 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePassDto } from './dto/create-pass.dto';
-import { UpdatePassDto } from './dto/update-pass.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Pass } from './entities/pass.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class PassService {
-  create(createPassDto: CreatePassDto) {
-    return 'This action adds a new pass';
+  constructor(
+    @InjectRepository(Pass)
+    private readonly passRepository: Repository<Pass>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
+
+  async passUser(userId: number, passedUserId: number): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const passedUser = await this.userRepository.findOne({
+      where: { id: passedUserId },
+    });
+
+    if (!user || !passedUser) {
+      throw new Error('사용자를 찾을 수 없습니다.');
+    }
+
+    const pass = this.passRepository.create({
+      user,
+      passedUser,
+    });
+
+    await this.passRepository.save(pass);
   }
 
-  findAll() {
-    return `This action returns all pass`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} pass`;
-  }
-
-  update(id: number, updatePassDto: UpdatePassDto) {
-    return `This action updates a #${id} pass`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} pass`;
+  async checkPassStatus(
+    userId: number,
+    passedUserId: number,
+  ): Promise<boolean> {
+    const pass = await this.passRepository.findOne({
+      where: {
+        user: { id: userId },
+        passedUser: { id: passedUserId },
+      },
+    });
+    return !!pass;
   }
 }
