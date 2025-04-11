@@ -34,7 +34,7 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      envFilePath: '.env.dev',
+      envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
