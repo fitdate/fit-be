@@ -1,9 +1,11 @@
 import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { Like } from '../../like/entities/like.entity';
+import { Pass } from '../../pass/entities/pass.entity';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
-export class User {
+export class User extends BaseTable {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -55,4 +57,10 @@ export class User {
 
   @OneToMany(() => Like, (like) => like.likedUser)
   likedBy: Like[];
+
+  @OneToMany(() => Pass, (pass) => pass.user)
+  passes: Pass[];
+
+  @OneToMany(() => Pass, (pass) => pass.passedUser)
+  passedBy: Pass[];
 }

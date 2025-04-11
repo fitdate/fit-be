@@ -3,13 +3,13 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
   Column,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
-export class Like {
+export class Like extends BaseTable {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -23,7 +23,4 @@ export class Like {
 
   @Column({ default: false })
   isNotified: boolean;
-
-  @CreateDateColumn()
-  createdAt: Date;
 }
