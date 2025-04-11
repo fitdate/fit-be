@@ -22,4 +22,8 @@ export class UserService {
   findUserByNickname(nickname: string) {
     return this.userRepository.findOne({ where: { nickname } });
   }
+
+  findOne(id: string) {
+    return this.userRepository.findOne({ where: { id: parseInt(id) } });
+  }
 }
