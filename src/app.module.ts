@@ -26,7 +26,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { RBACGuard } from './modules/auth/guard/rbac.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { configuration } from './common/config/config';
+import { config } from './common/config/config';
 import { AllConfig } from './common/config/config.types';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './modules/auth/guard/jwt.guard';
@@ -40,7 +40,7 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration],
+      load: [config],
       envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
@@ -85,6 +85,7 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     ProfileImageModule,
     FeedbackModule,
     IntroductionModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [

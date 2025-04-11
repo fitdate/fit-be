@@ -1,16 +1,20 @@
 import { CreateDateColumn, DeleteDateColumn, UpdateDateColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { IsOptional } from 'class-validator';
 
 export class BaseTable {
   @CreateDateColumn()
   @Exclude()
-  createdAt: Date;
+  @IsOptional()
+  createdAt?: Date;
 
   @UpdateDateColumn()
   @Exclude()
-  updatedAt: Date;
+  @IsOptional()
+  updatedAt?: Date;
 
   @DeleteDateColumn()
   @Exclude()
-  deletedAt: Date;
+  @IsOptional()
+  deletedAt?: Date;
 }

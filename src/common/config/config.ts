@@ -1,6 +1,6 @@
 import * as Joi from 'joi';
 
-export const configuration = () => ({
+export const config = () => ({
   database: {
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
@@ -63,7 +63,7 @@ export const validationSchema = Joi.object({
 
 export const ConfigModuleOptions = {
   isGlobal: true,
-  load: [configuration],
+  load: [config],
   validationSchema,
   validationOptions: {
     allowUnknown: true,
