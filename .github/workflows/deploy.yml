@@ -55,7 +55,8 @@ jobs:
             CURRENT_ENV="green"
           fi
 
-          # 배포 디렉토리 준비
+          # 배포 디렉토리 준비 (없으면 생성)
+          ssh $USERNAME@$HOST "mkdir -p ~/fit-blue ~/fit-green"
           ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
 
           # 파일 전송 (압축하여 전송)
