@@ -77,10 +77,10 @@ jobs:
             set -e
             cd $NEW_DIR
 
-            echo '📦 Updating NestJS dependencies...'
-            npm install @nestjs/terminus@^11.1.1 @nestjs/typeorm@^11.0.0 --save
+            echo '📦 Removing terminus dependency...'
+            npm uninstall @nestjs/terminus
 
-            echo '📦 Installing all dependencies...'
+            echo '📦 Installing dependencies...'
             npm ci
 
             echo '🔨 Building application...'
