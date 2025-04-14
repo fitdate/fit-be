@@ -1,8 +1,12 @@
-name: Deploy Application # 배포 워크플로우의 이름
+name: Deploy Backend Application
 
 on:
   push:
     branches: [main, develop] # main 또는 develop 브랜치에 push가 발생하면 실행
+    paths: # 백엔드 코드가 변경될 때만 실행
+      - '**'
+      - '.github/workflows/**'
+      - '!frontend/**' # 프론트엔드 디렉토리 제외
 
 jobs:
   deploy:
