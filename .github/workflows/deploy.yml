@@ -4,8 +4,8 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - ''
-      - '.github/workflows/'
+      - '**'
+      - '.github/workflows/**'
       - '!frontend/**'
 
 jobs:
@@ -13,10 +13,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -29,40 +27,23 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Configure SSH and Create .env
+      - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
-          echo "${{ secrets.ENV_FILE }}" > .env
-
-      - name: Test tar command (for debugging)
-        run: |
-          tar czf - ./* .env > test.tar
-          echo "tar file created"
-          ls -l test.tar
-
-      - name: Test SSH connection (for debugging)
-        run: |
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "echo 'SSH connection successful!'"
-
-      - name: Debug tar and ssh pipeline (for debugging)
-        run: |
-          tar czf - ./* .env | tee tar_output.log | ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "cat > ~/fit-green/deployment.tar"
-          cat tar_output.log
-
-      - name: Verify file on EC2 (for debugging)
-        run: |
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "ls -l ~/fit-green"
 
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
+          # 현재 실행 중인 포트 확인
+          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port")
 
+          # Blue/Green 환경 설정
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
             NEW_ENV="green"
@@ -73,26 +54,32 @@ jobs:
             CURRENT_ENV="green"
           fi
 
-          ssh $USERNAME@$HOST "mkdir -p ~/fit-blue ~/fit-green"
-          ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
+          # 환경 변수 파일 생성 및 파일 전송
+          echo "$ENV_FILE" > .env
+          scp -r ./* .env $USERNAME@$HOST:~/fit-$NEW_ENV
 
-          tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && tar xzf -"
-
-          ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && \
-            npm ci && \
+          # 배포 실행
+          ssh $USERNAME@$HOST "
+            cd ~/fit-$NEW_ENV && \
+            
+            # 1. 의존성 설치
+            npm install && \
+            
+            # 2. 프로젝트 빌드
             npm run build && \
-            pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
-            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
+            
+            # 3. PM2로 새로운 버전 실행
+            pm2 delete fit-$NEW_ENV || true && \
+            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV && \
+            
+            # 4. Nginx 설정 업데이트
+            sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV && \
+            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV /etc/nginx/sites-enabled/ && \
+            
+            # 5. Nginx 설정 검사 및 리로드
             sudo nginx -t && \
             sudo systemctl reload nginx && \
-            sleep 5 && \
-            if curl -s http://localhost:$NEW_PORT/health; then \
-              pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
-              sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
-              echo '배포 성공' \
-            else \
-              pm2 delete fit-$NEW_ENV && \
-              echo '배포 실패: 헬스 체크 실패' && \
-              exit 1 \
-            fi"
+            
+            # 6. 이전 버전 중지
+            pm2 delete fit-$CURRENT_ENV || true
+          "
