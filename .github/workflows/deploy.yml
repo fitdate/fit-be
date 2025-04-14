@@ -43,6 +43,9 @@ jobs:
       - name: Debug tar and SSH pipeline
         if: github.ref == 'refs/heads/develop'
         run: |
+          # 먼저 디렉토리 생성
+          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "mkdir -p ~/fit-green"
+          # 그 다음 파일 전송
           tar czf - ./* .env | tee tar_output.log | ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "cat > ~/fit-green/deployment.tar"
           ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "ls -l ~/fit-green"
           cat tar_output.log
