@@ -1,4 +1,4 @@
-name: Deploy Backend Application
+name: Deploy Backend Application # 백엔드 배포임을 명시
 
 on:
   push:
