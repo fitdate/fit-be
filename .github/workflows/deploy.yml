@@ -29,6 +29,18 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} # GitHub secrets에 저장된 SSH 프라이빗 키
 
+      # .env 파일 생성
+      - name: Create .env file
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      # .env 파일을 EC2로 전송
+      - name: Copy .env to EC2
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+        run: |
+          scp -o StrictHostKeyChecking=no .env $USERNAME@$HOST:/home/myuser/app-${NEW_ENV}/.env
+
       # EC2에 배포 실행
       - name: Deploy to EC2
         env:
