@@ -2,19 +2,19 @@ module.exports = {
   apps: [
     {
       name: 'fit-blue',
-      script: 'npm',
-      args: 'run start:blue',
+      script: 'dist/main.js',
       env: {
         NODE_ENV: 'production',
+        PORT: '3000',
         ENV_FILE: '.env',
       },
     },
     {
       name: 'fit-green',
-      script: 'npm',
-      args: 'run start:green',
+      script: 'dist/main.js',
       env: {
         NODE_ENV: 'production',
+        PORT: '3001',
         ENV_FILE: '.env',
       },
     },
