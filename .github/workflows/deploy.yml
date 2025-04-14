@@ -30,12 +30,10 @@ jobs:
         run: |
           # SSH 설정
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
-
           # .env 파일 생성
           echo "===== .env 파일 생성 ====="
           echo "${{ secrets.ENV_FILE }}" > .env
           echo ".env 파일 생성 완료"
-
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.HOST }}
@@ -44,12 +42,10 @@ jobs:
           GREEN_PORT: 3001
         run: |
           echo "===== 배포 프로세스 시작 ====="
-
           # 현재 실행 중인 포트 확인
           echo "현재 실행 중인 포트 확인 중..."
           CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port")
           echo "현재 실행 중인 포트: $CURRENT_PORT"
-
           # Blue/Green 환경 설정
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
@@ -60,15 +56,12 @@ jobs:
             NEW_ENV="blue"
             CURRENT_ENV="green"
           fi
-
           echo "배포 대상 환경: $NEW_ENV (포트: $NEW_PORT)"
           echo "현재 실행 환경: $CURRENT_ENV"
-
           # 파일 전송 (한 번만 실행)
           echo "===== 파일 전송 시작 ====="
           echo "대상 디렉토리: ~/fit-$NEW_ENV"
           scp -r ./* .env $USERNAME@$HOST:~/fit-$NEW_ENV
-
           # 배포 실행
           echo "===== 애플리케이션 배포 시작 ====="
           ssh $USERNAME@$HOST "
@@ -90,7 +83,6 @@ jobs:
             echo '5. Nginx 설정 검사 및 리로드' && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
-
             echo '6. 이전 버전 중지' && \
             pm2 delete fit-$CURRENT_ENV || true && \  # 이전 버전 프로세스 정리 추가
             
