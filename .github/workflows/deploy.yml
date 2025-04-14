@@ -40,6 +40,18 @@ jobs:
           echo "ServerAliveCountMax 60" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
+      - name: Test Database Connection
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: 5432
+        run: |
+          echo "Testing database connection to $DB_HOST:$DB_PORT"
+          nc -zv $DB_HOST $DB_PORT || {
+            echo "❌ Database connection test failed"
+            exit 1
+          }
+          echo "✅ Database connection test successful"
+
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.HOST }}
