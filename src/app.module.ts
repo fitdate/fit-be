@@ -36,9 +36,16 @@ import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
-    RedisModule.forRoot({
-      type: 'single',
-      url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'single',
+        url: `redis://${configService.get('REDIS_HOST')}:${configService.get('REDIS_PORT')}`,
+        retryStrategy: (times: number) => {
+          return Math.min(times * 2000, 10000);
+        },
+      }),
+      inject: [ConfigService],
     }),
     DevtoolsModule.register({
       http: true,

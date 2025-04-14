@@ -15,7 +15,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -48,11 +47,11 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          # SSH 연결 테스트
+          # 1. SSH 연결 테스트
           ssh -o ConnectTimeout=10 $USERNAME@$HOST "echo 'SSH connection test successful'"
 
+          # 2. 배포 환경 설정
           CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
-
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
             NEW_ENV="green"
@@ -66,69 +65,83 @@ jobs:
           NEW_DIR="~/fit-$NEW_ENV"
           CURRENT_DIR="~/fit-$CURRENT_ENV"
 
-          echo "🔄 Creating deployment directory..."
-          ssh $USERNAME@$HOST "mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true"
-
-          echo "📦 Transferring files..."
-          tar czf - ./* .env | ssh $USERNAME@$HOST "cd $NEW_DIR && tar xzf -"
-
-          echo "🚀 Building and deploying..."
+          # 3. 배포 스크립트 실행
           ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$HOST "
             set -e
+            
+            # 3.1 디렉토리 준비
+            echo '🔄 Creating deployment directory...'
+            mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true
             cd $NEW_DIR
 
+            # 3.2 파일 전송
+            echo '📦 Transferring files...'
+            $(cd $GITHUB_WORKSPACE && tar czf - ./* .env) | tar xzf -
+
+            # 3.3 의존성 설치
             echo '📦 Installing dependencies...'
             npm uninstall @nestjs/terminus
             npm install @nestjs-modules/ioredis@latest --save
             npm ci
 
+            # 3.4 DB 권한 설정
+            echo '🔧 Setting up database permissions...'
+            PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ secrets.DB_HOST }} -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO ${{ secrets.DB_USER }};'
+            PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ secrets.DB_HOST }} -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};'
+
+            # 3.5 환경 변수 확인
+            echo '🔍 Checking environment variables...'
+            if [ ! -f .env ]; then
+              echo '❌ .env file not found'
+              exit 1
+            fi
+            
+            if ! grep -q 'REDIS_HOST=' .env || ! grep -q 'REDIS_PORT=' .env; then
+              echo '❌ Redis environment variables are missing'
+              exit 1
+            fi
+
+            # 3.6 빌드
             echo '🔨 Building application...'
             ./node_modules/.bin/nest build
 
-            echo '📝 Checking build output...'
             if [ ! -f dist/src/main.js ]; then
               echo '❌ Build failed: dist/src/main.js not found'
               ls -la dist/
               exit 1
             fi
 
+            # 3.7 PM2 실행
             echo '🚀 Starting PM2...'
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
-            APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G
+            APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G --max-restarts 0
 
+            # 3.8 애플리케이션 시작 대기
             echo '⏳ Waiting for application to start...'
             sleep 10
-
-            echo '📋 Checking application logs...'
             pm2 logs fit-$NEW_ENV --lines 50 || true
 
+            # 3.9 Nginx 설정
             echo '🔄 Configuring Nginx...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
 
+            # 3.10 헬스 체크
             echo '🏥 Health checking...'
             for i in {1..12}; do
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
-              HEALTH_RESPONSE=\$(curl -s -w \"\\n%{http_code}\" http://localhost:$NEW_PORT/health)
-              HTTP_CODE=\$(echo \"\$HEALTH_RESPONSE\" | tail -n 1)
-              BODY=\$(echo \"\$HEALTH_RESPONSE\" | head -n 1)
-              
-              echo \"Response code: \$HTTP_CODE\"
-              echo \"Response body: \$BODY\"
-
-              if [ \"\$HTTP_CODE\" = \"200\" ]; then
+              if curl -s http://localhost:$NEW_PORT/health; then
                 pm2 delete fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
                 echo '✅ 배포 성공'
                 exit 0
               fi
-
               echo 'Waiting for next attempt...'
               sleep 5
             done
 
+            # 3.11 실패 처리
             echo '❌ 배포 실패: 헬스 체크 실패'
-            echo '📋 마지막 로그 확인:'
             pm2 logs fit-$NEW_ENV --lines 50 || true
             pm2 delete fit-$NEW_ENV
             exit 1
