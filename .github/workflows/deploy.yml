@@ -42,7 +42,8 @@ jobs:
           GREEN_PORT: 3001
         run: |
           # 현재 실행 중인 포트 확인
-          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s /port || echo $BLUE_PORT")
+          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
+          echo "Current port: $CURRENT_PORT"
 
           # Blue/Green 환경 설정
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
@@ -54,51 +55,38 @@ jobs:
             NEW_ENV="blue"
             CURRENT_ENV="green"
           fi
-
-          echo "배포 시작: $NEW_ENV 환경 (포트: $NEW_PORT)"
+          echo "Deploying to $NEW_ENV with port $NEW_PORT"
 
           # 배포 디렉토리 준비 (없으면 생성)
           ssh $USERNAME@$HOST "mkdir -p ~/fit-blue ~/fit-green"
           ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
+          echo "Deployment directories prepared"
 
           # 파일 전송 (압축하여 전송)
+          echo "Starting file transfer to EC2..."
           tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && tar xzf -"
+          echo "File transfer completed"
 
           # 배포 실행
-          ssh $USERNAME@$HOST "set -e; \
-            cd ~/fit-$NEW_ENV && \
-            echo '1. 현재 디렉토리 확인' && \
-            pwd && \
-            ls -la && \
-            echo '2. 의존성 설치 중...' && \
+          ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && \
+            echo 'Running npm ci' && \
             npm ci && \
-            echo '3. 프로젝트 빌드 중...' && \
+            echo 'Running npm run build' && \
             npm run build && \
-            echo '3-1. dist 디렉토리 확인' && \
-            ls -la dist/ && \
-            echo '4. PM2 프로세스 설정 중...' && \
             pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
-            if [ -f \"dist/main.js\" ]; then \
-              echo '4-1. main.js 파일 존재 확인됨' && \
-              APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G; \
-            else \
-              echo 'Error: dist/main.js 파일이 없습니다' && \
-              exit 1; \
-            fi && \
-            echo '5. Nginx 설정 업데이트 중...' && \
+            echo 'Starting pm2 for $NEW_ENV' && \
+            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
-            echo '6. 헬스 체크 중...' && \
             sleep 5 && \
-            if curl -s /health; then \
-              echo '7. 이전 버전 정리 중...' && \
+            if curl -s http://localhost:$NEW_PORT/health; then \
+              echo 'Health check passed. Deployment success!' && \
               pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
               sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
-              echo '=== 배포 성공 ===' && \
-              exit 0; \
+              echo '배포 성공' \
             else \
-              echo '배포 실패: 헬스 체크 실패' && \
+              echo 'Health check failed. Deployment failed!' && \
               pm2 delete fit-$NEW_ENV && \
-              exit 1; \
+              exit 1 \
             fi"
