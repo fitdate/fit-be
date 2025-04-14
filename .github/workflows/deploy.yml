@@ -83,11 +83,11 @@ jobs:
             npm ci --verbose
 
             echo '🔨 Building application...'
-            npm run build --verbose || {
-              echo '❌ Build failed. Showing TypeScript errors:'
-              ./node_modules/.bin/tsc --noEmit
-              cat tsconfig.json
-              ls -la dist/ || true
+            NODE_ENV=production nest build --debug || {
+              echo '❌ Build failed with nest build. Trying with tsc...'
+              ./node_modules/.bin/tsc -p tsconfig.build.json
+              echo '📁 Compiled files in dist:'
+              find dist/ -type f
               exit 1
             }
 
