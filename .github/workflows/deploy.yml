@@ -80,6 +80,7 @@ jobs:
             npm run build && \
             
             echo '3. PM2로 새로운 버전 실행 중...' && \
+            pm2 delete fit-$NEW_ENV || true && \  # 기존 프로세스 삭제 추가
             APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV && \
             
             echo '4. Nginx 설정 업데이트 중...' && \
@@ -89,6 +90,9 @@ jobs:
             echo '5. Nginx 설정 검사 및 리로드' && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
+
+            echo '6. 이전 버전 중지' && \
+            pm2 delete fit-$CURRENT_ENV || true && \  # 이전 버전 프로세스 정리 추가
             
             echo '===== 배포 완료 =====' 
           "
