@@ -1,4 +1,4 @@
-name: Deploy Backend Application # 백엔드 배포
+name: Deploy Backend Application
 
 on:
   push:
@@ -14,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1 # 최신 커밋만 가져오기
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -28,12 +30,10 @@ jobs:
 
       - name: Configure SSH and Create .env
         run: |
-          # SSH 설정
+          mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
-          # .env 파일 생성
-          echo "===== .env 파일 생성 ====="
           echo "${{ secrets.ENV_FILE }}" > .env
-          echo ".env 파일 생성 완료"
+
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.HOST }}
@@ -41,11 +41,9 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          echo "===== 배포 프로세스 시작 ====="
           # 현재 실행 중인 포트 확인
-          echo "현재 실행 중인 포트 확인 중..."
-          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port")
-          echo "현재 실행 중인 포트: $CURRENT_PORT"
+          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
+
           # Blue/Green 환경 설정
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
@@ -56,35 +54,29 @@ jobs:
             NEW_ENV="blue"
             CURRENT_ENV="green"
           fi
-          echo "배포 대상 환경: $NEW_ENV (포트: $NEW_PORT)"
-          echo "현재 실행 환경: $CURRENT_ENV"
-          # 파일 전송 (한 번만 실행)
-          echo "===== 파일 전송 시작 ====="
-          echo "대상 디렉토리: ~/fit-$NEW_ENV"
-          scp -r ./* .env $USERNAME@$HOST:~/fit-$NEW_ENV
+
+          # 배포 디렉토리 준비
+          ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
+
+          # 파일 전송 (압축하여 전송)
+          tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && tar xzf -"
+
           # 배포 실행
-          echo "===== 애플리케이션 배포 시작 ====="
-          ssh $USERNAME@$HOST "
-            cd ~/fit-$NEW_ENV && \
-            echo '1. 의존성 설치 중...' && \
-            npm install && \
-            
-            echo '2. 프로젝트 빌드 중...' && \
+          ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && \
+            npm ci && \
             npm run build && \
-            
-            echo '3. PM2로 새로운 버전 실행 중...' && \
-            pm2 delete fit-$NEW_ENV || true && \  # 기존 프로세스 삭제 추가
-            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV && \
-            
-            echo '4. Nginx 설정 업데이트 중...' && \
-            sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV && \
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV /etc/nginx/sites-enabled/ && \
-            
-            echo '5. Nginx 설정 검사 및 리로드' && \
+            pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
+            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
+            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
-            echo '6. 이전 버전 중지' && \
-            pm2 delete fit-$CURRENT_ENV || true && \  # 이전 버전 프로세스 정리 추가
-            
-            echo '===== 배포 완료 =====' 
-          "
+            sleep 5 && \
+            if curl -s http://localhost:$NEW_PORT/health; then \
+              pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
+              sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
+              echo '배포 성공' \
+            else \
+              pm2 delete fit-$NEW_ENV && \
+              echo '배포 실패: 헬스 체크 실패' && \
+              exit 1 \
+            fi"
