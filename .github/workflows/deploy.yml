@@ -96,23 +96,40 @@ jobs:
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
             APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G
 
+            echo '⏳ Waiting for application to start...'
+            sleep 10
+
+            echo '📋 Checking application logs...'
+            pm2 logs fit-$NEW_ENV --lines 50 || true
+
             echo '🔄 Configuring Nginx...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
 
             echo '🏥 Health checking...'
             for i in {1..12}; do
-              if curl -s http://localhost:$NEW_PORT/health; then
+              echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
+              HEALTH_RESPONSE=\$(curl -s -w \"\\n%{http_code}\" http://localhost:$NEW_PORT/health)
+              HTTP_CODE=\$(echo \"\$HEALTH_RESPONSE\" | tail -n 1)
+              BODY=\$(echo \"\$HEALTH_RESPONSE\" | head -n 1)
+              
+              echo \"Response code: \$HTTP_CODE\"
+              echo \"Response body: \$BODY\"
+
+              if [ \"\$HTTP_CODE\" = \"200\" ]; then
                 pm2 delete fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
                 echo '✅ 배포 성공'
                 exit 0
               fi
-              echo 'Waiting for health check... attempt $i'
+
+              echo 'Waiting for next attempt...'
               sleep 5
             done
 
             echo '❌ 배포 실패: 헬스 체크 실패'
+            echo '📋 마지막 로그 확인:'
+            pm2 logs fit-$NEW_ENV --lines 50 || true
             pm2 delete fit-$NEW_ENV
             exit 1
           "
