@@ -91,7 +91,6 @@ jobs:
             # 6.1 의존성 설치
             echo '📦 Installing dependencies...'
             npm uninstall @nestjs/terminus
-            npm install @nestjs-modules/ioredis@latest --save
             npm ci
 
             # 6.2 DB 권한 설정
@@ -103,11 +102,6 @@ jobs:
             echo '🔍 Checking environment variables...'
             if [ ! -f .env ]; then
               echo '❌ .env file not found'
-              exit 1
-            fi
-            
-            if ! grep -q 'REDIS_HOST=' .env || ! grep -q 'REDIS_PORT=' .env; then
-              echo '❌ Redis environment variables are missing'
               exit 1
             fi
 
