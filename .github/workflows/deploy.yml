@@ -1,4 +1,4 @@
-name: Deploy Backend Application # 백엔드 배포
+name: Deploy Backend Application
 
 on:
   push:
@@ -95,8 +95,9 @@ jobs:
 
             # 6.2 DB 권한 설정
             echo '🔧 Setting up database permissions...'
-            PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ secrets.DB_HOST }} -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO ${{ secrets.DB_USER }};'
-            PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ secrets.DB_HOST }} -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};'
+            export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
+            psql -h '${{ secrets.DB_HOST }}' -U '${{ secrets.DB_USER }}' -d '${{ secrets.DB_NAME }}' -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO \"${{ secrets.DB_USER }}\";'
+            psql -h '${{ secrets.DB_HOST }}' -U '${{ secrets.DB_USER }}' -d '${{ secrets.DB_NAME }}' -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"${{ secrets.DB_USER }}\";'
 
             # 6.3 환경 변수 확인
             echo '🔍 Checking environment variables...'
@@ -118,7 +119,7 @@ jobs:
             # 6.5 PM2 실행
             echo '🚀 Starting PM2...'
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
-            APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G --max-restarts 0
+            APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G --max-restarts 0 --update-env
 
             # 6.6 애플리케이션 시작 대기
             echo '⏳ Waiting for application to start...'
