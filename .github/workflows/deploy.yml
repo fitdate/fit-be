@@ -80,22 +80,40 @@ jobs:
 
           # 빌드 및 PM2 배포
           ssh $USERNAME@$HOST "
-            cd $NEW_DIR && \
-            npm ci && \
-            npm run build && \
-            pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
-            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
-            sudo nginx -t && \
-            sudo systemctl reload nginx && \
-            sleep 5 && \
-            if curl -s http://localhost:$NEW_PORT/health; then
-              pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
-              sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
-              echo '✅ 배포 성공'
+            set -e
+            echo '📦 Installing dependencies...'
+            cd $NEW_DIR
+            npm ci
+            
+            echo '🔨 Building application...'
+            npm run build
+            
+            echo '📝 Checking build output...'
+            ls -la dist/
+            
+            echo '🚀 Starting PM2...'
+            pm2 delete fit-$NEW_ENV 2>/dev/null || true
+            
+            if [ -f dist/main.js ]; then
+              APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G
+              
+              echo '🔄 Configuring Nginx...'
+              sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
+              sudo nginx -t && sudo systemctl reload nginx
+              
+              echo '🏥 Health checking...'
+              sleep 5
+              if curl -s http://localhost:$NEW_PORT/health; then
+                pm2 delete fit-$CURRENT_ENV 2>/dev/null || true
+                sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
+                echo '✅ 배포 성공'
+              else
+                pm2 delete fit-$NEW_ENV
+                echo '❌ 배포 실패: 헬스 체크 실패'
+                exit 1
+              fi
             else
-              pm2 delete fit-$NEW_ENV && \
-              echo '❌ 배포 실패: 헬스 체크 실패' && \
+              echo '❌ 배포 실패: dist/main.js 파일이 없습니다'
               exit 1
             fi
           "
