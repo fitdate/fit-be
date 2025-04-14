@@ -58,15 +58,15 @@ jobs:
           echo "배포 시작: $NEW_ENV 환경 (포트: $NEW_PORT)"
 
           # 배포 디렉토리 준비 (없으면 생성)
-          ssh $USERNAME@$HOST "mkdir -p ~/apps/fit-blue ~/apps/fit-green"
-          ssh $USERNAME@$HOST "rm -rf ~/apps/fit-$NEW_ENV/* || true"
+          ssh $USERNAME@$HOST "mkdir -p ~/fit-blue ~/fit-green"
+          ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
 
           # 파일 전송 (압축하여 전송)
-          tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/apps/fit-$NEW_ENV && tar xzf -"
+          tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && tar xzf -"
 
           # 배포 실행
           ssh $USERNAME@$HOST "set -e; \
-            cd ~/apps/fit-$NEW_ENV && \
+            cd ~/fit-$NEW_ENV && \
             echo '1. 현재 디렉토리 확인' && \
             pwd && \
             ls -la && \
