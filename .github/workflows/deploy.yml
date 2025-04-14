@@ -4,8 +4,8 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - '**'
-      - '.github/workflows/**'
+      - ''
+      - '.github/workflows/'
       - '!frontend/**'
 
 jobs:
@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -27,23 +29,29 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Configure SSH
+      - name: Configure SSH and Create .env
         run: |
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "${{ secrets.ENV_FILE }}" > .env
+
+      # Optional: 디버깅 용도로 develop 브랜치에서만 실행
+      - name: Debug tar and SSH pipeline
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          tar czf - ./* .env | tee tar_output.log | ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "cat > ~/fit-green/deployment.tar"
+          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "ls -l ~/fit-green"
+          cat tar_output.log
 
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
-          ENV_FILE: ${{ secrets.ENV_FILE }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          # 현재 실행 중인 포트 확인
-          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port")
+          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
 
-          # Blue/Green 환경 설정
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
             NEW_ENV="green"
@@ -54,32 +62,33 @@ jobs:
             CURRENT_ENV="green"
           fi
 
-          # 환경 변수 파일 생성 및 파일 전송
-          echo "$ENV_FILE" > .env
-          scp -r ./* .env $USERNAME@$HOST:~/fit-$NEW_ENV
+          NEW_DIR="~/fit-$NEW_ENV"
+          CURRENT_DIR="~/fit-$CURRENT_ENV"
 
-          # 배포 실행
+          # 배포 디렉토리 생성 및 기존 제거
+          ssh $USERNAME@$HOST "mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true"
+
+          # 압축 전송 및 압축 해제
+          tar czf - ./* .env | ssh $USERNAME@$HOST "tar xzf - -C $NEW_DIR"
+
+          # 빌드 및 PM2 배포
           ssh $USERNAME@$HOST "
-            cd ~/fit-$NEW_ENV && \
-            
-            # 1. 의존성 설치
-            npm install && \
-            
-            # 2. 프로젝트 빌드
+            cd $NEW_DIR && \
+            npm ci && \
             npm run build && \
-            
-            # 3. PM2로 새로운 버전 실행
-            pm2 delete fit-$NEW_ENV || true && \
-            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV && \
-            
-            # 4. Nginx 설정 업데이트
-            sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV && \
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV /etc/nginx/sites-enabled/ && \
-            
-            # 5. Nginx 설정 검사 및 리로드
+            pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
+            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
+            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
-            
-            # 6. 이전 버전 중지
-            pm2 delete fit-$CURRENT_ENV || true
+            sleep 5 && \
+            if curl -s http://localhost:$NEW_PORT/health; then
+              pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
+              sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
+              echo '✅ 배포 성공'
+            else
+              pm2 delete fit-$NEW_ENV && \
+              echo '❌ 배포 실패: 헬스 체크 실패' && \
+              exit 1
+            fi
           "
