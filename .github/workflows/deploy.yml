@@ -1,12 +1,16 @@
-name: Deploy Backend Application # 백엔드 배포
+name: Deploy Backend Application
 
 on:
   push:
     branches: [main, develop]
     paths:
-      - ''
-      - '.github/workflows/'
-      - '!frontend/**'
+      - '**.ts' # TypeScript 파일 변경 감지
+      - 'package*.json' # 패키지 관련 파일
+      - 'tsconfig*.json' # TypeScript 설정 파일
+      - '.env.example' # 환경 설정 예제 파일
+      - 'nest-cli.json' # NestJS 설정 파일
+      - '.github/workflows/**' # 워크플로우 파일
+      - '!frontend/**' # frontend 디렉토리 제외
 
 jobs:
   deploy:
