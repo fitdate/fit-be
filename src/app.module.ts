@@ -32,8 +32,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './modules/auth/guard/jwt.guard';
 import { BearerTokenMiddleware } from './modules/auth/middleware/bearer-token.middleware';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
+import { RedisModule } from '@nestjs-modules/ioredis';
+
 @Module({
   imports: [
+    RedisModule.forRoot({
+      type: 'single',
+      url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    }),
     DevtoolsModule.register({
       http: true,
       port: 7001,
