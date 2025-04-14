@@ -58,16 +58,16 @@ jobs:
 
       - name: Deploy to EC2
         env:
-          HOST: ${{ secrets.HOST }}
+          DB_HOST: ${{ secrets.DB_HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
           # 1. SSH 연결 테스트
-          ssh -o ConnectTimeout=10 $USERNAME@$HOST "echo 'SSH connection test successful'"
+          ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
           # 2. 배포 환경 설정
-          CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
+          CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
             NEW_ENV="green"
@@ -86,7 +86,7 @@ jobs:
           tar czf /tmp/deploy.tar.gz ./* .env
 
           # 4. 배포 스크립트 실행
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$HOST "
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$DB_HOST "
             set -e
             
             # 4.1 디렉토리 준비
@@ -97,11 +97,11 @@ jobs:
 
           # 5. 파일 전송 및 압축 해제
           echo '📦 Transferring and extracting files...'
-          scp /tmp/deploy.tar.gz $USERNAME@$HOST:$NEW_DIR/
-          ssh $USERNAME@$HOST "cd $NEW_DIR && tar xzf deploy.tar.gz && rm deploy.tar.gz"
+          scp /tmp/deploy.tar.gz $USERNAME@$DB_HOST:$NEW_DIR/
+          ssh $USERNAME@$DB_HOST "cd $NEW_DIR && tar xzf deploy.tar.gz && rm deploy.tar.gz"
 
           # 6. 애플리케이션 설정 및 실행
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$HOST "
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$DB_HOST "
             cd $NEW_DIR
 
             # 6.1 의존성 설치
