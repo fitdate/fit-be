@@ -65,31 +65,41 @@ jobs:
           NEW_DIR="~/fit-$NEW_ENV"
           CURRENT_DIR="~/fit-$CURRENT_ENV"
 
-          # 3. 배포 스크립트 실행
+          # 3. 파일 전송 준비
+          echo '📦 Preparing deployment files...'
+          tar czf /tmp/deploy.tar.gz ./* .env
+
+          # 4. 배포 스크립트 실행
           ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$HOST "
             set -e
             
-            # 3.1 디렉토리 준비
+            # 4.1 디렉토리 준비
             echo '🔄 Creating deployment directory...'
             mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true
             cd $NEW_DIR
+          "
 
-            # 3.2 파일 전송
-            echo '📦 Transferring files...'
-            $(cd $GITHUB_WORKSPACE && tar czf - ./* .env) | tar xzf -
+          # 5. 파일 전송 및 압축 해제
+          echo '📦 Transferring and extracting files...'
+          scp /tmp/deploy.tar.gz $USERNAME@$HOST:$NEW_DIR/
+          ssh $USERNAME@$HOST "cd $NEW_DIR && tar xzf deploy.tar.gz && rm deploy.tar.gz"
 
-            # 3.3 의존성 설치
+          # 6. 애플리케이션 설정 및 실행
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$HOST "
+            cd $NEW_DIR
+
+            # 6.1 의존성 설치
             echo '📦 Installing dependencies...'
             npm uninstall @nestjs/terminus
             npm install @nestjs-modules/ioredis@latest --save
             npm ci
 
-            # 3.4 DB 권한 설정
+            # 6.2 DB 권한 설정
             echo '🔧 Setting up database permissions...'
             PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ secrets.DB_HOST }} -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO ${{ secrets.DB_USER }};'
             PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h ${{ secrets.DB_HOST }} -U ${{ secrets.DB_USER }} -d ${{ secrets.DB_NAME }} -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};'
 
-            # 3.5 환경 변수 확인
+            # 6.3 환경 변수 확인
             echo '🔍 Checking environment variables...'
             if [ ! -f .env ]; then
               echo '❌ .env file not found'
@@ -101,7 +111,7 @@ jobs:
               exit 1
             fi
 
-            # 3.6 빌드
+            # 6.4 빌드
             echo '🔨 Building application...'
             ./node_modules/.bin/nest build
 
@@ -111,22 +121,22 @@ jobs:
               exit 1
             fi
 
-            # 3.7 PM2 실행
+            # 6.5 PM2 실행
             echo '🚀 Starting PM2...'
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
             APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G --max-restarts 0
 
-            # 3.8 애플리케이션 시작 대기
+            # 6.6 애플리케이션 시작 대기
             echo '⏳ Waiting for application to start...'
             sleep 10
             pm2 logs fit-$NEW_ENV --lines 50 || true
 
-            # 3.9 Nginx 설정
+            # 6.7 Nginx 설정
             echo '🔄 Configuring Nginx...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
 
-            # 3.10 헬스 체크
+            # 6.8 헬스 체크
             echo '🏥 Health checking...'
             for i in {1..12}; do
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
@@ -140,7 +150,7 @@ jobs:
               sleep 5
             done
 
-            # 3.11 실패 처리
+            # 6.9 실패 처리
             echo '❌ 배포 실패: 헬스 체크 실패'
             pm2 logs fit-$NEW_ENV --lines 50 || true
             pm2 delete fit-$NEW_ENV
