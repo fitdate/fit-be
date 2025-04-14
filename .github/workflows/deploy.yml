@@ -55,6 +55,8 @@ jobs:
             CURRENT_ENV="green"
           fi
 
+          echo "배포 시작: $NEW_ENV 환경 (포트: $NEW_PORT)"
+
           # 배포 디렉토리 준비 (없으면 생성)
           ssh $USERNAME@$HOST "mkdir -p ~/fit-blue ~/fit-green"
           ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
@@ -63,21 +65,29 @@ jobs:
           tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && tar xzf -"
 
           # 배포 실행
-          ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && \
+          ssh $USERNAME@$HOST "set -e; \
+            cd ~/fit-$NEW_ENV && \
+            echo '1. 의존성 설치 중...' && \
             npm ci && \
+            echo '2. 프로젝트 빌드 중...' && \
             npm run build && \
+            echo '3. PM2 프로세스 설정 중...' && \
             pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
             APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
+            echo '4. Nginx 설정 업데이트 중...' && \
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
+            echo '5. 헬스 체크 중...' && \
             sleep 5 && \
             if curl -s http://localhost:$NEW_PORT/health; then \
+              echo '6. 이전 버전 정리 중...' && \
               pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
               sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
-              echo '배포 성공' \
+              echo '=== 배포 성공 ===' && \
+              exit 0; \
             else \
-              pm2 delete fit-$NEW_ENV && \
               echo '배포 실패: 헬스 체크 실패' && \
-              exit 1 \
+              pm2 delete fit-$NEW_ENV && \
+              exit 1; \
             fi"
