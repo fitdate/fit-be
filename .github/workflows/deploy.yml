@@ -80,28 +80,21 @@ jobs:
             echo '📦 Installing dependencies...'
             npm uninstall @nestjs/terminus
             npm install @nestjs-modules/ioredis@latest --save
-            npm ci --verbose
+            npm ci
 
             echo '🔨 Building application...'
-            NODE_ENV=production nest build --debug || {
-              echo '❌ Build failed with nest build. Trying with tsc...'
-              ./node_modules/.bin/tsc -p tsconfig.build.json
-              echo '📁 Compiled files in dist:'
-              find dist/ -type f
-              exit 1
-            }
+            NODE_ENV=production nest build
 
             echo '📝 Checking build output...'
-            if [ ! -f dist/main.js ]; then
-              echo '❌ Build failed: dist/main.js not found'
-              ls -la
-              ls -la dist/ || true
+            if [ ! -f dist/src/main.js ]; then
+              echo '❌ Build failed: dist/src/main.js not found'
+              ls -la dist/
               exit 1
             fi
 
             echo '🚀 Starting PM2...'
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
-            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G
+            APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G
 
             echo '🔄 Configuring Nginx...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
