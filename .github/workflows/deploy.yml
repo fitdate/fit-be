@@ -64,35 +64,30 @@ jobs:
           echo "배포 대상 환경: $NEW_ENV (포트: $NEW_PORT)"
           echo "현재 실행 환경: $CURRENT_ENV"
 
-          # 파일 전송 (한 번만 실행)
+          # 파일 전송 전 기존 디렉토리 정리
           echo "===== 파일 전송 시작 ====="
           echo "대상 디렉토리: ~/fit-$NEW_ENV"
+          ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/*"
           scp -r ./* .env $USERNAME@$HOST:~/fit-$NEW_ENV
 
           # 배포 실행
           echo "===== 애플리케이션 배포 시작 ====="
           ssh $USERNAME@$HOST "
-            cd ~/fit-$NEW_ENV && \
-            echo '1. 의존성 설치 중...' && \
-            npm install && \
-            
-            echo '2. 프로젝트 빌드 중...' && \
-            npm run build && \
-            
-            echo '3. PM2로 새로운 버전 실행 중...' && \
-            pm2 delete fit-$NEW_ENV || true && \  # 기존 프로세스 삭제 추가
-            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV && \
-            
-            echo '4. Nginx 설정 업데이트 중...' && \
-            sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV && \
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV /etc/nginx/sites-enabled/ && \
-            
-            echo '5. Nginx 설정 검사 및 리로드' && \
-            sudo nginx -t && \
-            sudo systemctl reload nginx && \
-
-            echo '6. 이전 버전 중지' && \
-            pm2 delete fit-$CURRENT_ENV || true && \  # 이전 버전 프로세스 정리 추가
-            
-            echo '===== 배포 완료 =====' 
-          "
+            mkdir -p ~/fit-$NEW_ENV &&\
+            cd ~/fit-$NEW_ENV &&\
+            echo '1. 의존성 설치 중...' &&\
+            npm install &&\
+            echo '2. 프로젝트 빌드 중...' &&\
+            npm run build &&\
+            echo '3. PM2로 새로운 버전 실행 중...' &&\
+            pm2 delete fit-$NEW_ENV || true &&\
+            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV &&\
+            echo '4. Nginx 설정 업데이트 중...' &&\
+            sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV &&\
+            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV /etc/nginx/sites-enabled/ &&\
+            echo '5. Nginx 설정 검사 및 리로드' &&\
+            sudo nginx -t &&\
+            sudo systemctl reload nginx &&\
+            echo '6. 이전 버전 중지' &&\
+            pm2 delete fit-$CURRENT_ENV || true &&\
+            echo '===== 배포 완료 ====='"
