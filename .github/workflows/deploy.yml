@@ -77,18 +77,25 @@ jobs:
             set -e
             cd $NEW_DIR
 
-            echo '📦 Removing terminus dependency...'
-            npm uninstall @nestjs/terminus
-
             echo '📦 Installing dependencies...'
-            npm ci
+            npm uninstall @nestjs/terminus
+            npm install @nestjs-modules/ioredis@latest --save
+            npm ci --verbose
 
             echo '🔨 Building application...'
-            npm run build
+            npm run build --verbose || {
+              echo '❌ Build failed. Showing TypeScript errors:'
+              ./node_modules/.bin/tsc --noEmit
+              cat tsconfig.json
+              ls -la dist/ || true
+              exit 1
+            }
 
             echo '📝 Checking build output...'
             if [ ! -f dist/main.js ]; then
               echo '❌ Build failed: dist/main.js not found'
+              ls -la
+              ls -la dist/ || true
               exit 1
             fi
 
