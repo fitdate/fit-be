@@ -1,26 +1,59 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Payment } from './entities/payment.entity';
+import axios from 'axios';
+import { TossPaymentResponse } from './types/toss-payment.types';
 
 @Injectable()
 export class PaymentService {
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
+  constructor(
+    @InjectRepository(Payment)
+    private paymentRepository: Repository<Payment>,
+  ) {}
+
+  async createPayment(paymentData: Partial<Payment>): Promise<Payment> {
+    const payment = this.paymentRepository.create(paymentData);
+    return this.paymentRepository.save(payment);
   }
 
-  findAll() {
-    return `This action returns all payment`;
+  async confirmPayment(
+    paymentKey: string,
+    orderId: string,
+    amount: number,
+  ): Promise<{ data: TossPaymentResponse }> {
+    const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
+    const encryptedSecretKey = Buffer.from(`${secretKey}:`).toString('base64');
+
+    try {
+      const response = await axios.post<TossPaymentResponse>(
+        'https://api.tosspayments.com/v1/payments/confirm',
+        {
+          paymentKey,
+          orderId,
+          amount,
+        },
+        {
+          headers: {
+            Authorization: `Basic ${encryptedSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      await this.paymentRepository.update(
+        { orderId },
+        { status: 'DONE', paymentKey },
+      );
+
+      return { data: response.data };
+    } catch (error) {
+      await this.paymentRepository.update({ orderId }, { status: 'CANCELED' });
+      throw error;
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
-  }
-
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
+  async getPaymentByOrderId(orderId: string): Promise<Payment | null> {
+    return this.paymentRepository.findOne({ where: { orderId } });
   }
 }

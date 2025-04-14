@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CreateInterestLocationDto } from './dto/create-interest-location.dto';
+import { CreateInterestLocationDto } from './dto/create-many-interest-location.dto';
 import { UpdateInterestLocationDto } from './dto/update-interest-location.dto';
 
 @Injectable()

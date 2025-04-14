@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { InterestLocationService } from './interest-location.service';
-import { CreateInterestLocationDto } from './dto/create-interest-location.dto';
+import { CreateInterestLocationDto } from './dto/create-many-interest-location.dto';
 import { UpdateInterestLocationDto } from './dto/update-interest-location.dto';
 
 @Controller('interest-location')
 export class InterestLocationController {
-  constructor(private readonly interestLocationService: InterestLocationService) {}
+  constructor(private readonly interestLocationService: InterestLocationService) { }
 
   @Post()
   create(@Body() createInterestLocationDto: CreateInterestLocationDto) {

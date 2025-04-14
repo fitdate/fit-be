@@ -1,34 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { MbtiService } from './mbti.service';
-import { CreateMbtiDto } from './dto/create-mbti.dto';
-import { UpdateMbtiDto } from './dto/update-mbti.dto';
+import { MbtiType } from './constants/mbti.constants';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { Mbti } from './entities/mbti.entity';
+import { MbtiRecommendResponse } from './dto/mbti-recommend.response';
 
 @Controller('mbti')
 export class MbtiController {
   constructor(private readonly mbtiService: MbtiService) {}
 
-  @Post()
-  create(@Body() createMbtiDto: CreateMbtiDto) {
-    return this.mbtiService.create(createMbtiDto);
+  @ApiOperation({ summary: '유저 MBTI 조회' })
+  @ApiParam({ name: 'profileId', description: '유저 프로필 ID' })
+  @ApiResponse({
+    status: 200,
+    description: '유저 MBTI 조회 성공',
+    type: Mbti,
+  })
+  @Get('profile/:profileId')
+  getUserMbti(@Param('profileId') profileId: string) {
+    return this.mbtiService.getUserMbti(profileId);
   }
 
-  @Get()
-  findAll() {
-    return this.mbtiService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.mbtiService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMbtiDto: UpdateMbtiDto) {
-    return this.mbtiService.update(+id, updateMbtiDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.mbtiService.remove(+id);
+  @ApiOperation({ summary: '유저 MBTI 추천 목록 조회' })
+  @ApiParam({ name: 'mbti', description: 'MBTI 타입' })
+  @ApiResponse({
+    status: 200,
+    description: '유저 MBTI 추천 목록 조회 성공',
+    type: MbtiRecommendResponse,
+  })
+  @Get('recommend/:mbti')
+  getUserMbtiRecommendList(@Param('mbti') mbti: MbtiType) {
+    return this.mbtiService.getUserMbtiRecommendList(mbti);
   }
 }
