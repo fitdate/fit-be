@@ -4,13 +4,13 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - '**.ts' # TypeScript 파일 변경 감지
-      - 'package*.json' # 패키지 관련 파일
-      - 'tsconfig*.json' # TypeScript 설정 파일
-      - '.env.example' # 환경 설정 예제 파일
-      - 'nest-cli.json' # NestJS 설정 파일
-      - '.github/workflows/**' # 워크플로우 파일
-      - '!frontend/**' # frontend 디렉토리 제외
+      - '**.ts'
+      - 'package*.json'
+      - 'tsconfig*.json'
+      - '.env.example'
+      - 'nest-cli.json'
+      - '.github/workflows/**'
+      - '!frontend/**'
 
 jobs:
   deploy:
@@ -37,18 +37,9 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "ServerAliveInterval 30" >> ~/.ssh/config
+          echo "ServerAliveCountMax 60" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
-
-      # Optional: 디버깅 용도로 develop 브랜치에서만 실행
-      - name: Debug tar and SSH pipeline
-        if: github.ref == 'refs/heads/develop'
-        run: |
-          # 먼저 디렉토리 생성
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "mkdir -p ~/fit-green"
-          # 그 다음 파일 전송
-          tar czf - ./* .env | tee tar_output.log | ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "cat > ~/fit-green/deployment.tar"
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "ls -l ~/fit-green"
-          cat tar_output.log
 
       - name: Deploy to EC2
         env:
@@ -57,6 +48,9 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
+          # SSH 연결 테스트
+          ssh -o ConnectTimeout=10 $USERNAME@$HOST "echo 'SSH connection test successful'"
+
           CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
 
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
@@ -72,48 +66,53 @@ jobs:
           NEW_DIR="~/fit-$NEW_ENV"
           CURRENT_DIR="~/fit-$CURRENT_ENV"
 
-          # 배포 디렉토리 생성 및 기존 제거
+          echo "🔄 Creating deployment directory..."
           ssh $USERNAME@$HOST "mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true"
 
-          # 압축 전송 및 압축 해제
-          tar czf - ./* .env | ssh $USERNAME@$HOST "tar xzf - -C $NEW_DIR"
+          echo "📦 Transferring files..."
+          tar czf - ./* .env | ssh $USERNAME@$HOST "cd $NEW_DIR && tar xzf -"
 
-          # 빌드 및 PM2 배포
-          ssh $USERNAME@$HOST "
+          echo "🚀 Building and deploying..."
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$HOST "
             set -e
-            echo '📦 Installing dependencies...'
             cd $NEW_DIR
+
+            echo '📦 Updating NestJS dependencies...'
+            npm install @nestjs/terminus@^11.1.1 @nestjs/typeorm@^11.0.0 --save
+
+            echo '📦 Installing all dependencies...'
             npm ci
-            
+
             echo '🔨 Building application...'
             npm run build
-            
+
             echo '📝 Checking build output...'
-            ls -la dist/
-            
+            if [ ! -f dist/main.js ]; then
+              echo '❌ Build failed: dist/main.js not found'
+              exit 1
+            fi
+
             echo '🚀 Starting PM2...'
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
-            
-            if [ -f dist/main.js ]; then
-              APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G
-              
-              echo '🔄 Configuring Nginx...'
-              sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
-              sudo nginx -t && sudo systemctl reload nginx
-              
-              echo '🏥 Health checking...'
-              sleep 5
+            APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G
+
+            echo '🔄 Configuring Nginx...'
+            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
+            sudo nginx -t && sudo systemctl reload nginx
+
+            echo '🏥 Health checking...'
+            for i in {1..12}; do
               if curl -s http://localhost:$NEW_PORT/health; then
                 pm2 delete fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
                 echo '✅ 배포 성공'
-              else
-                pm2 delete fit-$NEW_ENV
-                echo '❌ 배포 실패: 헬스 체크 실패'
-                exit 1
+                exit 0
               fi
-            else
-              echo '❌ 배포 실패: dist/main.js 파일이 없습니다'
-              exit 1
-            fi
+              echo 'Waiting for health check... attempt $i'
+              sleep 5
+            done
+
+            echo '❌ 배포 실패: 헬스 체크 실패'
+            pm2 delete fit-$NEW_ENV
+            exit 1
           "
