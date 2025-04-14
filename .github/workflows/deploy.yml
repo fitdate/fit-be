@@ -45,6 +45,10 @@ jobs:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_PORT: 5432
         run: |
+          if [ -z "$DB_HOST" ]; then
+            echo "❌ DB_HOST environment variable is not set"
+            exit 1
+          fi
           echo "Testing database connection to $DB_HOST:$DB_PORT"
           nc -zv $DB_HOST $DB_PORT || {
             echo "❌ Database connection test failed"
