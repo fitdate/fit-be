@@ -4,8 +4,8 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - '**'
-      - '.github/workflows/**'
+      - ''
+      - '.github/workflows/'
       - '!frontend/**'
 
 jobs:
@@ -13,9 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 1 # 최신 커밋만 가져오기
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -34,6 +35,25 @@ jobs:
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
+      - name: Test tar command (for debugging)
+        run: |
+          tar czf - ./* .env > test.tar
+          echo "tar file created"
+          ls -l test.tar
+
+      - name: Test SSH connection (for debugging)
+        run: |
+          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "echo 'SSH connection successful!'"
+
+      - name: Debug tar and ssh pipeline (for debugging)
+        run: |
+          tar czf - ./* .env | tee tar_output.log | ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "cat > ~/fit-green/deployment.tar"
+          cat tar_output.log
+
+      - name: Verify file on EC2 (for debugging)
+        run: |
+          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "ls -l ~/fit-green"
+
       - name: Deploy to EC2
         env:
           HOST: ${{ secrets.HOST }}
@@ -41,11 +61,8 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          # 현재 실행 중인 포트 확인
           CURRENT_PORT=$(ssh $USERNAME@$HOST "curl -s localhost/port || echo $BLUE_PORT")
-          echo "Current port: $CURRENT_PORT"
 
-          # Blue/Green 환경 설정
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT="$GREEN_PORT"
             NEW_ENV="green"
@@ -55,38 +72,27 @@ jobs:
             NEW_ENV="blue"
             CURRENT_ENV="green"
           fi
-          echo "Deploying to $NEW_ENV with port $NEW_PORT"
 
-          # 배포 디렉토리 준비 (없으면 생성)
           ssh $USERNAME@$HOST "mkdir -p ~/fit-blue ~/fit-green"
           ssh $USERNAME@$HOST "rm -rf ~/fit-$NEW_ENV/* || true"
-          echo "Deployment directories prepared"
 
-          # 파일 전송 (압축하여 전송)
-          echo "Starting file transfer to EC2..."
           tar czf - ./* .env | ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && tar xzf -"
-          echo "File transfer completed"
 
-          # 배포 실행
           ssh $USERNAME@$HOST "cd ~/fit-$NEW_ENV && \
-            echo 'Running npm ci' && \
             npm ci && \
-            echo 'Running npm run build' && \
             npm run build && \
             pm2 delete fit-$NEW_ENV 2>/dev/null || true && \
-            echo 'Starting pm2 for $NEW_ENV' && \
             APP_PORT=$NEW_PORT pm2 start dist/main.js --name fit-$NEW_ENV --max-memory-restart 1G && \
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/ && \
             sudo nginx -t && \
             sudo systemctl reload nginx && \
             sleep 5 && \
             if curl -s http://localhost:$NEW_PORT/health; then \
-              echo 'Health check passed. Deployment success!' && \
               pm2 delete fit-$CURRENT_ENV 2>/dev/null || true && \
               sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf && \
               echo '배포 성공' \
             else \
-              echo 'Health check failed. Deployment failed!' && \
               pm2 delete fit-$NEW_ENV && \
+              echo '배포 실패: 헬스 체크 실패' && \
               exit 1 \
             fi"
