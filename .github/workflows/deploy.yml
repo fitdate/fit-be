@@ -97,8 +97,8 @@ jobs:
 
             echo '🔧 Setting up DB permissions...'
             export PGPASSWORD=$DB_PASSWORD
-            echo "GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\";" > /tmp/grant1.sql
-            echo "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";" > /tmp/grant2.sql
+            echo 'GRANT ALL PRIVILEGES ON SCHEMA public TO "'$DB_USER'";' > /tmp/grant1.sql
+            echo 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "'$DB_USER'";' > /tmp/grant2.sql
             psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /tmp/grant1.sql
             psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f /tmp/grant2.sql
 
