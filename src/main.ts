@@ -2,10 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TossPaymentResponse } from './modules/payment/types/toss-payment.types';
+import { RequestMethod } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [
+      {
+        path: 'health',
+        method: RequestMethod.GET,
+      },
+    ],
+  });
 
   const config = new DocumentBuilder()
     .setTitle('FIT API')

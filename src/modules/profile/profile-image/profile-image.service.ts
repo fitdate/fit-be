@@ -45,12 +45,17 @@ export class ProfileImageService {
     const targetPath = join(this.IMAGE_FOLDER, imageName);
 
     try {
-      await rename(tempPath, targetPath);
-      this.logger.log(`Profile image moved successfully: ${imageName}`);
+      // temp 디렉토리에 직접 저장
+      const profileImage = this.profileImageRepository.create({
+        imageUrl: `/temp/${imageName}`,
+        profile: { id: createProfileImageDto.profileId },
+      });
+      
+      await this.profileImageRepository.save(profileImage);
+      this.logger.log(`Profile image saved successfully: ${imageName}`);
     } catch (e) {
       this.logger.error(
-        `Failed to move profile image: ${imageName}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        `Failed to save profile image: ${imageName}`,
         e.stack,
       );
 
@@ -60,7 +65,6 @@ export class ProfileImageService {
       } catch (deleteErr) {
         this.logger.error(
           'Failed to clean up temporary file',
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           deleteErr.stack,
         );
       }
