@@ -34,8 +34,19 @@ import { LocationModule } from './modules/location/location.module';
 import { InterestCategoryModule } from './modules/profile/interest-category/common/interest-category.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-ioredis';
+
 @Module({
   imports: [
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: () => ({
+        store: redisStore,
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      }),
+    }),
     DevtoolsModule.register({
       http: true,
       port: 7001,

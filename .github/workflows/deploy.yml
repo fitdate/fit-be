@@ -40,7 +40,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "ServerAliveInterval 30" >> ~/.ssh/config
-          echo "ServerAliveCountMax 60" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
       - name: Build Docker image
@@ -83,17 +82,33 @@ jobs:
         run: |
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
-          # 원격 서버 디렉토리 권한 확인 및 설정
-          ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
+          # Redis 설치 및 실행
+          ssh $USERNAME@$DB_HOST "
+            if ! command -v redis-server &> /dev/null; then
+              echo '📦 Redis 설치 중...'
+              sudo apt update && sudo apt install -y redis-server
+              sudo systemctl enable redis-server
+              sudo systemctl start redis-server
+            else
+              echo '✅ Redis가 이미 설치되어 있습니다.'
+            fi
 
-          # Nginx 설정 파일 업로드
+            echo '🚀 Redis 상태 확인 중...'
+            sudo systemctl status redis-server || {
+              echo '❌ Redis 실행 실패'
+              exit 1
+            }
+          "
+
+          # Nginx 설정 업로드
+          ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
           ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available"
           scp nginx-config/fit-blue.conf $USERNAME@$DB_HOST:~/fit-blue.conf
           scp nginx-config/fit-green.conf $USERNAME@$DB_HOST:~/fit-green.conf
           ssh $USERNAME@$DB_HOST "sudo mv ~/fit-blue.conf /etc/nginx/sites-available/ && sudo mv ~/fit-green.conf /etc/nginx/sites-available/"
           ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-enabled"
 
-          # 현재 실행 중인 컨테이너 포트 확인
+          # 현재 실행 중인 포트 확인
           CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT=$GREEN_PORT
@@ -108,19 +123,19 @@ jobs:
           # .env 파일 전송
           scp .env $USERNAME@$DB_HOST:~/
 
-          # Blue-Green 배포 실행
+          # Blue-Green 배포
           ssh $USERNAME@$DB_HOST "
             set -e
-            
+
             echo '🧹 기존 프로세스 정리 중...'
             sudo kill -9 \$(sudo lsof -t -i:3000) 2>/dev/null || true
             sudo kill -9 \$(sudo lsof -t -i:3001) 2>/dev/null || true
             sudo docker stop fit-blue fit-green 2>/dev/null || true
             sudo docker rm fit-blue fit-green 2>/dev/null || true
-            
+
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
-            
+
             echo '🚀 새 컨테이너 시작 중...'
             sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
@@ -140,7 +155,7 @@ jobs:
             echo '🔄 Nginx 설정 업데이트 중...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
-            
+
             echo '🏥 Health checking...'
             for i in {1..12}; do
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
@@ -156,7 +171,7 @@ jobs:
               echo '⏳ 헬스 체크 실패, 5초 후 재시도...'
               sleep 5
             done
-            
+
             echo '❌ 배포 실패: 헬스 체크 실패'
             echo '=== 컨테이너 로그 ==='
             sudo docker logs fit-$NEW_ENV
