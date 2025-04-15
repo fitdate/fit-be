@@ -64,6 +64,6 @@ export class User {
   @Column({ type: 'varchar', default: UserRole.USER })
   role: UserRole;
 
-  @Column({ default: 0 })
+  @Column({ nullable: true })
   likeCount: number;
 }
