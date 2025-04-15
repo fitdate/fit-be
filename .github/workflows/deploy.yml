@@ -97,10 +97,8 @@ jobs:
 
             echo '🔧 Setting up DB permissions...'
             export PGPASSWORD=$DB_PASSWORD
-            echo 'GRANT ALL PRIVILEGES ON SCHEMA public TO "'$DB_USER'";' > /tmp/grant1.sql
-            echo 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "'$DB_USER'";' > /tmp/grant2.sql
-            psql -U $DB_USER -h $DB_HOST -d $DB_NAME -f /tmp/grant1.sql
-            psql -U $DB_USER -h $DB_HOST -d $DB_NAME -f /tmp/grant2.sql
+            psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\";"
+            psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";"
 
             echo '🔍 Checking .env...'
             if [ ! -f .env ]; then
