@@ -9,6 +9,8 @@ import {
   IsString,
   IsNumber,
 } from 'class-validator';
+import { UserRole } from 'src/common/enum/user-role.enum';
+
 @Entity()
 export class CreateUserDto extends BaseTable {
   @Expose()
@@ -63,4 +65,9 @@ export class CreateUserDto extends BaseTable {
   @IsOptional()
   @IsNumber()
   longitude?: number;
+
+  @Expose()
+  @IsEnum(UserRole)
+  @IsNotEmpty()
+  role: UserRole;
 }

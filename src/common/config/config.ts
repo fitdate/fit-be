@@ -22,6 +22,15 @@ export const config = () => ({
     audience: process.env.JWT_TOKEN_AUDIENCE,
     issuer: process.env.JWT_TOKEN_ISSUER,
   },
+  seedInitialize: {
+    introduction: process.env.SEED_ENABLE_INTRODUCTION,
+    feedback: process.env.SEED_ENABLE_FEEDBACK,
+    interestCategory: process.env.SEED_ENABLE_INTEREST_CATEGORY,
+  },
+  redis: {
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
+  },
 });
 
 export const validationSchema = Joi.object({
@@ -59,6 +68,11 @@ export const validationSchema = Joi.object({
   JWT_REFRESH_TOKEN_TTL: Joi.string().required(),
   JWT_TOKEN_AUDIENCE: Joi.string().required(),
   JWT_TOKEN_ISSUER: Joi.string().required(),
+  SEED_ENABLE_INTRODUCTION: Joi.boolean().required(),
+  SEED_ENABLE_FEEDBACK: Joi.boolean().required(),
+  SEED_ENABLE_INTEREST_CATEGORY: Joi.boolean().required(),
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().required(),
 });
 
 export const ConfigModuleOptions = {

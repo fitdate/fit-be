@@ -92,6 +92,7 @@ export class AuthService {
       gender,
       phoneNumber,
       address,
+      role,
     } = registerDto;
 
     const userEmail = await this.userService.findUserByEmail(email);
@@ -114,6 +115,7 @@ export class AuthService {
       gender,
       phoneNumber,
       address,
+      role,
     });
 
     return user;
@@ -154,7 +156,7 @@ export class AuthService {
     };
   }
 
-  issueToken(userId: number, userRole: UserRole, isRefreshToken: boolean) {
+  issueToken(userId: string, userRole: UserRole, isRefreshToken: boolean) {
     const accessTokenSecret = this.configService.getOrThrow(
       'jwt.accessTokenSecret',
       {
@@ -201,7 +203,7 @@ export class AuthService {
 
     const token = this.jwtService.sign(
       {
-        id: userId,
+        sub: userId,
         role: userRole,
         type: tokenType,
       },

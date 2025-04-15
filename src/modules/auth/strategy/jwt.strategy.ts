@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { AuthGuard, PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { JwtPayload } from '../types/jwt-payload.types';
+import { TokenPayload } from '../types/token-payload.types';
 
 export class JwtAuthGuard extends AuthGuard('jwt') {}
 
@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  validate(payload: JwtPayload) {
+  validate(payload: TokenPayload) {
     return payload;
   }
 }

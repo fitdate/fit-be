@@ -12,7 +12,7 @@ export type TokenErrorType =
   (typeof TOKEN_ERROR_TYPES)[keyof typeof TOKEN_ERROR_TYPES];
 
 export interface JwtPayload {
-  sub: number;
+  sub: string;
   email: string;
   role: UserRole;
   type: string;

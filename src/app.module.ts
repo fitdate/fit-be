@@ -15,6 +15,11 @@ import { ChatRoomModule } from './modules/chat-room/chat-room.module';
 import { MessageModule } from './modules/message/message.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { InterestLocationModule } from './modules/profile/interest-location/interest-location.module';
+import { MbtiModule } from './modules/profile/mbti/mbti.module';
+import { ProfileImageModule } from './modules/profile/profile-image/profile-image.module';
+import { FeedbackModule } from './modules/profile/feedback/common/feedback.module';
+import { IntroductionModule } from './modules/profile/introduction/common/introduction.module';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -22,11 +27,15 @@ import { RBACGuard } from './modules/auth/guard/rbac.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { config } from './common/config/config';
 import { AllConfig } from './common/config/config.types';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthGuard } from './modules/auth/guard/jwt.guard';
 import { BearerTokenMiddleware } from './modules/auth/middleware/bearer-token.middleware';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
-
+import { LocationModule } from './modules/location/location.module';
+import { InterestCategoryModule } from './modules/profile/interest-category/common/interest-category.module';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { SeedManagerModule } from './modules/seed/seed-manager.module';
+import { RedisModule } from '@nestjs-modules/ioredis';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -74,7 +83,15 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     MessageModule,
     NotificationModule,
     PaymentModule,
+    InterestLocationModule,
+    InterestCategoryModule,
+    MbtiModule,
+    ProfileImageModule,
+    FeedbackModule,
+    IntroductionModule,
     UserModule,
+    LocationModule,
+    SeedManagerModule,
   ],
   controllers: [AppController],
   providers: [
@@ -85,6 +102,10 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     {
       provide: APP_GUARD,
       useClass: RBACGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
     },
   ],
 })

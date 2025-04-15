@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RBAC } from '../decorator/rbac.decorator';
+import { RBAC_KEY } from '../../../common/decorator/rbac.decorator';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { Observable } from 'rxjs';
-import { RequestWithUser } from '../types/rbac-guard.types';
+import { RequestWithAuth } from '../types/auth-guard.types';
 
 @Injectable()
 export class RBACGuard implements CanActivate {
@@ -12,22 +12,22 @@ export class RBACGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const requiredRole = this.reflector.get<UserRole>(
-      RBAC,
+    const requiredRoles = this.reflector.get<UserRole[]>(
+      RBAC_KEY,
       context.getHandler(),
     );
 
-    if (requiredRole === undefined) {
+    if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const request = context.switchToHttp().getRequest<RequestWithAuth>();
     const user = request.user;
 
     if (!user) {
       return false;
     }
 
-    return user.role <= requiredRole;
+    return requiredRoles.includes(user.role);
   }
 }

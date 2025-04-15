@@ -1,13 +1,16 @@
-import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { Like } from '../../like/entities/like.entity';
-import { Pass } from '../../pass/entities/pass.entity';
-import { BaseTable } from 'src/common/entity/base-table.entity';
-
+import { Profile } from 'src/modules/profile/entities/profile.entity';
 @Entity()
-export class User extends BaseTable {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ unique: true })
   email: string;
@@ -33,9 +36,9 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   phoneNumber?: string;
 
-  // @OneToOne(() => Profile, (profile) => profile.user)
-  // @JoinColumn()
-  // profile: Profile;
+  @OneToOne(() => Profile, (profile) => profile.user)
+  @JoinColumn()
+  profile: Profile;
 
   @Column({ nullable: true })
   latitude?: number;
@@ -49,18 +52,6 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   passCount?: number;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  @Column({ type: 'varchar', default: UserRole.USER })
   role: UserRole;
-
-  @OneToMany(() => Like, (like) => like.user)
-  likes: Like[];
-
-  @OneToMany(() => Like, (like) => like.likedUser)
-  likedBy: Like[];
-
-  @OneToMany(() => Pass, (pass) => pass.user)
-  passes: Pass[];
-
-  @OneToMany(() => Pass, (pass) => pass.passedUser)
-  passedBy: Pass[];
 }

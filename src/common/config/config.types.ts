@@ -22,8 +22,20 @@ export interface JwtConfig {
   issuer: string;
 }
 
+export interface SeedInitializeConfig {
+  introduction: boolean;
+  feedback: boolean;
+  interestCategory: boolean;
+}
+
+export interface RedisConfig {
+  host: string;
+  port: number;
+}
+
 export interface AllConfig {
   database: DatabaseConfig;
   app: AppConfig;
   jwt: JwtConfig;
+  seedInitialize: SeedInitializeConfig;
 }
