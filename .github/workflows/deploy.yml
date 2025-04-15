@@ -116,11 +116,8 @@ jobs:
             set -e
             
             echo '🧹 기존 프로세스 정리 중...'
-            # 3000번 포트를 사용하는 모든 프로세스 종료
             sudo kill -9 \$(sudo lsof -t -i:3000) 2>/dev/null || true
             sudo kill -9 \$(sudo lsof -t -i:3001) 2>/dev/null || true
-            
-            # 기존 컨테이너 정리
             sudo docker stop fit-blue fit-green 2>/dev/null || true
             sudo docker rm fit-blue fit-green 2>/dev/null || true
             
@@ -128,7 +125,6 @@ jobs:
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
             
             echo '🚀 새 컨테이너 시작 중...'
-            # 새 컨테이너 실행
             sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
               -v ~/.env:/usr/src/app/.env \
@@ -137,24 +133,12 @@ jobs:
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
 
             echo '🔍 컨테이너 상태 확인 중...'
-            # 컨테이너 상태 확인
             CONTAINER_STATUS=\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)
             if [ \"\$CONTAINER_STATUS\" != \"running\" ]; then
               echo '❌ 컨테이너가 실행 중이지 않습니다. 상태: '\$CONTAINER_STATUS
-              echo '=== 컨테이너 상세 정보 ==='
-              sudo docker inspect fit-$NEW_ENV
-              echo '=== 컨테이너 로그 ==='
               sudo docker logs fit-$NEW_ENV
-              echo '=== 시스템 리소스 상태 ==='
-              sudo docker stats --no-stream fit-$NEW_ENV
               exit 1
             fi
-
-            echo '✅ 컨테이너가 정상 실행 중입니다.'
-            echo '=== 컨테이너 상세 정보 ==='
-            sudo docker inspect fit-$NEW_ENV
-            echo '=== 시스템 리소스 상태 ==='
-            sudo docker stats --no-stream fit-$NEW_ENV
 
             echo '🔄 Nginx 설정 업데이트 중...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
@@ -163,8 +147,8 @@ jobs:
             echo '🏥 Health checking...'
             for i in {1..12}; do
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
-              if curl -s http://localhost:$NEW_PORT/health; then
-                # 성공 시 이전 환경 정리
+              if curl -s -f http://localhost:$NEW_PORT/health | grep -q 'ok'; then
+                echo '✅ 헬스 체크 성공'
                 sudo docker stop fit-$CURRENT_ENV 2>/dev/null || true
                 sudo docker rm fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
@@ -172,11 +156,15 @@ jobs:
                 echo '✅ 배포 성공'
                 exit 0
               fi
+              echo '⏳ 헬스 체크 실패, 5초 후 재시도...'
               sleep 5
             done
             
             echo '❌ 배포 실패: 헬스 체크 실패'
+            echo '=== 컨테이너 로그 ==='
             sudo docker logs fit-$NEW_ENV
+            echo '=== 컨테이너 상태 ==='
+            sudo docker ps -a | grep fit-$NEW_ENV
             sudo docker stop fit-$NEW_ENV
             sudo docker rm fit-$NEW_ENV
             exit 1
