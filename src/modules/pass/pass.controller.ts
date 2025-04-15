@@ -10,9 +10,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 
-@ApiTags('passes')
+@ApiTags('pass')
 @ApiBearerAuth()
-@Controller('passes')
+@Controller('pass')
 @UseGuards(JwtAuthGuard)
 export class PassController {
   constructor(private readonly passService: PassService) {}

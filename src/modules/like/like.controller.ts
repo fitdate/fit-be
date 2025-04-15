@@ -9,9 +9,9 @@ import {
 import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
-@ApiTags('likes')
+@ApiTags('like')
 @ApiBearerAuth()
-@Controller('likes')
+@Controller('like')
 @UseGuards(JwtAuthGuard)
 export class LikeController {
   constructor(private readonly likeService: LikeService) {}
