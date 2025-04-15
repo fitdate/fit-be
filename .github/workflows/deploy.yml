@@ -113,15 +113,15 @@ jobs:
             set -e
             
             echo '🐳 Docker 이미지 다운로드 중...'
-            docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
+            sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
             
             echo '🚀 새 컨테이너 시작 중...'
             # 이미 해당 이름의 컨테이너가 있으면 중지 및 삭제
-            docker stop fit-$NEW_ENV 2>/dev/null || true
-            docker rm fit-$NEW_ENV 2>/dev/null || true
+            sudo docker stop fit-$NEW_ENV 2>/dev/null || true
+            sudo docker rm fit-$NEW_ENV 2>/dev/null || true
             
             # 새 컨테이너 실행
-            docker run -d --name fit-$NEW_ENV \
+            sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
               -v ~/:/app \
               -e APP_PORT=$NEW_PORT \
@@ -137,8 +137,8 @@ jobs:
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
               if curl -s http://localhost:$NEW_PORT/health; then
                 # 성공 시 이전 환경 정리
-                docker stop fit-$CURRENT_ENV 2>/dev/null || true
-                docker rm fit-$CURRENT_ENV 2>/dev/null || true
+                sudo docker stop fit-$CURRENT_ENV 2>/dev/null || true
+                sudo docker rm fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
                 sudo nginx -t && sudo systemctl reload nginx
                 echo '✅ 배포 성공'
@@ -148,8 +148,8 @@ jobs:
             done
             
             echo '❌ 배포 실패: 헬스 체크 실패'
-            docker logs fit-$NEW_ENV
-            docker stop fit-$NEW_ENV
-            docker rm fit-$NEW_ENV
+            sudo docker logs fit-$NEW_ENV
+            sudo docker stop fit-$NEW_ENV
+            sudo docker rm fit-$NEW_ENV
             exit 1
           "
