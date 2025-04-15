@@ -45,9 +45,9 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t fit-backend:$GITHUB_SHA .
-          docker tag fit-backend:$GITHUB_SHA ${{ secrets.DOCKER_USERNAME }}/fit-backend:$GITHUB_SHA
-          docker tag fit-backend:$GITHUB_SHA ${{ secrets.DOCKER_USERNAME }}/fit-backend:latest
+          docker build -t fit-be:$GITHUB_SHA .
+          docker tag fit-be:$GITHUB_SHA ${{ secrets.DOCKER_USERNAME }}/fit-be:$GITHUB_SHA
+          docker tag fit-be:$GITHUB_SHA ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -57,8 +57,8 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/fit-backend:$GITHUB_SHA
-          docker push ${{ secrets.DOCKER_USERNAME }}/fit-backend:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/fit-be:$GITHUB_SHA
+          docker push ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
 
       - name: Test Database Connection
         run: |
@@ -110,7 +110,7 @@ jobs:
             set -e
             
             echo '🐳 Docker 이미지 다운로드 중...'
-            docker pull $DOCKER_USERNAME/fit-backend:$GITHUB_SHA
+            docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
             
             echo '🚀 새 컨테이너 시작 중...'
             # 이미 해당 이름의 컨테이너가 있으면 중지 및 삭제
@@ -123,7 +123,7 @@ jobs:
               -v ~/:/app \
               -e APP_PORT=$NEW_PORT \
               --restart unless-stopped \
-              $DOCKER_USERNAME/fit-backend:$GITHUB_SHA
+              $DOCKER_USERNAME/fit-be:$GITHUB_SHA
             
             echo '🔄 Nginx 설정 업데이트 중...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
