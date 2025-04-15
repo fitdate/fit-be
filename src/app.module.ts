@@ -15,12 +15,6 @@ import { ChatRoomModule } from './modules/chat-room/chat-room.module';
 import { MessageModule } from './modules/message/message.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { PaymentModule } from './modules/payment/payment.module';
-import { InterestLocationModule } from './modules/profile/interest-location/interest-location.module';
-import { InterestCategoryModule } from './modules/profile/interest-category/interest-category.module';
-import { MbtiModule } from './modules/profile/mbti/mbti.module';
-import { ProfileImageModule } from './modules/profile/profile-image/profile-image.module';
-import { FeedbackModule } from './modules/profile/feedback/feedback.module';
-import { IntroductionModule } from './modules/profile/introduction/introduction.module';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -80,12 +74,6 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     MessageModule,
     NotificationModule,
     PaymentModule,
-    InterestLocationModule,
-    InterestCategoryModule,
-    MbtiModule,
-    ProfileImageModule,
-    FeedbackModule,
-    IntroductionModule,
     UserModule,
   ],
   controllers: [AppController],
