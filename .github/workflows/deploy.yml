@@ -108,6 +108,9 @@ jobs:
           # .env 파일 전송
           scp .env $USERNAME@$DB_HOST:~/
 
+          # 디버깅: .env 파일 확인
+          ssh $USERNAME@$DB_HOST "echo '=== .env 파일 내용 ==='; cat ~/.env; echo '==================='"
+
           # Blue-Green 배포 실행
           ssh $USERNAME@$DB_HOST "
             set -e
@@ -128,11 +131,21 @@ jobs:
             # 새 컨테이너 실행
             sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
-              -v ~/:/app \
+              -v ~/.env:/usr/src/app/.env \
               -e APP_PORT=$NEW_PORT \
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
-            
+
+            # 컨테이너 내부 .env 파일 확인
+            echo '=== 컨테이너 내부 .env 파일 내용 ==='
+            sudo docker exec fit-$NEW_ENV cat /usr/src/app/.env
+            echo '=================================='
+
+            # 컨테이너 내부 환경 변수 확인
+            echo '=== 컨테이너 내부 환경 변수 ==='
+            sudo docker exec fit-$NEW_ENV env | grep DB_
+            echo '============================='
+
             echo '🔄 Nginx 설정 업데이트 중...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
