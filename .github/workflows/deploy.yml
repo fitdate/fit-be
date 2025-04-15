@@ -64,10 +64,8 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          # 1. SSH 연결 테스트
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
-          # 2. 현재 실행 중인 포트 확인 후 새 포트 결정
           CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT=$GREEN_PORT
@@ -82,16 +80,13 @@ jobs:
           NEW_DIR="~/fit-$NEW_ENV"
           CURRENT_DIR="~/fit-$CURRENT_ENV"
 
-          # 3. 파일 압축
           echo '📦 Preparing deployment files...'
           tar czf /tmp/deploy.tar.gz ./* .env
 
-          # 4. 서버에 디렉토리 생성 및 파일 전송
           ssh $USERNAME@$DB_HOST "mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true"
           scp /tmp/deploy.tar.gz $USERNAME@$DB_HOST:$NEW_DIR/
           ssh $USERNAME@$DB_HOST "cd $NEW_DIR && tar xzf deploy.tar.gz && rm deploy.tar.gz"
 
-          # 5. 서버에서 배포 스크립트 실행
           ssh $USERNAME@$DB_HOST "
             set -e
             cd $NEW_DIR
@@ -101,9 +96,8 @@ jobs:
             npm ci
 
             echo '🔧 Setting up DB permissions...'
-            export PGPASSWORD='$DB_PASSWORD'
-            psql -h '$DB_HOST' -U '$DB_USER' -d '$DB_NAME' -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\";'
-            psql -h '$DB_HOST' -U '$DB_USER' -d '$DB_NAME' -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";'
+            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c \"GRANT ALL PRIVILEGES ON SCHEMA public TO \\\"$DB_USER\\\";\"
+            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c \"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \\\"$DB_USER\\\";\"
 
             echo '🔍 Checking .env...'
             if [ ! -f .env ]; then
