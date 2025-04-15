@@ -136,15 +136,25 @@ jobs:
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
 
-            # 컨테이너 내부 .env 파일 확인
-            echo '=== 컨테이너 내부 .env 파일 내용 ==='
-            sudo docker exec fit-$NEW_ENV cat /usr/src/app/.env
-            echo '=================================='
+            echo '🔍 컨테이너 상태 확인 중...'
+            # 컨테이너 상태 확인
+            CONTAINER_STATUS=\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)
+            if [ \"\$CONTAINER_STATUS\" != \"running\" ]; then
+              echo '❌ 컨테이너가 실행 중이지 않습니다. 상태: '\$CONTAINER_STATUS
+              echo '=== 컨테이너 상세 정보 ==='
+              sudo docker inspect fit-$NEW_ENV
+              echo '=== 컨테이너 로그 ==='
+              sudo docker logs fit-$NEW_ENV
+              echo '=== 시스템 리소스 상태 ==='
+              sudo docker stats --no-stream fit-$NEW_ENV
+              exit 1
+            fi
 
-            # 컨테이너 내부 환경 변수 확인
-            echo '=== 컨테이너 내부 환경 변수 ==='
-            sudo docker exec fit-$NEW_ENV env | grep DB_
-            echo '============================='
+            echo '✅ 컨테이너가 정상 실행 중입니다.'
+            echo '=== 컨테이너 상세 정보 ==='
+            sudo docker inspect fit-$NEW_ENV
+            echo '=== 시스템 리소스 상태 ==='
+            sudo docker stats --no-stream fit-$NEW_ENV
 
             echo '🔄 Nginx 설정 업데이트 중...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
