@@ -96,8 +96,9 @@ jobs:
             npm ci
 
             echo '🔧 Setting up DB permissions...'
-            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c \"GRANT ALL PRIVILEGES ON SCHEMA public TO \\\"$DB_USER\\\";\"
-            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c \"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \\\"$DB_USER\\\";\"
+            export PGPASSWORD=$DB_PASSWORD
+            psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c \"GRANT ALL PRIVILEGES ON SCHEMA public TO \\\"$DB_USER\\\";\"
+            psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c \"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \\\"$DB_USER\\\";\"
 
             echo '🔍 Checking .env...'
             if [ ! -f .env ]; then
