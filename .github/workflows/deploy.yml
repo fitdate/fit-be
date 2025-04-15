@@ -95,9 +95,10 @@ jobs:
             npm uninstall @nestjs/terminus
             npm ci
 
-            echo '🔧 Setting up DB permissions...'
-            export PGPASSWORD=$DB_PASSWORD
-            echo "GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\"; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";" | psql -U $DB_USER -h $DB_HOST -d $DB_NAME
+            echo '🔧 Setting up DB permissions... (권한 설정 건너뜀)'
+            # 권한 설정 단계 비활성화 - 별도 프로세스로 관리 필요
+            # export PGPASSWORD=$DB_PASSWORD
+            # 권한 설정 명령 제거
 
             echo '🔍 Checking .env...'
             if [ ! -f .env ]; then
