@@ -3,10 +3,13 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UserRole } from 'src/common/enum/user-role.enum';
 
 interface RequestWithUser extends Request {
   user: {
-    sub: number;
+    sub: string;
+    role: UserRole;
+    type: 'access' | 'refresh';
   };
 }
 

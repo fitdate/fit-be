@@ -10,8 +10,8 @@ import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
 export class Like extends BaseTable {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => User, (user) => user.likes)
   @JoinColumn()

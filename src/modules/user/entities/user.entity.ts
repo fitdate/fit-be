@@ -2,11 +2,14 @@ import {
   Column,
   Entity,
   JoinColumn,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { Profile } from 'src/modules/profile/entities/profile.entity';
+import { Like } from 'src/modules/like/entities/like.entity';
+import { Pass } from 'src/modules/pass/entities/pass.entity';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -46,12 +49,21 @@ export class User {
   @Column({ nullable: true })
   longitude?: number;
 
-  @Column({ nullable: true })
-  likeCount?: number;
+  @OneToMany(() => Like, (like) => like.likedUser)
+  likes: Like[];
 
-  @Column({ nullable: true })
-  passCount?: number;
+  @OneToMany(() => Like, (like) => like.user)
+  likedBy: Like[];
+
+  @OneToMany(() => Pass, (pass) => pass.passedUser)
+  passedBy: Pass[];
+
+  @OneToMany(() => Pass, (pass) => pass.user)
+  passes: Pass[];
 
   @Column({ type: 'varchar', default: UserRole.USER })
   role: UserRole;
+
+  @Column({ default: 0 })
+  likeCount: number;
 }

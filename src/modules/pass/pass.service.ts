@@ -13,7 +13,7 @@ export class PassService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async passUser(userId: number, passedUserId: number): Promise<void> {
+  async passUser(userId: string, passedUserId: string): Promise<void> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     const passedUser = await this.userRepository.findOne({
       where: { id: passedUserId },
@@ -32,8 +32,8 @@ export class PassService {
   }
 
   async checkPassStatus(
-    userId: number,
-    passedUserId: number,
+    userId: string,
+    passedUserId: string,
   ): Promise<boolean> {
     const pass = await this.passRepository.findOne({
       where: {

@@ -26,7 +26,7 @@ export class PassController {
     @GetUser() user: User,
     @Param('passedUserId') passedUserId: string,
   ) {
-    return this.passService.passUser(user.id, parseInt(passedUserId));
+    return this.passService.passUser(user.id, passedUserId);
   }
 
   @Get(':passedUserId/status')
@@ -37,6 +37,6 @@ export class PassController {
     @GetUser() user: User,
     @Param('passedUserId') passedUserId: string,
   ) {
-    return this.passService.checkPassStatus(user.id, parseInt(passedUserId));
+    return this.passService.checkPassStatus(user.id, passedUserId);
   }
 }

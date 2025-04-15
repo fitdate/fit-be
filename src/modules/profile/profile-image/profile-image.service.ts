@@ -50,23 +50,17 @@ export class ProfileImageService {
         imageUrl: `/temp/${imageName}`,
         profile: { id: createProfileImageDto.profileId },
       });
-      
+
       await this.profileImageRepository.save(profileImage);
       this.logger.log(`Profile image saved successfully: ${imageName}`);
     } catch (e) {
-      this.logger.error(
-        `Failed to save profile image: ${imageName}`,
-        e.stack,
-      );
+      this.logger.error(`Failed to save profile image: ${imageName}`, e.stack);
 
       try {
         await unlink(tempPath);
         this.logger.log('Temporary file cleaned up successfully');
       } catch (deleteErr) {
-        this.logger.error(
-          'Failed to clean up temporary file',
-          deleteErr.stack,
-        );
+        this.logger.error('Failed to clean up temporary file', deleteErr.stack);
       }
       throw new InternalServerErrorException(
         '프로필 이미지 저장에 실패했습니다.',

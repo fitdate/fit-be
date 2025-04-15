@@ -4,8 +4,8 @@ import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
 export class Pass extends BaseTable {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => User, (user) => user.passes)
   @JoinColumn()

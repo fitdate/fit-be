@@ -16,8 +16,8 @@ export class LikeService {
   ) {}
 
   async toggleLike(
-    userId: number,
-    likedUserId: number,
+    userId: string,
+    likedUserId: string,
   ): Promise<{ isLiked: boolean }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     const likedUser = await this.userRepository.findOne({
@@ -69,7 +69,7 @@ export class LikeService {
     }
   }
 
-  async checkLikeStatus(userId: number, likedUserId: number): Promise<boolean> {
+  async checkLikeStatus(userId: string, likedUserId: string): Promise<boolean> {
     const like = await this.likeRepository.findOne({
       where: {
         user: { id: userId },

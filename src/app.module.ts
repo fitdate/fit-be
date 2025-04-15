@@ -15,7 +15,6 @@ import { ChatRoomModule } from './modules/chat-room/chat-room.module';
 import { MessageModule } from './modules/message/message.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { PaymentModule } from './modules/payment/payment.module';
-import { InterestLocationModule } from './modules/profile/interest-location/interest-location.module';
 import { MbtiModule } from './modules/profile/mbti/mbti.module';
 import { ProfileImageModule } from './modules/profile/profile-image/profile-image.module';
 import { FeedbackModule } from './modules/profile/feedback/common/feedback.module';
@@ -35,7 +34,6 @@ import { LocationModule } from './modules/location/location.module';
 import { InterestCategoryModule } from './modules/profile/interest-category/common/interest-category.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
-import { RedisModule } from '@nestjs-modules/ioredis';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -83,7 +81,6 @@ import { RedisModule } from '@nestjs-modules/ioredis';
     MessageModule,
     NotificationModule,
     PaymentModule,
-    InterestLocationModule,
     InterestCategoryModule,
     MbtiModule,
     ProfileImageModule,

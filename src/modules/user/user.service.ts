@@ -24,6 +24,6 @@ export class UserService {
   }
 
   findOne(id: string) {
-    return this.userRepository.findOne({ where: { id: parseInt(id) } });
+    return this.userRepository.findOne({ where: { id } });
   }
 }
