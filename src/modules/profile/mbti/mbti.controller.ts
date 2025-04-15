@@ -3,7 +3,7 @@ import { MbtiService } from './mbti.service';
 import { MbtiType } from './constants/mbti.constants';
 import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { Mbti } from './entities/mbti.entity';
-import { MbtiRecommendResponse } from './dto/mbti-recommend.response';
+import { MbtiRecommendResponse } from './dto/mbti-recommend.response.dto';
 
 @Controller('mbti')
 export class MbtiController {

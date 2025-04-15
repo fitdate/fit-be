@@ -8,7 +8,7 @@ import {
   MBTI_LIST,
   MBTI_RECOMMEND_LIST,
 } from './constants/mbti.constants';
-import { MbtiRecommendResponse } from './dto/mbti-recommend.response';
+import { MbtiRecommendResponse } from './dto/mbti-recommend.response.dto';
 
 @Injectable()
 export class MbtiService {

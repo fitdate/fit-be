@@ -37,6 +37,7 @@
     "@nestjs/swagger": "^11.1.1",
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.0.15",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "cache-manager-ioredis": "^2.1.0",

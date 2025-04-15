@@ -35,6 +35,7 @@ import { InterestCategoryModule } from './modules/profile/interest-category/comm
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { S3Module } from './modules/s3/s3.module';
 import * as redisStore from 'cache-manager-ioredis';
 
 @Module({
@@ -100,6 +101,7 @@ import * as redisStore from 'cache-manager-ioredis';
     UserModule,
     LocationModule,
     SeedManagerModule,
+    S3Module,
   ],
   controllers: [AppController],
   providers: [
