@@ -112,14 +112,19 @@ jobs:
           ssh $USERNAME@$DB_HOST "
             set -e
             
+            echo '🧹 기존 프로세스 정리 중...'
+            # 3000번 포트를 사용하는 모든 프로세스 종료
+            sudo kill -9 \$(sudo lsof -t -i:3000) 2>/dev/null || true
+            sudo kill -9 \$(sudo lsof -t -i:3001) 2>/dev/null || true
+            
+            # 기존 컨테이너 정리
+            sudo docker stop fit-blue fit-green 2>/dev/null || true
+            sudo docker rm fit-blue fit-green 2>/dev/null || true
+            
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
             
             echo '🚀 새 컨테이너 시작 중...'
-            # 이미 해당 이름의 컨테이너가 있으면 중지 및 삭제
-            sudo docker stop fit-$NEW_ENV 2>/dev/null || true
-            sudo docker rm fit-$NEW_ENV 2>/dev/null || true
-            
             # 새 컨테이너 실행
             sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
