@@ -97,8 +97,7 @@ jobs:
 
             echo '🔧 Setting up DB permissions...'
             export PGPASSWORD=$DB_PASSWORD
-            psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\";"
-            psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";"
+            echo "GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\"; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";" | psql -U $DB_USER -h $DB_HOST -d $DB_NAME
 
             echo '🔍 Checking .env...'
             if [ ! -f .env ]; then
