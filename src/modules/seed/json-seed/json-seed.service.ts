@@ -30,7 +30,10 @@ export class JsonSeedService {
   writeSeed<T>(filePath: string, data: T[]) {
     try {
       const absolutePath = join(process.cwd(), filePath);
-      const dir = absolutePath.substring(0, absolutePath.lastIndexOf(process.platform === 'win32' ? '\\' : '/'));
+      const dir = absolutePath.substring(
+        0,
+        absolutePath.lastIndexOf(process.platform === 'win32' ? '\\' : '/'),
+      );
 
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });

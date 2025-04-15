@@ -2,8 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsIn } from 'class-validator';
 
 export class CreateUserMbtiDto {
-  pr
-
   @ApiProperty({
     description: 'MBTI 이름',
     example: 'ISTJ',

@@ -7,7 +7,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { UserId } from 'src/common/decorator/get-user.decorator';
 
 @ApiTags('like')
 @ApiBearerAuth()
@@ -22,7 +22,7 @@ export class LikeController {
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   async likeUser(
-    @GetUser('id') userId: string,
+    @UserId('id') userId: string,
     @Param('likedUserId') likedUserId: string,
   ): Promise<void> {
     await this.likeService.toggleLike(userId, likedUserId);
@@ -33,7 +33,7 @@ export class LikeController {
   @ApiResponse({ status: 200, description: '좋아요 상태 반환' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   async checkLikeStatus(
-    @GetUser('id') userId: string,
+    @UserId('id') userId: string,
     @Param('likedUserId') likedUserId: string,
   ): Promise<boolean> {
     return this.likeService.checkLikeStatus(userId, likedUserId);
