@@ -15,7 +15,7 @@ export class ProfileImageFilePipe
   implements PipeTransform<MulterFile[], Promise<MulterFile[]>>
 {
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  private readonly WARNING_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+  private readonly WARNING_FILE_SIZE = 500 * 1024; // 500KB
   private readonly DEFAULT_QUALITY = 100;
   private readonly TEMP_DIR = join(process.cwd(), 'public', 'temp');
   private readonly IMAGE_DIR = join(process.cwd(), 'public', 'profile-images');
