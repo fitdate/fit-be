@@ -1,4 +1,4 @@
-name: Deploy Backend Application # 백엔드 배포
+name: Deploy Backend Application
 
 on:
   push:
@@ -15,6 +15,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -41,16 +42,13 @@ jobs:
           echo "${{ secrets.ENV_FILE }}" > .env
 
       - name: Test Database Connection
-        env:
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: 5432
         run: |
-          if [ -z "$DB_HOST" ]; then
+          if [ -z "${{ secrets.DB_HOST }}" ]; then
             echo "❌ DB_HOST environment variable is not set"
             exit 1
           fi
-          echo "Testing database connection to $DB_HOST:$DB_PORT"
-          nc -zv $DB_HOST $DB_PORT || {
+          echo "Testing database connection to ${{ secrets.DB_HOST }}:5432"
+          nc -zv ${{ secrets.DB_HOST }} 5432 || {
             echo "❌ Database connection test failed"
             exit 1
           }
@@ -59,6 +57,9 @@ jobs:
       - name: Deploy to EC2
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           USERNAME: ${{ secrets.USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
@@ -66,14 +67,14 @@ jobs:
           # 1. SSH 연결 테스트
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
-          # 2. 배포 환경 설정
+          # 2. 현재 실행 중인 포트 확인 후 새 포트 결정
           CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
-            NEW_PORT="$GREEN_PORT"
+            NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
             CURRENT_ENV="blue"
           else
-            NEW_PORT="$BLUE_PORT"
+            NEW_PORT=$BLUE_PORT
             NEW_ENV="blue"
             CURRENT_ENV="green"
           fi
@@ -81,73 +82,51 @@ jobs:
           NEW_DIR="~/fit-$NEW_ENV"
           CURRENT_DIR="~/fit-$CURRENT_ENV"
 
-          # 3. 파일 전송 준비
+          # 3. 파일 압축
           echo '📦 Preparing deployment files...'
           tar czf /tmp/deploy.tar.gz ./* .env
 
-          # 4. 배포 스크립트 실행
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$DB_HOST "
-            set -e
-            
-            # 4.1 디렉토리 준비
-            echo '🔄 Creating deployment directory...'
-            mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true
-            cd $NEW_DIR
-          "
-
-          # 5. 파일 전송 및 압축 해제
-          echo '📦 Transferring and extracting files...'
+          # 4. 서버에 디렉토리 생성 및 파일 전송
+          ssh $USERNAME@$DB_HOST "mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true"
           scp /tmp/deploy.tar.gz $USERNAME@$DB_HOST:$NEW_DIR/
           ssh $USERNAME@$DB_HOST "cd $NEW_DIR && tar xzf deploy.tar.gz && rm deploy.tar.gz"
 
-          # 6. 애플리케이션 설정 및 실행
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=60 $USERNAME@$DB_HOST "
+          # 5. 서버에서 배포 스크립트 실행
+          ssh $USERNAME@$DB_HOST "
+            set -e
             cd $NEW_DIR
 
-            # 6.1 의존성 설치
             echo '📦 Installing dependencies...'
             npm uninstall @nestjs/terminus
             npm ci
 
-            # 6.2 DB 권한 설정
-            echo '🔧 Setting up database permissions...'
-            export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            psql -h '${{ secrets.DB_HOST }}' -U '${{ secrets.DB_USER }}' -d '${{ secrets.DB_NAME }}' -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO \"${{ secrets.DB_USER }}\";'
-            psql -h '${{ secrets.DB_HOST }}' -U '${{ secrets.DB_USER }}' -d '${{ secrets.DB_NAME }}' -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"${{ secrets.DB_USER }}\";'
+            echo '🔧 Setting up DB permissions...'
+            export PGPASSWORD='$DB_PASSWORD'
+            psql -h '$DB_HOST' -U '$DB_USER' -d '$DB_NAME' -c 'GRANT ALL PRIVILEGES ON SCHEMA public TO \"$DB_USER\";'
+            psql -h '$DB_HOST' -U '$DB_USER' -d '$DB_NAME' -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$DB_USER\";'
 
-            # 6.3 환경 변수 확인
-            echo '🔍 Checking environment variables...'
+            echo '🔍 Checking .env...'
             if [ ! -f .env ]; then
               echo '❌ .env file not found'
               exit 1
             fi
 
-            # 6.4 빌드
-            echo '🔨 Building application...'
+            echo '🔨 Building app...'
             ./node_modules/.bin/nest build
-
             if [ ! -f dist/src/main.js ]; then
               echo '❌ Build failed: dist/src/main.js not found'
               ls -la dist/
               exit 1
             fi
 
-            # 6.5 PM2 실행
             echo '🚀 Starting PM2...'
             pm2 delete fit-$NEW_ENV 2>/dev/null || true
             APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G --max-restarts 0 --update-env
 
-            # 6.6 애플리케이션 시작 대기
-            echo '⏳ Waiting for application to start...'
-            sleep 10
-            pm2 logs fit-$NEW_ENV --lines 50 || true
-
-            # 6.7 Nginx 설정
             echo '🔄 Configuring Nginx...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
 
-            # 6.8 헬스 체크
             echo '🏥 Health checking...'
             for i in {1..12}; do
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
@@ -157,11 +136,9 @@ jobs:
                 echo '✅ 배포 성공'
                 exit 0
               fi
-              echo 'Waiting for next attempt...'
               sleep 5
             done
 
-            # 6.9 실패 처리
             echo '❌ 배포 실패: 헬스 체크 실패'
             pm2 logs fit-$NEW_ENV --lines 50 || true
             pm2 delete fit-$NEW_ENV
