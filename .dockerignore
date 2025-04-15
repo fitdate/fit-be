@@ -1,0 +1,41 @@
+# 의존성
+node_modules
+npm-debug.log
+
+# 빌드 결과물
+dist
+build
+
+# Git
+.git
+.gitignore
+
+# 환경 설정 (중요: Dockerfile에서 별도로 복사)
+.env
+.env.*
+!.env.example
+
+# 로그
+logs
+*.log
+
+# 테스트
+test
+coverage
+.nyc_output
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# 기타
+README.md
+docker-compose.yml
+*.md
+.dockerignore 

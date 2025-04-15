@@ -10,6 +10,8 @@ on:
       - '.env.example'
       - 'nest-cli.json'
       - '.github/workflows/**'
+      - 'Dockerfile'
+      - 'nginx-config/**'
       - '!frontend/**'
 
 jobs:
@@ -41,6 +43,23 @@ jobs:
           echo "ServerAliveCountMax 60" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
+      - name: Build Docker image
+        run: |
+          docker build -t fit-backend:$GITHUB_SHA .
+          docker tag fit-backend:$GITHUB_SHA ${{ secrets.DOCKER_USERNAME }}/fit-backend:$GITHUB_SHA
+          docker tag fit-backend:$GITHUB_SHA ${{ secrets.DOCKER_USERNAME }}/fit-backend:latest
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/fit-backend:$GITHUB_SHA
+          docker push ${{ secrets.DOCKER_USERNAME }}/fit-backend:latest
+
       - name: Test Database Connection
         run: |
           if [ -z "${{ secrets.DB_HOST }}" ]; then
@@ -57,15 +76,21 @@ jobs:
       - name: Deploy to EC2
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           USERNAME: ${{ secrets.USERNAME }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
+          # Nginx 설정 파일 업로드
+          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available"
+          scp nginx-config/fit-blue.conf $USERNAME@$DB_HOST:~/fit-blue.conf
+          scp nginx-config/fit-green.conf $USERNAME@$DB_HOST:~/fit-green.conf
+          ssh $USERNAME@$DB_HOST "sudo mv ~/fit-blue.conf /etc/nginx/sites-available/ && sudo mv ~/fit-green.conf /etc/nginx/sites-available/"
+          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-enabled"
+
+          # 현재 실행 중인 컨테이너 포트 확인
           CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT=$GREEN_PORT
@@ -77,65 +102,51 @@ jobs:
             CURRENT_ENV="green"
           fi
 
-          NEW_DIR="~/fit-$NEW_ENV"
-          CURRENT_DIR="~/fit-$CURRENT_ENV"
+          # .env 파일 전송
+          scp .env $USERNAME@$DB_HOST:~/
 
-          echo '📦 Preparing deployment files...'
-          tar czf /tmp/deploy.tar.gz ./* .env
-
-          ssh $USERNAME@$DB_HOST "mkdir -p $NEW_DIR && rm -rf $NEW_DIR/* || true"
-          scp /tmp/deploy.tar.gz $USERNAME@$DB_HOST:$NEW_DIR/
-          ssh $USERNAME@$DB_HOST "cd $NEW_DIR && tar xzf deploy.tar.gz && rm deploy.tar.gz"
-
+          # Blue-Green 배포 실행
           ssh $USERNAME@$DB_HOST "
             set -e
-            cd $NEW_DIR
-
-            echo '📦 Installing dependencies...'
-            npm uninstall @nestjs/terminus
-            npm ci
-
-            echo '🔧 Setting up DB permissions... (권한 설정 건너뜀)'
-            # 권한 설정 단계 비활성화 - 별도 프로세스로 관리 필요
-            # export PGPASSWORD=$DB_PASSWORD
-            # 권한 설정 명령 제거
-
-            echo '🔍 Checking .env...'
-            if [ ! -f .env ]; then
-              echo '❌ .env file not found'
-              exit 1
-            fi
-
-            echo '🔨 Building app...'
-            ./node_modules/.bin/nest build
-            if [ ! -f dist/src/main.js ]; then
-              echo '❌ Build failed: dist/src/main.js not found'
-              ls -la dist/
-              exit 1
-            fi
-
-            echo '🚀 Starting PM2...'
-            pm2 delete fit-$NEW_ENV 2>/dev/null || true
-            APP_PORT=$NEW_PORT pm2 start dist/src/main.js --name fit-$NEW_ENV --max-memory-restart 1G --max-restarts 0 --update-env
-
-            echo '🔄 Configuring Nginx...'
+            
+            echo '🐳 Docker 이미지 다운로드 중...'
+            docker pull $DOCKER_USERNAME/fit-backend:$GITHUB_SHA
+            
+            echo '🚀 새 컨테이너 시작 중...'
+            # 이미 해당 이름의 컨테이너가 있으면 중지 및 삭제
+            docker stop fit-$NEW_ENV 2>/dev/null || true
+            docker rm fit-$NEW_ENV 2>/dev/null || true
+            
+            # 새 컨테이너 실행
+            docker run -d --name fit-$NEW_ENV \
+              -p $NEW_PORT:3000 \
+              -v ~/:/app \
+              -e APP_PORT=$NEW_PORT \
+              --restart unless-stopped \
+              $DOCKER_USERNAME/fit-backend:$GITHUB_SHA
+            
+            echo '🔄 Nginx 설정 업데이트 중...'
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
-
+            
             echo '🏥 Health checking...'
             for i in {1..12}; do
               echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
               if curl -s http://localhost:$NEW_PORT/health; then
-                pm2 delete fit-$CURRENT_ENV 2>/dev/null || true
+                # 성공 시 이전 환경 정리
+                docker stop fit-$CURRENT_ENV 2>/dev/null || true
+                docker rm fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
+                sudo nginx -t && sudo systemctl reload nginx
                 echo '✅ 배포 성공'
                 exit 0
               fi
               sleep 5
             done
-
+            
             echo '❌ 배포 실패: 헬스 체크 실패'
-            pm2 logs fit-$NEW_ENV --lines 50 || true
-            pm2 delete fit-$NEW_ENV
+            docker logs fit-$NEW_ENV
+            docker stop fit-$NEW_ENV
+            docker rm fit-$NEW_ENV
             exit 1
           "
