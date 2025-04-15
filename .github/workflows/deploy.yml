@@ -83,6 +83,9 @@ jobs:
         run: |
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
+          # 원격 서버 디렉토리 권한 확인 및 설정
+          ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
+
           # Nginx 설정 파일 업로드
           ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available"
           scp nginx-config/fit-blue.conf $USERNAME@$DB_HOST:~/fit-blue.conf
