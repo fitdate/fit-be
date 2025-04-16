@@ -32,7 +32,7 @@ import { BearerTokenMiddleware } from './modules/auth/middleware/bearer-token.mi
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { LocationModule } from './modules/location/location.module';
 import { InterestCategoryModule } from './modules/profile/interest-category/common/interest-category.module';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LoggingInterceptor } from './common/interceptor/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { S3Module } from './modules/s3/s3.module';
