@@ -10,6 +10,8 @@ import { TokenPayload } from './types/token-payload.types';
 import { EmailLoginDto } from './dto/email-login.dto';
 import { MailerService } from '../mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
+import { parseTimeToSeconds } from 'src/common/util/time.util';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -237,13 +239,14 @@ export class AuthService {
     }
     // 이메일 토큰 생성
     const token = this.mailerService.generateEmailToken(email);
-    // Redis에 토큰 저장 (env에 설정된 토큰 만료 시간)
+    // Redis에 토큰 저장
     const tokenKey = `email-verification:${email}`;
-    await this.redisService.set(
-      tokenKey,
-      token,
-      this.configService.getOrThrow('mailer.tokenTtl', { infer: true }),
-    );
+    // 시간 문자열을 초 단위로 변환
+    const tokenTtlStr = this.configService.getOrThrow('mailer.tokenTtl', {
+      infer: true,
+    });
+    const tokenTtlSeconds = parseTimeToSeconds(tokenTtlStr);
+    await this.redisService.set(tokenKey, token, tokenTtlSeconds);
     // 생성한 토큰을 전달하여 이메일 발송
     await this.mailerService.sendEmailVerification(email, token);
     return { success: true };
@@ -262,9 +265,10 @@ export class AuthService {
       if (!storedToken || storedToken !== token) {
         throw new UnauthorizedException('유효하지 않거나 만료된 토큰입니다.');
       }
-      // 인증 완료 상태 저장 (다른 키 사용)
+      // 인증 완료 상태 저장
       const verifiedKey = `email-verified:${email}`;
-      await this.redisService.set(verifiedKey, 'verified', 60 * 60 * 24); // 24시간
+      const verifiedTtlSeconds = 60 * 60; // 1시간
+      await this.redisService.set(verifiedKey, 'verified', verifiedTtlSeconds);
       // 인증 토큰 삭제
       await this.redisService.del(tokenKey);
       return {

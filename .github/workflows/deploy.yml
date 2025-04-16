@@ -125,6 +125,12 @@ jobs:
               -e APP_PORT=$NEW_PORT \
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
+              
+            echo '🔌 네트워크 및 Redis 연결 중...'
+            # 새 컨테이너에 fit-network 연결
+            sudo docker network connect fit-network fit-$NEW_ENV || true
+            # Redis 연결 설정
+            sudo docker network connect redis-network fit-$NEW_ENV || true
 
             echo '🔍 컨테이너 상태 확인 중...'
             CONTAINER_STATUS=\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)
