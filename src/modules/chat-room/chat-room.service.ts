@@ -6,21 +6,40 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatRoom } from './entities/chat-room.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class ChatRoomService {
   constructor(
     @InjectRepository(ChatRoom)
     private readonly chatRoomRepository: Repository<ChatRoom>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   // 새로운 채팅방을 생성하고 기본적으로 활성화 상태로 설정
-  async create(title: string, participants: string[]): Promise<ChatRoom> {
+  async create(title: string, participantIds: string[]): Promise<ChatRoom> {
+    // 참여자 조회
+    const users = await Promise.all(
+      participantIds.map(async (userId) => {
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        if (!user) {
+          throw new NotFoundException(
+            `사용자를 찾을 수 없습니다. (ID: ${userId})`,
+          );
+        }
+        return user;
+      }),
+    );
+
     const chatRoom = this.chatRoomRepository.create({
       title,
-      participants,
       isActive: true,
+      users,
     });
+
     return await this.chatRoomRepository.save(chatRoom);
   }
 
@@ -34,16 +53,11 @@ export class ChatRoomService {
   }> {
     const query = this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .select([
-        'chatRoom.id',
-        'chatRoom.title',
-        'chatRoom.participants',
-        'chatRoom.createdAt',
-      ])
+      .select(['chatRoom.id', 'chatRoom.title', 'chatRoom.createdAt'])
       .where('chatRoom.isActive = :isActive', { isActive: true })
       .orderBy('chatRoom.createdAt', 'DESC')
       .addOrderBy('chatRoom.id', 'DESC')
-      .take(limit + 1); // 다음 페이지 존재 여부 확인을 위해 +1
+      .take(limit + 1);
 
     if (cursor) {
       const [createdAt, id] = cursor.split('_');
@@ -81,13 +95,7 @@ export class ChatRoomService {
   async findOne(id: string): Promise<ChatRoom> {
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id, isActive: true },
-      select: {
-        id: true,
-        title: true,
-        participants: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      relations: ['users'],
     });
     if (!chatRoom) {
       throw new NotFoundException(`채팅방을 찾을 수 없습니다. (ID: ${id})`);
@@ -95,15 +103,10 @@ export class ChatRoomService {
     return chatRoom;
   }
 
-  // 채팅방의 제목과 참여자 목록을 업데이트
-  async update(
-    id: string,
-    title: string,
-    participants: string[],
-  ): Promise<ChatRoom> {
+  // 채팅방의 제목을 업데이트
+  async update(id: string, title: string): Promise<ChatRoom> {
     const chatRoom = await this.findOne(id);
     chatRoom.title = title;
-    chatRoom.participants = participants;
     return await this.chatRoomRepository.save(chatRoom);
   }
 
@@ -114,43 +117,42 @@ export class ChatRoomService {
     await this.chatRoomRepository.save(chatRoom);
   }
 
-  // 이미 참여 중인 사용자인 경우 BadRequestException 발생
+  // 참여자 추가
   async addParticipant(id: string, userId: string): Promise<ChatRoom> {
-    const result = (await this.chatRoomRepository
-      .createQueryBuilder()
-      .update(ChatRoom)
-      .set({ participants: () => `array_append(participants, :userId)` })
-      .where('id = :id', { id })
-      .andWhere('isActive = :isActive', { isActive: true })
-      .andWhere('NOT participants @> ARRAY[:userId]', { userId })
-      .setParameter('userId', userId)
-      .returning('*')
-      .execute()) as { affected: number; raw: ChatRoom[] };
+    const chatRoom = await this.findOne(id);
+    const user = await this.userRepository.findOne({ where: { id: userId } });
 
-    if (result.affected === 0) {
+    if (!user) {
+      throw new NotFoundException(`사용자를 찾을 수 없습니다. (ID: ${userId})`);
+    }
+
+    // 이미 참여 중인지 확인
+    const isAlreadyParticipant = chatRoom.users.some(
+      (participant) => participant.id === userId,
+    );
+    if (isAlreadyParticipant) {
       throw new BadRequestException('이미 채팅방에 참여 중인 사용자입니다.');
     }
 
-    return result.raw[0];
+    // 참여자 추가
+    chatRoom.users.push(user);
+    return await this.chatRoomRepository.save(chatRoom);
   }
 
-  // 존재하지 않는 참여자인 경우 BadRequestException 발생
+  // 참여자 제거
   async removeParticipant(id: string, userId: string): Promise<ChatRoom> {
-    const result = (await this.chatRoomRepository
-      .createQueryBuilder()
-      .update(ChatRoom)
-      .set({ participants: () => `array_remove(participants, :userId)` })
-      .where('id = :id', { id })
-      .andWhere('isActive = :isActive', { isActive: true })
-      .andWhere('participants @> ARRAY[:userId]', { userId })
-      .setParameter('userId', userId)
-      .returning('*')
-      .execute()) as { affected: number; raw: ChatRoom[] };
+    const chatRoom = await this.findOne(id);
 
-    if (result.affected === 0) {
+    // 참여 중인지 확인
+    const participantIndex = chatRoom.users.findIndex(
+      (user) => user.id === userId,
+    );
+    if (participantIndex === -1) {
       throw new BadRequestException('채팅방에 존재하지 않는 사용자입니다.');
     }
 
-    return result.raw[0];
+    // 참여자 제거
+    chatRoom.users.splice(participantIndex, 1);
+    return await this.chatRoomRepository.save(chatRoom);
   }
 }

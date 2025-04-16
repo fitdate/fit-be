@@ -9,7 +9,6 @@ import {
 import { Message } from '../../message/entities/message.entity';
 import { BaseTable } from 'src/common/entity/base-table.entity';
 import { User } from '../../user/entities/user.entity';
-import { ChatRoomUser } from './chat-room-user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('chat_rooms')
@@ -26,20 +25,12 @@ export class ChatRoom extends BaseTable {
   @Column({ default: true })
   isActive: boolean;
 
-  @ApiProperty()
-  @Column('text', { array: true, default: [] })
-  participants: string[];
-
   @ApiProperty({ type: () => [Message] })
   @OneToMany(() => Message, (message) => message.chatRoom)
   messages: Message[];
 
-  @ApiProperty({ type: () => [ChatRoomUser] })
-  @OneToMany(() => ChatRoomUser, (chatRoomUser) => chatRoomUser.chatRoom)
-  chatRoomUsers: ChatRoomUser[];
-
   @ApiProperty({ type: () => [User] })
-  @ManyToMany(() => User, (user) => user.chatRooms, { cascade: true })
+  @ManyToMany(() => User, (user) => user.chatRooms)
   @JoinTable({
     name: 'chat_room_users',
     joinColumn: {

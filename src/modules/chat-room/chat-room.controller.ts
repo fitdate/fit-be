@@ -51,10 +51,14 @@ export class ChatRoomController {
       throw new ForbiddenException('사용자를 찾을 수 없습니다.');
     }
 
-    return this.chatRoomService.create(createChatRoomDto.title, [
-      ...createChatRoomDto.participants,
-      user.id.toString(),
-    ]);
+    const uniqueParticipants = Array.from(
+      new Set([...createChatRoomDto.participants, user.id]),
+    );
+
+    return this.chatRoomService.create(
+      createChatRoomDto.title,
+      uniqueParticipants,
+    );
   }
 
   @ApiOperation({
@@ -110,11 +114,7 @@ export class ChatRoomController {
       throw new ForbiddenException('사용자를 찾을 수 없습니다.');
     }
 
-    return this.chatRoomService.update(
-      id,
-      updateChatRoomDto.title,
-      updateChatRoomDto.participants,
-    );
+    return this.chatRoomService.update(id, updateChatRoomDto.title);
   }
 
   @ApiOperation({

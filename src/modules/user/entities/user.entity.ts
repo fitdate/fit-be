@@ -13,7 +13,6 @@ import { Like } from 'src/modules/like/entities/like.entity';
 import { Pass } from 'src/modules/pass/entities/pass.entity';
 import { Payment } from 'src/modules/payment/entities/payment.entity';
 import { ChatRoom } from 'src/modules/chat-room/entities/chat-room.entity';
-import { ChatRoomUser } from 'src/modules/chat-room/entities/chat-room-user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
@@ -89,10 +88,6 @@ export class User {
   @ApiProperty({ type: () => [ChatRoom] })
   @ManyToMany(() => ChatRoom, (chatRoom) => chatRoom.users)
   chatRooms: ChatRoom[];
-
-  @ApiProperty({ type: () => [ChatRoomUser] })
-  @OneToMany(() => ChatRoomUser, (chatRoomUser) => chatRoomUser.user)
-  chatRoomUsers: ChatRoomUser[];
 
   @ApiProperty()
   @Column({ type: 'varchar', default: UserRole.USER })

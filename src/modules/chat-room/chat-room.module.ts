@@ -6,11 +6,11 @@ import { ChatRoomController } from './chat-room.controller';
 import { ChatRoomGateway } from './chat-room.gateway';
 import { MessageModule } from '../message/message.module';
 import { UserModule } from '../user/user.module';
-import { ChatRoomUser } from './entities/chat-room-user.entity';
+import { User } from '../user/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatRoom, ChatRoomUser]),
+    TypeOrmModule.forFeature([ChatRoom, User]),
     forwardRef(() => MessageModule),
     forwardRef(() => UserModule),
   ],
