@@ -237,9 +237,13 @@ export class AuthService {
     }
     // 이메일 토큰 생성
     const token = this.mailerService.generateEmailToken(email);
-    // Redis에 토큰 저장 (15분 만료)
+    // Redis에 토큰 저장 (env에 설정된 토큰 만료 시간)
     const tokenKey = `email-verification:${email}`;
-    await this.redisService.set(tokenKey, token, 60 * 15); // 15분
+    await this.redisService.set(
+      tokenKey,
+      token,
+      this.configService.getOrThrow('mailer.tokenTtl', { infer: true }),
+    );
     // 생성한 토큰을 전달하여 이메일 발송
     await this.mailerService.sendEmailVerification(email, token);
     return { success: true };
