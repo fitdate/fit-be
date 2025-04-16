@@ -26,6 +26,10 @@ export class ChatRoom extends BaseTable {
   @Column({ default: true })
   isActive: boolean;
 
+  @ApiProperty()
+  @Column('text', { array: true, default: [] })
+  participants: string[];
+
   @ApiProperty({ type: () => [Message] })
   @OneToMany(() => Message, (message) => message.chatRoom)
   messages: Message[];

@@ -21,14 +21,7 @@ export class ChatRoomService {
       participants,
       isActive: true,
     });
-    const savedChatRoom = await this.chatRoomRepository.save(chatRoom);
-
-    return {
-      id: savedChatRoom.id,
-      title: savedChatRoom.title,
-      participants: savedChatRoom.participants,
-      createdAt: savedChatRoom.createdAt,
-    } as ChatRoom;
+    return await this.chatRoomRepository.save(chatRoom);
   }
 
   // isActive가 true인 채팅방만 조회
@@ -111,14 +104,7 @@ export class ChatRoomService {
     const chatRoom = await this.findOne(id);
     chatRoom.title = title;
     chatRoom.participants = participants;
-    const updatedChatRoom = await this.chatRoomRepository.save(chatRoom);
-
-    return {
-      id: updatedChatRoom.id,
-      title: updatedChatRoom.title,
-      participants: updatedChatRoom.participants,
-      updatedAt: updatedChatRoom.updatedAt,
-    } as ChatRoom;
+    return await this.chatRoomRepository.save(chatRoom);
   }
 
   // 채팅방을 완전히 삭제하지 않고 isActive를 false로 설정
@@ -145,12 +131,7 @@ export class ChatRoomService {
       throw new BadRequestException('이미 채팅방에 참여 중인 사용자입니다.');
     }
 
-    const updatedChatRoom = result.raw[0];
-    return {
-      ...updatedChatRoom,
-      isActive: true,
-      messages: [],
-    };
+    return result.raw[0];
   }
 
   // 존재하지 않는 참여자인 경우 BadRequestException 발생
@@ -170,11 +151,6 @@ export class ChatRoomService {
       throw new BadRequestException('채팅방에 존재하지 않는 사용자입니다.');
     }
 
-    const updatedChatRoom = result.raw[0];
-    return {
-      ...updatedChatRoom,
-      isActive: true,
-      messages: [],
-    };
+    return result.raw[0];
   }
 }

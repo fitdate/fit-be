@@ -86,7 +86,7 @@ export class ChatRoomGateway
       const roomClients = this.connectedClients.get(data.roomId) || new Set();
       if (!roomClients.has(data.userId)) {
         const chatRoom = await this.chatRoomService.findOne(data.roomId);
-        if (!chatRoom.participants.includes(data.userId)) {
+        if (!chatRoom.participants?.includes(data.userId)) {
           throw new Error('채팅방 참여자가 아닙니다.');
         }
         roomClients.add(data.userId);
