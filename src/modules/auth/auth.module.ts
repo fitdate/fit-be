@@ -6,8 +6,10 @@ import { BcryptService } from './hash/bcrypt.service';
 import { UserModule } from '../user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategy/jwt.strategy';
+import { MailerModule } from '../mailer/mailer.module';
+import { RedisModule } from '../redis/redis.module';
 @Module({
-  imports: [UserModule, JwtModule.register({})],
+  imports: [UserModule, JwtModule.register({}), MailerModule, RedisModule],
   controllers: [AuthController],
   providers: [
     AuthService,
