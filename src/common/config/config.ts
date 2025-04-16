@@ -31,6 +31,13 @@ export const config = () => ({
     host: process.env.REDIS_HOST,
     port: Number(process.env.REDIS_PORT),
   },
+  mailer: {
+    host: process.env.MAIL_HOST,
+    port: Number(process.env.MAIL_PORT),
+    user: process.env.MAIL_USER,
+    password: process.env.MAIL_PASS,
+    tokenTtl: process.env.MAIL_TOKEN_TTL,
+  },
 });
 
 export const validationSchema = Joi.object({

@@ -8,7 +8,8 @@ import { UserRole } from 'src/common/enum/user-role.enum';
 import { RegisterDto } from './dto/register.dto';
 import { TokenPayload } from './types/token-payload.types';
 import { EmailLoginDto } from './dto/email-login.dto';
-
+import { MailerService } from '../mailer/mailer.service';
+import { RedisService } from '../redis/redis.service';
 @Injectable()
 export class AuthService {
   constructor(
@@ -16,6 +17,8 @@ export class AuthService {
     private readonly hashService: HashService,
     private readonly configService: ConfigService<AllConfig>,
     private readonly jwtService: JwtService,
+    private readonly mailerService: MailerService,
+    private readonly redisService: RedisService,
   ) {}
 
   parseBasicToken(rawToken: string) {
@@ -95,9 +98,11 @@ export class AuthService {
       role,
     } = registerDto;
 
-    const userEmail = await this.userService.findUserByEmail(email);
-    if (userEmail) {
-      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
+    const isEmailVerified = await this.checkEmailVerification(email);
+    if (!isEmailVerified) {
+      throw new UnauthorizedException(
+        '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
+      );
     }
 
     const userNickname = await this.userService.findUserByNickname(nickname);
@@ -118,13 +123,19 @@ export class AuthService {
       role,
     });
 
+    // 인증 완료 후 Redis에서 인증 상태 삭제
+    const verifiedKey = `email-verified:${email}`;
+    await this.redisService.del(verifiedKey);
+
     return user;
   }
 
   async validate(email: string, password: string) {
     const user = await this.userService.findUserByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('존재하지 않는 이메일입니다.');
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 일치하지 않습니다.',
+      );
     }
 
     const isPasswordValid = await this.hashService.compare(
@@ -133,7 +144,9 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 일치하지 않습니다.',
+      );
     }
 
     return user;
@@ -215,5 +228,58 @@ export class AuthService {
       },
     );
     return token;
+  }
+
+  async sendVerificationEmail(email: string): Promise<{ success: boolean }> {
+    const user = await this.userService.findUserByEmail(email);
+    if (user) {
+      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
+    }
+    // 이메일 토큰 생성
+    const token = this.mailerService.generateEmailToken(email);
+    // Redis에 토큰 저장 (15분 만료)
+    const tokenKey = `email-verification:${email}`;
+    await this.redisService.set(tokenKey, token, 60 * 15); // 15분
+    // 생성한 토큰을 전달하여 이메일 발송
+    await this.mailerService.sendEmailVerification(email, token);
+    return { success: true };
+  }
+
+  async verifyEmail(
+    token: string,
+  ): Promise<{ verified: boolean; email: string }> {
+    try {
+      // 토큰 검증
+      const payload = this.mailerService.verifyMailerToken(token);
+      const email = payload.email;
+      // Redis에서 저장된 토큰 확인
+      const tokenKey = `email-verification:${email}`;
+      const storedToken = await this.redisService.get(tokenKey);
+      if (!storedToken || storedToken !== token) {
+        throw new UnauthorizedException('유효하지 않거나 만료된 토큰입니다.');
+      }
+      // 인증 완료 상태 저장 (다른 키 사용)
+      const verifiedKey = `email-verified:${email}`;
+      await this.redisService.set(verifiedKey, 'verified', 60 * 60 * 24); // 24시간
+      // 인증 토큰 삭제
+      await this.redisService.del(tokenKey);
+      return {
+        verified: true,
+        email,
+      };
+    } catch (error) {
+      throw new UnauthorizedException(
+        '인증에 실패했습니다. 유효하지 않거나 만료된 토큰입니다.',
+        {
+          cause: error,
+        },
+      );
+    }
+  }
+
+  async checkEmailVerification(email: string): Promise<boolean> {
+    const verifiedKey = `email-verified:${email}`;
+    const verifiedValue = await this.redisService.get(verifiedKey);
+    return verifiedValue === 'verified';
   }
 }

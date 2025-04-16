@@ -33,9 +33,18 @@ export interface RedisConfig {
   port: number;
 }
 
+export interface MailerConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  tokenTtl: string;
+}
 export interface AllConfig {
   database: DatabaseConfig;
   app: AppConfig;
   jwt: JwtConfig;
   seedInitialize: SeedInitializeConfig;
+  mailer: MailerConfig;
+  redis: RedisConfig;
 }
