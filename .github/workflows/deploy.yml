@@ -82,24 +82,6 @@ jobs:
         run: |
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
-          # Redis 설치 및 실행
-          ssh $USERNAME@$DB_HOST "
-            if ! command -v redis-server &> /dev/null; then
-              echo '📦 Redis 설치 중...'
-              sudo apt update && sudo apt install -y redis-server
-              sudo systemctl enable redis-server
-              sudo systemctl start redis-server
-            else
-              echo '✅ Redis가 이미 설치되어 있습니다.'
-            fi
-
-            echo '🚀 Redis 상태 확인 중...'
-            sudo systemctl status redis-server || {
-              echo '❌ Redis 실행 실패'
-              exit 1
-            }
-          "
-
           # Nginx 설정 업로드
           ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
           ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available"
