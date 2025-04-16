@@ -2,8 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { Profile } from '../../profile/entities/profile.entity';
-import { InterestLocation } from '../../profile/interest-location/entities/interest-location.entity';
 import {
   AgeGroups,
   GenderStatistics,
@@ -17,10 +15,6 @@ export class UserStatisticsService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Profile)
-    private readonly profileRepository: Repository<Profile>,
-    @InjectRepository(InterestLocation)
-    private readonly interestLocationRepository: Repository<InterestLocation>,
   ) {}
 
   async getGenderStatistics(): Promise<GenderStatistics> {
@@ -82,25 +76,25 @@ export class UserStatisticsService {
   }
 
   async getLocationStatistics(): Promise<LocationStatistics> {
-    const locations = await this.interestLocationRepository.find({
-      relations: ['profile', 'profile.user'],
-    });
-
-    const total = locations.length;
+    const users = await this.userRepository.find();
+    const total = users.length;
     const locationMap = new Map<string, LocationStats>();
 
-    locations.forEach((location) => {
-      const key = `${location.sido}-${location.sigungu}`;
-      if (!locationMap.has(key)) {
-        locationMap.set(key, {
-          sido: location.sido,
-          sigungu: location.sigungu,
-          count: 0,
-          percentage: 0,
-        });
+    users.forEach((user) => {
+      if (user.address) {
+        const [sido, sigungu] = user.address.split(' ');
+        const key = `${sido}-${sigungu}`;
+        if (!locationMap.has(key)) {
+          locationMap.set(key, {
+            sido,
+            sigungu,
+            count: 0,
+            percentage: 0,
+          });
+        }
+        const stats = locationMap.get(key)!;
+        stats.count++;
       }
-      const stats = locationMap.get(key)!;
-      stats.count++;
     });
 
     const locationStats: LocationStats[] = Array.from(locationMap.values());
