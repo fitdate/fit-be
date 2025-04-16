@@ -1,19 +1,30 @@
-# 1. Node.js 이미지 사용
-FROM node:20-alpine
+# 빌드 스테이지
+FROM node:20-alpine AS builder
 
-# 2. 작업 디렉토리 설정
 WORKDIR /usr/src/app
 
-# 3. 의존성 복사 및 설치
+# 의존성 파일만 먼저 복사하여 캐시 활용
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# 4. 애플리케이션 소스 코드 복사
+# 소스 코드 복사 및 빌드
 COPY . .
-
-# 5. 빌드 및 환경 설정
 RUN npm run build
 
-# 6. 애플리케이션 실행
+# 프로덕션 스테이지
+FROM node:20-alpine
+
+WORKDIR /usr/src/app
+
+# 프로덕션 의존성만 설치
+COPY package*.json ./
+RUN npm ci --only=production
+
+# 빌드된 파일만 복사
+COPY --from=builder /usr/src/app/dist ./dist
+
+# 환경 변수 설정
+ENV NODE_ENV=production
+
 EXPOSE 3000
 CMD ["node", "dist/src/main.js"]

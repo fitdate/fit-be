@@ -126,17 +126,15 @@ jobs:
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
               
-            echo '🔌 네트워크 및 Redis 연결 중...'
-            # 새 컨테이너에 fit-network 연결
+            echo '🔌 네트워크 연결 중...'
             sudo docker network connect fit-network fit-$NEW_ENV || true
-            # Redis 연결 설정
             sudo docker network connect redis-network fit-$NEW_ENV || true
 
             echo '🔍 컨테이너 상태 확인 중...'
             CONTAINER_STATUS=\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)
             if [ \"\$CONTAINER_STATUS\" != \"running\" ]; then
-              echo '❌ 컨테이너가 실행 중이지 않습니다. 상태: '\$CONTAINER_STATUS
-              sudo docker logs fit-$NEW_ENV
+              echo '❌ 컨테이너 실행 실패' > ~/deploy-error.log
+              sudo docker logs fit-$NEW_ENV >> ~/deploy-error.log
               exit 1
             fi
 
@@ -144,11 +142,9 @@ jobs:
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
             sudo nginx -t && sudo systemctl reload nginx
 
-            echo '🏥 Health checking...'
+            echo '🏥 헬스 체크 중...'
             for i in {1..3}; do
-              echo \"Attempt \$i: Checking http://localhost:$NEW_PORT/health\"
               if curl -s -f http://localhost:$NEW_PORT/health | grep -q 'ok'; then
-                echo '✅ 헬스 체크 성공'
                 sudo docker stop fit-$CURRENT_ENV 2>/dev/null || true
                 sudo docker rm fit-$CURRENT_ENV 2>/dev/null || true
                 sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
@@ -156,15 +152,11 @@ jobs:
                 echo '✅ 배포 성공'
                 exit 0
               fi
-              echo '⏳ 헬스 체크 실패, 5초 후 재시도...'
               sleep 5
             done
 
-            echo '❌ 배포 실패: 헬스 체크 실패'
-            echo '=== 컨테이너 로그 ==='
-            sudo docker logs fit-$NEW_ENV
-            echo '=== 컨테이너 상태 ==='
-            sudo docker ps -a | grep fit-$NEW_ENV
+            echo '❌ 헬스 체크 실패' > ~/deploy-error.log
+            sudo docker logs fit-$NEW_ENV >> ~/deploy-error.log
             sudo docker stop fit-$NEW_ENV
             sudo docker rm fit-$NEW_ENV
             exit 1
