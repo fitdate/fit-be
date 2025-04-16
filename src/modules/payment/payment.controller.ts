@@ -22,6 +22,7 @@ export class PaymentController {
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   @ApiResponse({ status: 500, description: '서버 에러' })
   @Post('confirm')
+  // 토스페이먼츠 결제 확인 처리
   async confirmPayment(
     @Query() confirmPaymentDto: ConfirmPaymentDto,
   ): Promise<{ data: TossPaymentResponse }> {
@@ -43,6 +44,7 @@ export class PaymentController {
   })
   @ApiResponse({ status: 404, description: '결제 정보를 찾을 수 없음' })
   @Get(':orderId')
+  // 주문 ID로 결제 정보 조회
   async getPayment(@Param('orderId') orderId: string) {
     return this.paymentService.getPaymentByOrderId(orderId);
   }

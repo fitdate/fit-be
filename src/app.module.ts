@@ -36,6 +36,7 @@ import { LoggingInterceptor } from './common/interceptor/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
 import { S3Module } from './modules/s3/s3.module';
 import { MailerModule } from './modules/mailer/mailer.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { MailerModule } from './modules/mailer/mailer.module';
     SeedManagerModule,
     S3Module,
     MailerModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

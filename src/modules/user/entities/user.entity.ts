@@ -10,6 +10,8 @@ import { UserRole } from 'src/common/enum/user-role.enum';
 import { Profile } from 'src/modules/profile/entities/profile.entity';
 import { Like } from 'src/modules/like/entities/like.entity';
 import { Pass } from 'src/modules/pass/entities/pass.entity';
+import { Payment } from 'src/modules/payment/entities/payment.entity';
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -60,6 +62,9 @@ export class User {
 
   @OneToMany(() => Pass, (pass) => pass.user)
   passes: Pass[];
+
+  @OneToMany(() => Payment, (payment) => payment.user)
+  payments: Payment[];
 
   @Column({ type: 'varchar', default: UserRole.USER })
   role: UserRole;
