@@ -25,7 +25,7 @@ export class MessageService {
     fileUrl?: string,
   ): Promise<Message> {
     const chatRoom = await this.chatRoomService.findOne(chatRoomId);
-    if (!chatRoom.participants.includes(senderId)) {
+    if (!chatRoom.users.some((user) => user.id === senderId)) {
       throw new ForbiddenException('채팅방 참여자가 아닙니다');
     }
 
