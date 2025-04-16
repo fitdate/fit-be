@@ -13,7 +13,9 @@ import {
   LocationStatistics,
 } from '../user/types/statistics.types';
 import { Payment } from '../payment/entities/payment.entity';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
+@ApiTags('Admin')
 @RBAC(UserRole.ADMIN)
 @Controller('admin')
 export class AdminController {
@@ -22,31 +24,42 @@ export class AdminController {
     private readonly paymentService: PaymentService,
   ) {}
 
-  // 성별 통계 데이터 조회
+  @ApiOperation({ summary: '성별 통계 데이터 조회' })
+  @ApiResponse({ status: 200, description: '성별 통계 데이터 반환' })
   @Get('statistics/gender')
   async getGenderStatistics(): Promise<GenderStatistics> {
     return this.adminService.getGenderStatistics();
   }
 
-  // 연령대별 통계 데이터 조회
+  @ApiOperation({ summary: '연령대별 통계 데이터 조회' })
+  @ApiResponse({ status: 200, description: '연령대별 통계 데이터 반환' })
   @Get('statistics/age')
   async getAgeGroupStatistics(): Promise<AgeGroupStatistics> {
     return this.adminService.getAgeGroupStatistics();
   }
 
-  // 지역별 통계 데이터 조회
+  @ApiOperation({ summary: '지역별 통계 데이터 조회' })
+  @ApiResponse({ status: 200, description: '지역별 통계 데이터 반환' })
   @Get('statistics/location')
   async getLocationStatistics(): Promise<LocationStatistics> {
     return this.adminService.getLocationStatistics();
   }
 
-  // 결제 통계 데이터 조회
+  @ApiOperation({ summary: '결제 통계 데이터 조회' })
+  @ApiResponse({ status: 200, description: '결제 통계 데이터 반환' })
   @Get('statistics/payment')
   async getPaymentStatistics(): Promise<PaymentStatistics> {
     return this.paymentService.getPaymentStatistics();
   }
 
-  // 상위 결제자 목록 조회
+  @ApiOperation({ summary: '상위 결제자 목록 조회' })
+  @ApiResponse({ status: 200, description: '상위 결제자 목록 반환' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: '조회할 상위 결제자 수',
+  })
   @Get('statistics/top-payers')
   async getTopPayingUsers(
     @Query('limit') limit?: number,
@@ -54,7 +67,8 @@ export class AdminController {
     return this.paymentService.getTopPayingUsers(limit);
   }
 
-  // 테스트용 모의 결제 데이터 생성
+  @ApiOperation({ summary: '테스트용 모의 결제 데이터 생성' })
+  @ApiResponse({ status: 201, description: '생성된 모의 결제 데이터 반환' })
   @Post('mock/payments')
   async generateMockPayments(): Promise<Payment[]> {
     return this.paymentService.generateMockPayments();

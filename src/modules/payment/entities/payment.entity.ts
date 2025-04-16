@@ -17,7 +17,7 @@ export class Payment extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.payments)
   user: User;
 
