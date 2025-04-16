@@ -1,6 +1,15 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseTable } from 'src/common/entity/base-table.entity';
+
+export type PaymentStatus =
+  | 'completed'
+  | 'failed'
+  | 'refunded'
+  | 'DONE'
+  | 'CANCELED';
+export type PaymentMethod = 'credit_card' | 'kakao_pay' | 'naver_pay';
 
 @Entity()
 export class Payment extends BaseTable {
@@ -9,12 +18,16 @@ export class Payment extends BaseTable {
   id: string;
 
   @ApiProperty()
-  @Column()
-  orderId: string;
+  @ManyToOne(() => User, (user) => user.payments)
+  user: User;
 
   @ApiProperty()
   @Column()
   orderName: string;
+
+  @ApiProperty()
+  @Column({ unique: true })
+  orderId: string;
 
   @ApiProperty()
   @Column()
@@ -25,8 +38,8 @@ export class Payment extends BaseTable {
   paymentKey: string;
 
   @ApiProperty()
-  @Column({ default: 'READY' })
-  status: 'READY' | 'IN_PROGRESS' | 'DONE' | 'CANCELED' | 'ABORTED';
+  @Column()
+  status: PaymentStatus;
 
   @ApiProperty()
   @Column({ nullable: true })
@@ -39,4 +52,8 @@ export class Payment extends BaseTable {
   @ApiProperty()
   @Column({ nullable: true })
   customerMobilePhone: string;
+
+  @ApiProperty()
+  @Column()
+  paymentMethod: PaymentMethod;
 }
