@@ -75,6 +75,9 @@ jobs:
       - name: Deploy to EC2
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
           USERNAME: ${{ secrets.USERNAME }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
@@ -119,11 +122,7 @@ jobs:
             sudo docker system prune -a --volumes -f
 
             echo '🗑️ 기존 테이블 삭제 중...'
-            export PGHOST=\$DB_HOST
-            export PGUSER=\$DB_USERNAME
-            export PGDATABASE=\$DB_DATABASE
-            export PGPASSWORD=\$DB_PASSWORD
-            psql -c \"DROP TABLE IF EXISTS chat_room_users CASCADE;\"
+            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USERNAME -d $DB_DATABASE -c \"DROP TABLE IF EXISTS chat_room_users CASCADE;\"
 
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
