@@ -120,12 +120,9 @@ jobs:
 
             echo '🗑️ 기존 테이블 삭제 중...'
             sudo docker run --rm \
-              -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
+              --network host \
               postgres:latest \
-              psql -h ${{ secrets.DB_HOST }} \
-                   -U ${{ secrets.DB_USERNAME }} \
-                   -d ${{ secrets.DB_DATABASE }} \
-                   -c "DROP TABLE IF EXISTS chat_room_users CASCADE;"
+              bash -c "PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -U ${{ secrets.DB_USERNAME }} -d ${{ secrets.DB_DATABASE }} -h ${{ secrets.DB_HOST }} -p 5432 -c 'DROP TABLE IF EXISTS chat_room_users CASCADE;'"
 
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
