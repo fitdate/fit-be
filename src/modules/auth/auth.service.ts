@@ -11,6 +11,35 @@ import { EmailLoginDto } from './dto/email-login.dto';
 import { MailerService } from '../mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
+import { AuthProvider } from './types/oatuth.types';
+import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { CookieOptions, Response, Request } from 'express';
+
+// JWT 응답 타입 정의
+interface JwtTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  accessOptions: CookieOptions;
+  refreshOptions: CookieOptions;
+}
+
+// 소셜 로그인 사용자 정보 타입
+interface SocialUserInfo {
+  id?: string;
+  email: string;
+  name?: string;
+  role?: UserRole;
+  isProfileComplete?: boolean;
+  authProvider: AuthProvider;
+}
+
+// 로그인 응답 타입
+export interface LoginResponse {
+  message: string;
+  accessToken: string;
+  refreshToken: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -107,6 +136,11 @@ export class AuthService {
       );
     }
 
+    const userEmail = await this.userService.findUserByEmail(email);
+    if (userEmail) {
+      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
+    }
+
     const userNickname = await this.userService.findUserByNickname(nickname);
     if (userNickname) {
       throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
@@ -123,6 +157,8 @@ export class AuthService {
       phoneNumber,
       address,
       role,
+      isProfileComplete: true,
+      authProvider: AuthProvider.EMAIL,
     });
 
     // 인증 완료 후 Redis에서 인증 상태 삭제
@@ -154,20 +190,144 @@ export class AuthService {
     return user;
   }
 
-  async login(loginDto: EmailLoginDto): Promise<{
-    refreshToken: string;
-    accessToken: string;
-  }> {
+  async login(
+    loginDto: EmailLoginDto,
+    origin?: string,
+  ): Promise<JwtTokenResponse> {
     const { email, password } = loginDto;
-
     const user = await this.validate(email, password);
+    return this.generateTokens(user.id, user.role, origin);
+  }
 
-    const refreshToken = this.issueToken(user.id, user.role, true);
-    const accessToken = this.issueToken(user.id, user.role, false);
+  //이메일 로그인
+  async handleEmailLogin(
+    loginDto: EmailLoginDto,
+    req: Request,
+    res: Response,
+  ): Promise<LoginResponse> {
+    const { email, password } = loginDto;
+    const user = await this.validate(email, password);
+    const tokens = this.generateTokens(user.id, user.role, req.headers.origin);
+    res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
+    res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
 
     return {
-      refreshToken,
+      message: '로그인 성공',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
+
+  //로그아웃
+  handleLogout(req: Request, res: Response) {
+    const cookieOptions = this.logoutCookieOptions(req.headers.origin);
+
+    // 쿠키 만료 설정
+    res.cookie('accessToken', '', cookieOptions.accessOptions);
+    res.cookie('refreshToken', '', cookieOptions.refreshOptions);
+
+    // Redis에서 리프레시 토큰 삭제도 구현 가능 (보류)
+
+    return {
+      message: '로그아웃 성공',
+    };
+  }
+
+  //구글 콜백 처리
+  async handleGoogleCallback(
+    user: { email: string; name?: string },
+    req: Request,
+    res: Response,
+  ): Promise<string> {
+    try {
+      const socialUserInfo: SocialUserInfo = {
+        email: user.email,
+        name: user.name,
+        authProvider: AuthProvider.GOOGLE,
+      };
+
+      const result = await this.googleLogin(socialUserInfo, req.headers.origin);
+
+      res.cookie('accessToken', result.accessToken, result.accessOptions);
+      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
+
+      // 프론트엔드 URL 및 리다이렉트 경로 설정
+      const frontendUrl =
+        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
+        this.configService.get('app.host', { infer: true });
+
+      // 리다이렉트 URL 구성
+      return `${frontendUrl}${result.redirectUrl}`;
+    } catch (error) {
+      throw new UnauthorizedException(
+        '구글 로그인 처리 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    }
+  }
+
+  // 토큰 생성
+  generateTokens(
+    userId: string,
+    userRole: UserRole,
+    origin?: string,
+  ): JwtTokenResponse {
+    const accessToken = this.issueToken(userId, userRole, false);
+    const refreshToken = this.issueToken(userId, userRole, true);
+
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    return {
       accessToken,
+      refreshToken,
+      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+    };
+  }
+
+  //쿠키
+  createCookieOptions(maxAge: number, origin?: string): CookieOptions {
+    let domain: string | undefined;
+
+    const configDomain = this.configService.get('app.host', {
+      infer: true,
+    });
+    if (configDomain) {
+      domain = configDomain;
+    } else if (origin) {
+      // 환경 변수에 설정이 없는 경우 origin에서 도메인 추출
+      const hostname = new URL(origin).hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        domain = 'localhost';
+      } else {
+        domain = hostname;
+      }
+    }
+
+    return {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge,
+      domain,
+      path: '/',
+    };
+  }
+
+  //로그아웃
+  logoutCookieOptions(origin?: string): {
+    accessOptions: CookieOptions;
+    refreshOptions: CookieOptions;
+  } {
+    return {
+      accessOptions: this.createCookieOptions(0, origin),
+      refreshOptions: this.createCookieOptions(0, origin),
     };
   }
 
@@ -232,52 +392,64 @@ export class AuthService {
     return token;
   }
 
-  async sendVerificationEmail(email: string): Promise<{ success: boolean }> {
+  async sendVerificationEmail(
+    sendVerificationEmailDto: SendVerificationEmailDto,
+  ): Promise<{ success: boolean }> {
+    const { email } = sendVerificationEmailDto;
     const user = await this.userService.findUserByEmail(email);
     if (user) {
       throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
-    // 이메일 토큰 생성
-    const token = this.mailerService.generateEmailToken(email);
-    // Redis에 토큰 저장
-    const tokenKey = `email-verification:${email}`;
+    // 6자리 인증 코드 생성
+    const verificationCode = this.mailerService.generateEmailVerificationCode();
+
+    // Redis에 코드를 키로, 이메일을 값으로 저장 (역방향 매핑)
+    const codeKey = `verification-code:${verificationCode}`;
+
     // 시간 문자열을 초 단위로 변환
     const tokenTtlStr = this.configService.getOrThrow('mailer.tokenTtl', {
       infer: true,
     });
     const tokenTtlSeconds = parseTimeToSeconds(tokenTtlStr);
-    await this.redisService.set(tokenKey, token, tokenTtlSeconds);
-    // 생성한 토큰을 전달하여 이메일 발송
-    await this.mailerService.sendEmailVerification(email, token);
+
+    // 코드를 키로 이메일을 저장
+    await this.redisService.set(codeKey, email, tokenTtlSeconds);
+
+    // 생성한 인증 코드를 전달하여 이메일 발송
+    await this.mailerService.sendEmailVerification(email, verificationCode);
     return { success: true };
   }
 
   async verifyEmail(
-    token: string,
+    verifyEmailDto: VerifyEmailDto,
   ): Promise<{ verified: boolean; email: string }> {
+    const { code } = verifyEmailDto;
     try {
-      // 토큰 검증
-      const payload = this.mailerService.verifyMailerToken(token);
-      const email = payload.email;
-      // Redis에서 저장된 토큰 확인
-      const tokenKey = `email-verification:${email}`;
-      const storedToken = await this.redisService.get(tokenKey);
-      if (!storedToken || storedToken !== token) {
-        throw new UnauthorizedException('유효하지 않거나 만료된 토큰입니다.');
+      // Redis에서 코드로 이메일 찾기
+      const codeKey = `verification-code:${code}`;
+      const email = await this.redisService.get(codeKey);
+
+      if (!email) {
+        throw new UnauthorizedException(
+          '유효하지 않거나 만료된 인증 코드입니다.',
+        );
       }
+
       // 인증 완료 상태 저장
       const verifiedKey = `email-verified:${email}`;
       const verifiedTtlSeconds = 60 * 60; // 1시간
       await this.redisService.set(verifiedKey, 'verified', verifiedTtlSeconds);
-      // 인증 토큰 삭제
-      await this.redisService.del(tokenKey);
+
+      // 인증 코드 삭제
+      await this.redisService.del(codeKey);
+
       return {
         verified: true,
         email,
       };
     } catch (error) {
       throw new UnauthorizedException(
-        '인증에 실패했습니다. 유효하지 않거나 만료된 토큰입니다.',
+        '인증에 실패했습니다. 유효하지 않거나 만료된 인증 코드입니다.',
         {
           cause: error,
         },
@@ -289,5 +461,51 @@ export class AuthService {
     const verifiedKey = `email-verified:${email}`;
     const verifiedValue = await this.redisService.get(verifiedKey);
     return verifiedValue === 'verified';
+  }
+
+  // 소셜 로그인
+  async processSocialLogin(
+    userData: SocialUserInfo,
+    origin?: string,
+  ): Promise<
+    JwtTokenResponse & {
+      isProfileComplete: boolean;
+      redirectUrl: string;
+    }
+  > {
+    let user = await this.userService.findUserByEmail(userData.email);
+
+    if (!user) {
+      user = await this.userService.createSocialUser({
+        email: userData.email,
+        name: userData.name,
+        authProvider: userData.authProvider,
+      });
+    }
+
+    const tokenResponse = this.generateTokens(user.id, user.role, origin);
+
+    // 프로필 완성 여부 확인
+    const isProfileComplete = user.isProfileComplete || false;
+
+    // 리다이렉트 경로 결정
+    const redirectPath = isProfileComplete ? '/' : '/complete-profile';
+
+    return {
+      ...tokenResponse,
+      isProfileComplete,
+      redirectUrl: redirectPath,
+    };
+  }
+
+  // 구글 로그인
+  async googleLogin(userData: SocialUserInfo, origin?: string) {
+    return this.processSocialLogin(
+      {
+        ...userData,
+        authProvider: AuthProvider.GOOGLE,
+      },
+      origin,
+    );
   }
 }

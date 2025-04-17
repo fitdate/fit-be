@@ -38,6 +38,24 @@ export const config = () => ({
     password: process.env.MAIL_PASS,
     tokenTtl: process.env.MAIL_TOKEN_TTL,
   },
+  social: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+    },
+    kakao: {
+      clientId: process.env.KAKAO_CLIENT_ID,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET,
+      callbackUrl: process.env.KAKAO_CALLBACK_URL,
+    },
+    naver: {
+      clientId: process.env.NAVER_CLIENT_ID,
+      clientSecret: process.env.NAVER_CLIENT_SECRET,
+      callbackUrl: process.env.NAVER_CALLBACK_URL,
+    },
+    socialFrontendUrl: process.env.SOCIAL_FRONTEND_URL,
+  },
 });
 
 export const validationSchema = Joi.object({
@@ -80,6 +98,16 @@ export const validationSchema = Joi.object({
   SEED_ENABLE_INTEREST_CATEGORY: Joi.boolean().required(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
+  GOOGLE_CLIENT_ID: Joi.string().required(),
+  GOOGLE_CLIENT_SECRET: Joi.string().required(),
+  GOOGLE_CALLBACK_URL: Joi.string().required(),
+  KAKAO_CLIENT_ID: Joi.string().required(),
+  KAKAO_CLIENT_SECRET: Joi.string().required(),
+  KAKAO_CALLBACK_URL: Joi.string().required(),
+  NAVER_CLIENT_ID: Joi.string().required(),
+  NAVER_CLIENT_SECRET: Joi.string().required(),
+  NAVER_CALLBACK_URL: Joi.string().required(),
+  SOCIAL_FRONTEND_URL: Joi.string().required(),
 });
 
 export const ConfigModuleOptions = {

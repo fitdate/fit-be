@@ -10,6 +10,7 @@ import { UserRole } from 'src/common/enum/user-role.enum';
 import { Profile } from 'src/modules/profile/entities/profile.entity';
 import { Like } from 'src/modules/like/entities/like.entity';
 import { Pass } from 'src/modules/pass/entities/pass.entity';
+import { AuthProvider } from 'src/modules/auth/types/oatuth.types';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -66,4 +67,10 @@ export class User {
 
   @Column({ nullable: true })
   likeCount: number;
+
+  @Column()
+  isProfileComplete: boolean;
+
+  @Column({ type: 'varchar' })
+  authProvider: AuthProvider;
 }

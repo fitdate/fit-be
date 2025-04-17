@@ -40,6 +40,25 @@ export interface MailerConfig {
   password: string;
   tokenTtl: string;
 }
+
+export interface SocialConfig {
+  google: {
+    clientId: string;
+    clientSecret: string;
+    callbackUrl: string;
+  };
+  kakao: {
+    clientId: string;
+    clientSecret: string;
+    callbackUrl: string;
+  };
+  naver: {
+    clientId: string;
+    clientSecret: string;
+    callbackUrl: string;
+  };
+  socialFrontendUrl: string;
+}
 export interface AllConfig {
   database: DatabaseConfig;
   app: AppConfig;
@@ -47,4 +66,5 @@ export interface AllConfig {
   seedInitialize: SeedInitializeConfig;
   mailer: MailerConfig;
   redis: RedisConfig;
+  social: SocialConfig;
 }

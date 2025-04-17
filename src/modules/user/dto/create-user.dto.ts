@@ -8,8 +8,10 @@ import {
   IsOptional,
   IsString,
   IsNumber,
+  IsBoolean,
 } from 'class-validator';
 import { UserRole } from 'src/common/enum/user-role.enum';
+import { AuthProvider } from 'src/modules/auth/types/oatuth.types';
 
 @Entity()
 export class CreateUserDto extends BaseTable {
@@ -70,4 +72,14 @@ export class CreateUserDto extends BaseTable {
   @IsEnum(UserRole)
   @IsNotEmpty()
   role: UserRole;
+
+  @Expose()
+  @IsBoolean()
+  @IsNotEmpty()
+  isProfileComplete: boolean;
+
+  @Expose()
+  @IsEnum(AuthProvider)
+  @IsNotEmpty()
+  authProvider: AuthProvider;
 }

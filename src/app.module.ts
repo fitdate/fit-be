@@ -36,7 +36,7 @@ import { LoggingInterceptor } from './common/interceptor/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
 import { S3Module } from './modules/s3/s3.module';
 import { MailerModule } from './modules/mailer/mailer.module';
-
+import { ProfileCompleteGuard } from './modules/auth/guard/profile-complete.guard';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -100,6 +100,10 @@ import { MailerModule } from './modules/mailer/mailer.module';
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ProfileCompleteGuard,
     },
     {
       provide: APP_GUARD,
