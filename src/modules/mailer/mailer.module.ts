@@ -1,16 +1,15 @@
 import { Module } from '@nestjs/common';
 import { MailerService } from './mailer.service';
 import { MailerController } from './mailer.controller';
-import { JwtModule } from '@nestjs/jwt';
 import { MailerModule as NestMailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AllConfig } from '../../common/config/config.types';
+
 @Module({
   imports: [
-    JwtModule.register({}),
-    ConfigModule,
     NestMailerModule.forRootAsync({
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService<AllConfig>) => ({
         transport: {
           host: configService.getOrThrow('mailer.host', { infer: true }),
@@ -22,7 +21,6 @@ import { AllConfig } from '../../common/config/config.types';
           },
         },
       }),
-      inject: [ConfigService],
     }),
   ],
   controllers: [MailerController],

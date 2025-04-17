@@ -8,12 +8,14 @@ import { CreateUserIntroductionDto } from './introduction/dto/create-user-introd
 import { CreateUserFeedbackDto } from './feedback/dto/create-user-feedback.dto';
 import { CreateUserInterestCategoryDto } from './interest-category/dto/create-user-interest-category.dto';
 import { UserId } from 'src/common/decorator/get-user.decorator';
+import { SkipProfileComplete } from '../auth/guard/profile-complete.guard';
 
 @ApiTags('Profile')
 @Controller('profile')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
+  @SkipProfileComplete()
   @Post()
   @ApiOperation({ summary: '프로필 생성' })
   @ApiBody({
@@ -70,6 +72,7 @@ export class ProfileController {
     return this.profileService.getProfileById(id);
   }
 
+  @SkipProfileComplete()
   @Patch()
   @ApiOperation({ summary: '프로필 수정' })
   @ApiBody({
