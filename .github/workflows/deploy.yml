@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
           echo "Testing database connection to ${{ secrets.DB_HOST }}:5432"
-          nc -zv ${{ secrets.DB_HOST }} 5432 || {
+          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "export PGPASSWORD='${{ secrets.DB_PASSWORD }}' && psql -U ${{ secrets.DB_USERNAME }} -d ${{ secrets.DB_DATABASE }} -h ${{ secrets.DB_HOST }} -p 5432 -c 'SELECT 1'" || {
             echo "❌ Database connection test failed"
             exit 1
           }
@@ -75,12 +75,18 @@ jobs:
       - name: Reset DB schema
         run: |
           echo "🗑️ 데이터베이스 스키마 초기화 중..."
-          export PGPASSWORD="${{ secrets.DB_PASSWORD }}"
-          psql -U "${{ secrets.DB_USERNAME }}" \
-            -d "${{ secrets.DB_DATABASE }}" \
-            -h "${{ secrets.DB_HOST }}" \
-            -p 5432 \
-            -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
+            export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
+            psql -U ${{ secrets.DB_USERNAME }} \
+              -d ${{ secrets.DB_DATABASE }} \
+              -h ${{ secrets.DB_HOST }} \
+              -p 5432 \
+              -c \"DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USERNAME }};\"
+          " || {
+            echo "❌ Failed to reset database schema"
+            exit 1
+          }
+          echo "✅ Database schema reset successful"
 
       - name: Deploy to EC2
         env:
