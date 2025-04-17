@@ -101,7 +101,14 @@ jobs:
           echo "🗑️ 데이터베이스 스키마 초기화 중..."
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 -c 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};'
+            psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+              DROP SCHEMA IF EXISTS public CASCADE;
+              CREATE SCHEMA public;
+              GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON SCHEMA public TO public;
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${{ secrets.DB_USER }};
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${{ secrets.DB_USER }};
+            EOF
           " || {
             echo "❌ Failed to reset database schema"
             exit 1
