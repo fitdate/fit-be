@@ -110,6 +110,29 @@ jobs:
             echo "❌ Database connection test failed"
             exit 1
           }
+
+          echo "🔄 Setting up database permissions..."
+          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 << EOF
+            -- 데이터베이스 소유권 변경
+            ALTER DATABASE $DB_NAME OWNER TO $DB_USER;
+            
+            -- public 스키마 권한 설정
+            GRANT ALL ON SCHEMA public TO $DB_USER;
+            GRANT ALL ON ALL TABLES IN SCHEMA public TO $DB_USER;
+            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;
+            GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO $DB_USER;
+            
+            -- 기본 권한 설정
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+              GRANT ALL ON TABLES TO $DB_USER;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+              GRANT ALL ON SEQUENCES TO $DB_USER;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+              GRANT ALL ON FUNCTIONS TO $DB_USER;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+              GRANT ALL ON TYPES TO $DB_USER;
+          EOF"
+
           echo "✅ Database connection test successful"
 
       - name: Reset DB schema
