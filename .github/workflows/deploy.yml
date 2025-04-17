@@ -289,7 +289,7 @@ jobs:
 
             echo '🔌 네트워크 연결 중...'
             sudo docker network connect fit-network fit-$NEW_ENV || true
-            sudo docker network connect redis-network fit-$NEW_ENV || true
+            sudo docker network connect redis-network fit-$NEW_ENV
 
             echo '🔍 컨테이너 상태 확인 중...'
             if [ \"\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)\" != \"running\" ]; then
