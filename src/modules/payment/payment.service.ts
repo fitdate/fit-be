@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  Payment,
-  PaymentMethod,
-  PaymentStatus,
-} from './entities/payment.entity';
+import { Payment } from './entities/payment.entity';
 import axios from 'axios';
 import { TossPaymentResponse } from './types/toss-payment.types';
 import { User } from '../user/entities/user.entity';
-import { PaymentStatistics, TopPayingUser } from './types/payment.types';
+import {
+  PaymentMethod,
+  PaymentStatistics,
+  PaymentStatus,
+  TopPayingUser,
+} from './types/payment.types';
 
 @Injectable()
 export class PaymentService {
