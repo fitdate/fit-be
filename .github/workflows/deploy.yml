@@ -72,22 +72,38 @@ jobs:
       - name: Test Database Connection
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_NAME: fit-be
         run: |
+          # 환경 변수 검증
           if [ -z "$DB_HOST" ]; then
-            echo "❌ DB_HOST environment variable is not set"
+            echo "❌ DB_HOST is not set"
             exit 1
           fi
-          echo "Testing database connection to $DB_HOST:5432"
-          echo "Using database: $DB_DATABASE"
-          echo "Using username: $DB_USERNAME"
-          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USERNAME -d $DB_DATABASE -h $DB_HOST -p 5432 -c 'SELECT 1' 2>&1" || {
+          if [ -z "$DB_USER" ]; then
+            echo "❌ DB_USER is not set"
+            exit 1
+          fi
+          if [ -z "$DB_PASSWORD" ]; then
+            echo "❌ DB_PASSWORD is not set"
+            exit 1
+          fi
+
+          echo "🔍 Database connection test configuration:"
+          echo "Host: $DB_HOST"
+          echo "Database: $DB_NAME"
+          echo "Username: $DB_USER"
+          echo "Port: 5432"
+
+          # 데이터베이스 연결 테스트
+          echo "🔄 Testing database connection..."
+          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1' 2>&1" || {
             echo "❌ Database connection test failed"
+            echo "Error details:"
             echo "DB_HOST: $DB_HOST"
-            echo "DB_USERNAME: $DB_USERNAME"
-            echo "DB_DATABASE: $DB_DATABASE"
+            echo "DB_USER: $DB_USER"
+            echo "DB_NAME: $DB_NAME"
             exit 1
           }
           echo "✅ Database connection test successful"
@@ -97,11 +113,11 @@ jobs:
           echo "🗑️ 데이터베이스 스키마 초기화 중..."
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            psql -U ${{ secrets.DB_USERNAME }} \
-              -d ${{ secrets.DB_DATABASE }} \
+            psql -U ${{ secrets.DB_USER }} \
+              -d fit-be \
               -h ${{ secrets.DB_HOST }} \
               -p 5432 \
-              -c \"DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USERNAME }};\"
+              -c \"DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};\"
           " || {
             echo "❌ Failed to reset database schema"
             exit 1
