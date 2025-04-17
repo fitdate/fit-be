@@ -32,5 +32,7 @@ ENV NODE_ENV=production
 RUN rm -rf /usr/src/app/node_modules/.cache && \
     find /usr/src/app/node_modules -type d -name "test" -o -name "tests" -o -name "docs" -o -name "examples" | xargs rm -rf
 
+RUN npm install -g npm@11.3.0
+
 EXPOSE 3000
 CMD ["node", "dist/src/main.js"]
