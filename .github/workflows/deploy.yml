@@ -119,7 +119,7 @@ jobs:
             sudo docker system prune -a --volumes -f
 
             echo '🗑️ 기존 테이블 삭제 중...'
-            docker run --rm \
+            sudo docker run --rm \
               -e PGPASSWORD=${{ secrets.DB_PASSWORD }} \
               postgres:latest \
               psql -h ${{ secrets.DB_HOST }} \
