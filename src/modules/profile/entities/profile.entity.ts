@@ -8,11 +8,12 @@ import {
 } from 'typeorm';
 import { InterestLocation } from '../interest-location/entities/interest-location.entity';
 import { ProfileImage } from '../profile-image/entities/profile-image.entity';
-import { User } from 'src/modules/user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
 import { Mbti } from '../mbti/entities/mbti.entity';
-import { UserFeedback } from 'src/modules/profile/feedback/entities/user-feedback.entity';
-import { UserInterestCategory } from 'src/modules/profile/interest-category/entities/user-interest-category.entity';
+import { UserFeedback } from '../feedback/entities/user-feedback.entity';
+import { UserInterestCategory } from '../interest-category/entities/user-interest-category.entity';
 import { UserIntroduction } from '../introduction/entities/user-introduction.entity';
+
 @Entity()
 export class Profile {
   @PrimaryGeneratedColumn('uuid')

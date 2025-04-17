@@ -6,7 +6,7 @@ import {
   Column,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { BaseTable } from 'src/common/entity/base-table.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
 
 @Entity()
 export class Like extends BaseTable {

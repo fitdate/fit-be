@@ -2,17 +2,17 @@ import { Controller, Get, Post, Query } from '@nestjs/common';
 import { RBAC } from 'src/common/decorator/rbac.decorator';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { AdminService } from './admin.service';
-import { PaymentService } from '../payment/payment.service';
+import { PaymentService } from 'src/modules/payment/payment.service';
 import {
   PaymentStatistics,
   TopPayingUser,
-} from '../payment/types/payment.types';
+} from 'src/modules/payment/types/payment.types';
 import {
   GenderStatistics,
   AgeGroupStatistics,
   LocationStatistics,
-} from '../user/types/statistics.types';
-import { Payment } from '../payment/entities/payment.entity';
+} from 'src/modules/user/types/statistics.types';
+import { Payment } from 'src/modules/payment/entities/payment.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Admin')

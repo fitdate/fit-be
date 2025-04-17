@@ -1,15 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { BaseTable } from 'src/common/entity/base-table.entity';
-
-export type PaymentStatus =
-  | 'completed'
-  | 'failed'
-  | 'refunded'
-  | 'DONE'
-  | 'CANCELED';
-export type PaymentMethod = 'credit_card' | 'kakao_pay' | 'naver_pay';
+import { BaseTable } from '../../../common/entity/base-table.entity';
+import { PaymentStatus } from '../types/payment.types';
+import { PaymentMethod } from '../types/payment.types';
 
 @Entity()
 export class Payment extends BaseTable {
@@ -18,8 +18,9 @@ export class Payment extends BaseTable {
   id: string;
 
   @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, (user) => user.payments)
-  user: User;
+  @ManyToOne(() => User, { onDelete: 'CASCADE', eager: true })
+  @JoinColumn({ name: 'userId' })
+  user!: User;
 
   @ApiProperty()
   @Column()

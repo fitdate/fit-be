@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { Profile } from 'src/modules/profile/entities/profile.entity';
+import { Profile } from '../../entities/profile.entity';
 import { Feedback } from './feedback.entity';
 
 @Entity()

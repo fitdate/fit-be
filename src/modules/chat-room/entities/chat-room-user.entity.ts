@@ -1,16 +1,17 @@
-import { Entity, ManyToOne, JoinColumn, PrimaryColumn } from 'typeorm';
-import { ChatRoom } from './chat-room.entity';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
+import { ChatRoom } from './chat-room.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('chat_room_users')
-export class ChatRoomUser {
+export class ChatRoomUser extends BaseTable {
   @ApiProperty()
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   chatRoomId: string;
 
   @ApiProperty()
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
   userId: string;
 
   @ApiProperty({ type: () => ChatRoom })

@@ -15,6 +15,7 @@ import { AuthProvider } from './types/oatuth.types';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { CookieOptions, Response, Request } from 'express';
+import { User } from '../user/entities/user.entity';
 
 // JWT 응답 타입 정의
 interface JwtTokenResponse {
@@ -473,14 +474,26 @@ export class AuthService {
       redirectUrl: string;
     }
   > {
-    let user = await this.userService.findUserByEmail(userData.email);
+    let user: User | null = await this.userService.findUserByEmail(
+      userData.email,
+    );
 
     if (!user) {
-      user = await this.userService.createSocialUser({
-        email: userData.email,
-        name: userData.name,
-        authProvider: userData.authProvider,
-      });
+      try {
+        const newUser = await this.userService.createSocialUser({
+          email: userData.email,
+          name: userData.name,
+          authProvider: userData.authProvider,
+        });
+        user = newUser;
+      } catch (error) {
+        throw new UnauthorizedException(
+          '소셜 로그인 사용자 생성에 실패했습니다.',
+          {
+            cause: error,
+          },
+        );
+      }
     }
 
     const tokenResponse = this.generateTokens(user.id, user.role, origin);

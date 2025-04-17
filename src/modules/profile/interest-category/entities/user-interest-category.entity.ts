@@ -1,6 +1,6 @@
 import { Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { InterestCategory } from './interest-category.entity';
-import { Profile } from 'src/modules/profile/entities/profile.entity';
+import { Profile } from '../../entities/profile.entity';
 
 @Entity('user_interest_category')
 export class UserInterestCategory {

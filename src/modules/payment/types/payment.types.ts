@@ -1,4 +1,11 @@
-import { PaymentStatus, PaymentMethod } from '../entities/payment.entity';
+export type PaymentStatus =
+  | 'completed'
+  | 'failed'
+  | 'refunded'
+  | 'DONE'
+  | 'CANCELED';
+
+export type PaymentMethod = 'credit_card' | 'kakao_pay' | 'naver_pay';
 
 export interface PaymentStatistics {
   total: number;

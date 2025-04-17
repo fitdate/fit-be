@@ -44,7 +44,9 @@ export class UserService {
     });
   }
 
-  createSocialUser(createUserSocialDto: CreateUserSocialDto) {
+  async createSocialUser(
+    createUserSocialDto: CreateUserSocialDto,
+  ): Promise<User> {
     const timestamp = Date.now();
 
     const socialUser = {

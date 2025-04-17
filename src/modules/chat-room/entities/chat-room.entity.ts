@@ -7,7 +7,7 @@ import {
   JoinTable,
 } from 'typeorm';
 import { Message } from '../../message/entities/message.entity';
-import { BaseTable } from 'src/common/entity/base-table.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
 import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 

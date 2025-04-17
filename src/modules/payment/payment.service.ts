@@ -152,15 +152,21 @@ export class PaymentService {
       relations: ['payments'],
     });
 
-    const userPayments = users.map((user) => ({
-      user,
-      totalAmount: user.payments
-        .filter((payment) => payment.status === 'completed')
-        .reduce((sum, payment) => sum + payment.amount, 0),
-      paymentCount: user.payments.filter(
-        (payment) => payment.status === 'completed',
-      ).length,
-    }));
+    const userPayments = users.map((user) => {
+      const completedPayments = (user.payments || []).filter(
+        (payment: Payment) => payment.status === 'completed',
+      );
+      const totalAmount = completedPayments.reduce(
+        (sum, payment: Payment) => sum + payment.amount,
+        0,
+      );
+
+      return {
+        user,
+        totalAmount,
+        paymentCount: completedPayments.length,
+      };
+    });
 
     return userPayments
       .sort((a, b) => b.totalAmount - a.totalAmount)

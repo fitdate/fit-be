@@ -7,13 +7,13 @@ import {
   PrimaryGeneratedColumn,
   ManyToMany,
 } from 'typeorm';
-import { UserRole } from 'src/common/enum/user-role.enum';
-import { Profile } from 'src/modules/profile/entities/profile.entity';
-import { Like } from 'src/modules/like/entities/like.entity';
-import { Pass } from 'src/modules/pass/entities/pass.entity';
-import { AuthProvider } from 'src/modules/auth/types/oatuth.types';
-import { Payment } from 'src/modules/payment/entities/payment.entity';
-import { ChatRoom } from 'src/modules/chat-room/entities/chat-room.entity';
+import { UserRole } from '../../../common/enum/user-role.enum';
+import { Profile } from '../../profile/entities/profile.entity';
+import { Like } from '../../like/entities/like.entity';
+import { Pass } from '../../pass/entities/pass.entity';
+import { AuthProvider } from '../../auth/types/oatuth.types';
+import { Payment } from '../../payment/entities/payment.entity';
+import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
 
 @Entity()
 export class User {

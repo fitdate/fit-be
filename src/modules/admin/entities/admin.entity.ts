@@ -1,6 +1,6 @@
-import { Entity } from 'typeorm';
+import { UserRole } from '../../../common/enum/user-role.enum';
 import { User } from '../../user/entities/user.entity';
-import { UserRole } from 'src/common/enum/user-role.enum';
+import { Entity } from 'typeorm';
 
 @Entity()
 export class Admin extends User {
