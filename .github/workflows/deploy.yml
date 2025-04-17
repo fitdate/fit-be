@@ -114,6 +114,9 @@ jobs:
             sudo kill -9 \$(sudo lsof -t -i:3001) 2>/dev/null || true
             sudo docker stop fit-blue fit-green 2>/dev/null || true
             sudo docker rm fit-blue fit-green 2>/dev/null || true
+            
+            echo '🧹 사용하지 않는 도커 리소스 정리 중...'
+            sudo docker system prune -a --volumes -f
 
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
@@ -123,6 +126,9 @@ jobs:
               -p $NEW_PORT:3000 \
               -v ~/.env:/usr/src/app/.env \
               -e APP_PORT=$NEW_PORT \
+              --log-driver json-file \
+              --log-opt max-size=10m \
+              --log-opt max-file=3 \
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
               
