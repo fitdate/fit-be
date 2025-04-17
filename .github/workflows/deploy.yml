@@ -214,6 +214,14 @@ jobs:
               
               -- chat_room_users 테이블 관련 제약 조건 강제 삭제
               DROP TABLE IF EXISTS chat_room_users CASCADE;
+              
+              -- 기존 제약 조건 삭제
+              DO \$\$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'PK_7b36b3577d455c6e10772dae103') THEN
+                  ALTER TABLE chat_room_users DROP CONSTRAINT "PK_7b36b3577d455c6e10772dae103";
+                END IF;
+              END \$\$;
             EOF
           " || {
             echo "❌ Failed to setup database"
