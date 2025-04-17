@@ -74,6 +74,7 @@ jobs:
 
       - name: Deploy to EC2
         env:
+          DB_HOST: ${{ secrets.DB_HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
