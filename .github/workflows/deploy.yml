@@ -141,54 +141,36 @@ jobs:
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
             
-            # 1. 데이터베이스 사용자 권한 설정
-            psql -U ${{ secrets.DB_USER }} -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
-              -- 사용자 권한 설정
-              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
-              ALTER USER ${{ secrets.DB_USER }} WITH CREATEDB;
-              ALTER USER ${{ secrets.DB_USER }} WITH CREATEROLE;
-              ALTER USER ${{ secrets.DB_USER }} WITH LOGIN;
-            EOF
-            
-            # 2. 데이터베이스 생성 및 권한 설정
-            psql -U ${{ secrets.DB_USER }} -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
-              -- 기존 데이터베이스 삭제 (다른 세션에서 사용 중이면 강제 종료)
+            # 1. postgres 사용자로 데이터베이스 초기화
+            psql -U postgres -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+              -- 기존 데이터베이스 삭제
               SELECT pg_terminate_backend(pg_stat_activity.pid)
               FROM pg_stat_activity
               WHERE pg_stat_activity.datname = 'fit'
                 AND pid <> pg_backend_pid();
               
               DROP DATABASE IF EXISTS fit;
+              DROP USER IF EXISTS ${{ secrets.DB_USER }};
+              
+              -- 새 사용자 생성
+              CREATE USER ${{ secrets.DB_USER }} WITH PASSWORD '${{ secrets.DB_PASSWORD }}';
+              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
               
               -- 새 데이터베이스 생성
               CREATE DATABASE fit;
-              
-              -- 데이터베이스 소유권 설정
               ALTER DATABASE fit OWNER TO ${{ secrets.DB_USER }};
-              
-              -- 데이터베이스 권한 설정
-              GRANT ALL PRIVILEGES ON DATABASE fit TO ${{ secrets.DB_USER }};
-              GRANT CONNECT ON DATABASE fit TO ${{ secrets.DB_USER }};
-              GRANT TEMPORARY ON DATABASE fit TO ${{ secrets.DB_USER }};
             EOF
             
-            # 3. 데이터베이스 초기화
+            # 2. 새 사용자로 스키마 초기화
             psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
-              -- 기존 스키마 제거
+              -- 스키마 초기화
               DROP SCHEMA IF EXISTS public CASCADE;
-              
-              -- 스키마 생성
               CREATE SCHEMA public;
               
-              -- 스키마 소유권 설정
+              -- 스키마 소유권 및 권한 설정
               ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
-              
-              -- 스키마 권한 설정
               GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON SCHEMA public TO public;
-              GRANT CREATE ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT USAGE ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT USAGE ON SCHEMA public TO public;
               
               -- 기본 권한 설정
               ALTER DEFAULT PRIVILEGES IN SCHEMA public 
@@ -200,20 +182,8 @@ jobs:
               ALTER DEFAULT PRIVILEGES IN SCHEMA public 
                 GRANT ALL ON TYPES TO ${{ secrets.DB_USER }};
               
-              -- 기존 객체에 대한 권한 설정
-              GRANT ALL ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL TYPES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              
-              -- 시퀀스 생성 권한
-              GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              
               -- uuid-ossp 확장 설치
               CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
-              
-              -- chat_room_users 테이블 관련 제약 조건 강제 삭제
-              DROP TABLE IF EXISTS chat_room_users CASCADE;
             EOF
           " || {
             echo "❌ Failed to setup database"
