@@ -78,7 +78,7 @@ export class User {
   @Column({ nullable: true })
   likeCount: number;
 
-  @Column()
+  @Column({ default: false })
   isProfileComplete: boolean;
 
   @Column({ type: 'varchar' })
