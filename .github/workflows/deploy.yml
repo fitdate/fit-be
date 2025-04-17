@@ -147,6 +147,7 @@ jobs:
               ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
               ALTER USER ${{ secrets.DB_USER }} WITH CREATEDB;
               ALTER USER ${{ secrets.DB_USER }} WITH CREATEROLE;
+              ALTER USER ${{ secrets.DB_USER }} WITH LOGIN;
             EOF
             
             # 2. 데이터베이스 생성 및 권한 설정
@@ -168,6 +169,7 @@ jobs:
               -- 데이터베이스 권한 설정
               GRANT ALL PRIVILEGES ON DATABASE fit TO ${{ secrets.DB_USER }};
               GRANT CONNECT ON DATABASE fit TO ${{ secrets.DB_USER }};
+              GRANT TEMPORARY ON DATABASE fit TO ${{ secrets.DB_USER }};
             EOF
             
             # 3. 데이터베이스 초기화
@@ -185,6 +187,8 @@ jobs:
               GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON SCHEMA public TO public;
               GRANT CREATE ON SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT USAGE ON SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT USAGE ON SCHEMA public TO public;
               
               -- 기본 권한 설정
               ALTER DEFAULT PRIVILEGES IN SCHEMA public 
