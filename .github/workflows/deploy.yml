@@ -96,6 +96,10 @@ jobs:
           echo "Username: $DB_USER"
           echo "Port: 5432"
 
+          # 데이터베이스 생성
+          echo "🔄 Creating database if not exists..."
+          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -h $DB_HOST -p 5432 -c 'CREATE DATABASE \"$DB_NAME\"' || true"
+
           # 데이터베이스 연결 테스트
           echo "🔄 Testing database connection..."
           ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1' 2>&1" || {
