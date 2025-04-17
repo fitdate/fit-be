@@ -119,7 +119,7 @@ jobs:
             sudo docker system prune -a --volumes -f
 
             echo '🗑️ 기존 테이블 삭제 중...'
-            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USERNAME -d $DB_DATABASE -c "DROP TABLE IF EXISTS chat_room_users CASCADE;"
+            PGPASSWORD=$DB_PASSWORD psql "postgresql://$DB_USERNAME@$DB_HOST/$DB_DATABASE" -c 'DROP TABLE IF EXISTS chat_room_users CASCADE;'
 
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
