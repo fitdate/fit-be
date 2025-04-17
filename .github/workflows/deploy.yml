@@ -126,6 +126,22 @@ jobs:
               ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${{ secrets.DB_USER }};
               GRANT ALL ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL PROCEDURES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL ROUTINES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL TYPES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL DOMAINS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL LARGE OBJECTS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL OPERATORS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL OPERATOR CLASSES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL OPERATOR FAMILIES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL TEXT SEARCH CONFIGURATIONS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL TEXT SEARCH DICTIONARIES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL TEXT SEARCH PARSERS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL TEXT SEARCH TEMPLATES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL FOREIGN DATA WRAPPERS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL FOREIGN SERVERS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON ALL USER MAPPINGS IN SCHEMA public TO ${{ secrets.DB_USER }};
               
               -- chat_room_users 테이블 관련 제약 조건 강제 삭제
               DROP TABLE IF EXISTS chat_room_users CASCADE;
