@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { ChatRoomService } from '../chat-room/chat-room.service';
+import { MessageResponseDto } from './dto/message-response.dto';
 
 @Injectable()
 export class MessageService {
@@ -16,6 +17,16 @@ export class MessageService {
     private readonly chatRoomService: ChatRoomService,
   ) {}
 
+  private toMessageResponseDto(
+    message: Message,
+    currentUserId: string,
+  ): MessageResponseDto {
+    return {
+      ...message,
+      isMine: message.senderId === currentUserId,
+    };
+  }
+
   // 새로운 메시지를 생성하고 저장
   async create(
     chatRoomId: string,
@@ -23,7 +34,7 @@ export class MessageService {
     content: string,
     type: 'text' | 'image' | 'emoji' = 'text',
     fileUrl?: string,
-  ): Promise<Message> {
+  ): Promise<MessageResponseDto> {
     const chatRoom = await this.chatRoomService.findOne(chatRoomId);
     if (!chatRoom.users.some((user) => user.id === senderId)) {
       throw new ForbiddenException('채팅방 참여자가 아닙니다');
@@ -37,15 +48,17 @@ export class MessageService {
       fileUrl,
       isRead: false,
     });
-    return await this.messageRepository.save(message);
+    const savedMessage = await this.messageRepository.save(message);
+    return this.toMessageResponseDto(savedMessage, senderId);
   }
 
   // 특정 채팅방의 메시지 목록을 조회
   async findAll(
     chatRoomId: string,
+    currentUserId: string,
     cursor?: string,
     limit: number = 50,
-  ): Promise<{ messages: Message[]; nextCursor: string | null }> {
+  ): Promise<{ messages: MessageResponseDto[]; nextCursor: string | null }> {
     const queryBuilder = this.messageRepository
       .createQueryBuilder('message')
       .where('message.chatRoomId = :chatRoomId', { chatRoomId })
@@ -71,23 +84,36 @@ export class MessageService {
 
     const lastItem = items[items.length - 1];
     if (!lastItem?.createdAt || !lastItem?.id) {
-      return { messages: items, nextCursor: null };
+      return {
+        messages: items.map((message) =>
+          this.toMessageResponseDto(message, currentUserId),
+        ),
+        nextCursor: null,
+      };
     }
 
     const nextCursor = hasNextPage
       ? `${lastItem.createdAt.toISOString()}_${lastItem.id}`
       : null;
 
-    return { messages: items, nextCursor };
+    return {
+      messages: items.map((message) =>
+        this.toMessageResponseDto(message, currentUserId),
+      ),
+      nextCursor,
+    };
   }
 
   // 특정 메시지의 상세 정보를 조회
-  async findOne(id: string): Promise<Message> {
+  async findOne(
+    id: string,
+    currentUserId: string,
+  ): Promise<MessageResponseDto> {
     const message = await this.messageRepository.findOne({ where: { id } });
     if (!message) {
       throw new BadRequestException('메시지를 찾을 수 없습니다');
     }
-    return message;
+    return this.toMessageResponseDto(message, currentUserId);
   }
 
   // 여러 메시지를 한 번에 읽음으로 표시
@@ -104,10 +130,11 @@ export class MessageService {
   // 채팅방 내에서 메시지를 검색
   async search(
     chatRoomId: string,
+    currentUserId: string,
     keyword: string,
     cursor?: string,
     limit: number = 50,
-  ): Promise<{ messages: Message[]; nextCursor: string | null }> {
+  ): Promise<{ messages: MessageResponseDto[]; nextCursor: string | null }> {
     const queryBuilder = this.messageRepository
       .createQueryBuilder('message')
       .where('message.chatRoomId = :chatRoomId', { chatRoomId })
@@ -134,23 +161,34 @@ export class MessageService {
 
     const lastItem = items[items.length - 1];
     if (!lastItem?.createdAt || !lastItem?.id) {
-      return { messages: items, nextCursor: null };
+      return {
+        messages: items.map((message) =>
+          this.toMessageResponseDto(message, currentUserId),
+        ),
+        nextCursor: null,
+      };
     }
 
     const nextCursor = hasNextPage
       ? `${lastItem.createdAt.toISOString()}_${lastItem.id}`
       : null;
 
-    return { messages: items, nextCursor };
+    return {
+      messages: items.map((message) =>
+        this.toMessageResponseDto(message, currentUserId),
+      ),
+      nextCursor,
+    };
   }
 
   // 채팅방의 메시지 히스토리를 조회
   async getHistory(
     chatRoomId: string,
+    currentUserId: string,
     before?: string,
     after?: string,
     limit: number = 50,
-  ): Promise<{ messages: Message[]; total: number }> {
+  ): Promise<{ messages: MessageResponseDto[]; total: number }> {
     const queryBuilder = this.messageRepository
       .createQueryBuilder('message')
       .where('message.chatRoomId = :chatRoomId', { chatRoomId });
@@ -167,6 +205,11 @@ export class MessageService {
       .take(limit)
       .getManyAndCount();
 
-    return { messages, total };
+    return {
+      messages: messages.map((message) =>
+        this.toMessageResponseDto(message, currentUserId),
+      ),
+      total,
+    };
   }
 }

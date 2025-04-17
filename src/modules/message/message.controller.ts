@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,6 +8,13 @@ import {
 } from '@nestjs/swagger';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { Request } from 'express';
+
+interface RequestWithUser extends Request {
+  user: {
+    id: string;
+  };
+}
 
 @ApiTags('messages')
 @Controller('messages')
@@ -54,10 +61,17 @@ export class MessageController {
   })
   findAll(
     @Param('chatRoomId') chatRoomId: string,
+    @Req() req: RequestWithUser,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: number,
   ) {
-    return this.messageService.findAll(chatRoomId, cursor, limit);
+    const currentUserId = req.user.id;
+    return this.messageService.findAll(
+      chatRoomId,
+      currentUserId,
+      cursor,
+      limit,
+    );
   }
 
   @Get(':id')
@@ -71,8 +85,9 @@ export class MessageController {
     description: '메시지가 성공적으로 조회되었습니다.',
   })
   @ApiResponse({ status: 400, description: '메시지를 찾을 수 없습니다.' })
-  findOne(@Param('id') id: string) {
-    return this.messageService.findOne(id);
+  findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const currentUserId = req.user.id;
+    return this.messageService.findOne(id, currentUserId);
   }
 
   @Post('read')
@@ -114,10 +129,18 @@ export class MessageController {
   })
   search(
     @Param('chatRoomId') chatRoomId: string,
+    @Req() req: RequestWithUser,
     @Query('keyword') keyword: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: number,
   ) {
-    return this.messageService.search(chatRoomId, keyword, cursor, limit);
+    const currentUserId = req.user.id;
+    return this.messageService.search(
+      chatRoomId,
+      currentUserId,
+      keyword,
+      cursor,
+      limit,
+    );
   }
 }
