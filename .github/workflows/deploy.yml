@@ -119,12 +119,12 @@ jobs:
             sudo docker system prune -a --volumes -f
 
             echo '🗑️ 데이터베이스 스키마 초기화 중...'
-            PGPASSWORD=${{ secrets.DB_PASSWORD }} psql \
-              -U ${{ secrets.DB_USERNAME }} \
-              -d ${{ secrets.DB_DATABASE }} \
-              -h ${{ secrets.DB_HOST }} \
-              -p 5432 \
-              -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+            export PGPASSWORD=${{ secrets.DB_PASSWORD }}
+            psql -h ${{ secrets.DB_HOST }} \
+                 -p 5432 \
+                 -U ${{ secrets.DB_USERNAME }} \
+                 -d ${{ secrets.DB_DATABASE }} \
+                 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
             echo '🐳 Docker 이미지 다운로드 중...'
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
