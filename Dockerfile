@@ -18,13 +18,19 @@ WORKDIR /usr/src/app
 
 # 프로덕션 의존성만 설치
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=production && \
+    npm cache clean --force && \
+    rm -rf /root/.npm /tmp/*
 
 # 빌드된 파일만 복사
 COPY --from=builder /usr/src/app/dist ./dist
 
 # 환경 변수 설정
 ENV NODE_ENV=production
+
+# 불필요한 파일 제거
+RUN rm -rf /usr/src/app/node_modules/.cache && \
+    find /usr/src/app/node_modules -type d -name "test" -o -name "tests" -o -name "docs" -o -name "examples" | xargs rm -rf
 
 EXPOSE 3000
 CMD ["node", "dist/src/main.js"]
