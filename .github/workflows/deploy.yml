@@ -108,6 +108,9 @@ jobs:
               GRANT ALL ON SCHEMA public TO public;
               ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${{ secrets.DB_USER }};
               ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${{ secrets.DB_USER }};
+              
+              -- chat_room_users 테이블 관련 제약 조건 강제 삭제
+              DROP TABLE IF EXISTS chat_room_users CASCADE;
             EOF
           " || {
             echo "❌ Failed to reset database schema"
