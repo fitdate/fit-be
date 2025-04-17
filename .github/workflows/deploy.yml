@@ -74,19 +74,10 @@ jobs:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: fit-be
+          DB_NAME: fit
         run: |
-          # 환경 변수 검증
-          if [ -z "$DB_HOST" ]; then
-            echo "❌ DB_HOST is not set"
-            exit 1
-          fi
-          if [ -z "$DB_USER" ]; then
-            echo "❌ DB_USER is not set"
-            exit 1
-          fi
-          if [ -z "$DB_PASSWORD" ]; then
-            echo "❌ DB_PASSWORD is not set"
+          if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
+            echo "❌ DB 관련 환경 변수가 비어있습니다."
             exit 1
           fi
 
@@ -94,20 +85,13 @@ jobs:
           echo "Host: $DB_HOST"
           echo "Database: $DB_NAME"
           echo "Username: $DB_USER"
-          echo "Port: 5432"
 
-          # 데이터베이스 생성
           echo "🔄 Creating database if not exists..."
           ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -h $DB_HOST -p 5432 -c 'CREATE DATABASE \"$DB_NAME\"' || true"
 
-          # 데이터베이스 연결 테스트
           echo "🔄 Testing database connection..."
-          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1' 2>&1" || {
+          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1'" || {
             echo "❌ Database connection test failed"
-            echo "Error details:"
-            echo "DB_HOST: $DB_HOST"
-            echo "DB_USER: $DB_USER"
-            echo "DB_NAME: $DB_NAME"
             exit 1
           }
           echo "✅ Database connection test successful"
@@ -117,11 +101,7 @@ jobs:
           echo "🗑️ 데이터베이스 스키마 초기화 중..."
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            psql -U ${{ secrets.DB_USER }} \
-              -d fit-be \
-              -h ${{ secrets.DB_HOST }} \
-              -p 5432 \
-              -c \"DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};\"
+            psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 -c 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};'
           " || {
             echo "❌ Failed to reset database schema"
             exit 1
@@ -138,7 +118,6 @@ jobs:
         run: |
           ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
 
-          # Nginx 설정 업로드
           ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
           ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available"
           scp nginx-config/fit-blue.conf $USERNAME@$DB_HOST:~/fit-blue.conf
@@ -146,9 +125,8 @@ jobs:
           ssh $USERNAME@$DB_HOST "sudo mv ~/fit-blue.conf /etc/nginx/sites-available/ && sudo mv ~/fit-green.conf /etc/nginx/sites-available/"
           ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-enabled"
 
-          # 현재 실행 중인 포트 확인
           CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
-          if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
+          if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
             NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
             CURRENT_ENV="blue"
@@ -158,20 +136,17 @@ jobs:
             CURRENT_ENV="green"
           fi
 
-          # .env 파일 전송
           scp .env $USERNAME@$DB_HOST:~/
 
-          # Blue-Green 배포
           ssh $USERNAME@$DB_HOST "
             set -e
-
             echo '🧹 기존 프로세스 정리 중...'
             sudo kill -9 \$(sudo lsof -t -i:3000) 2>/dev/null || true
             sudo kill -9 \$(sudo lsof -t -i:3001) 2>/dev/null || true
             sudo docker stop fit-blue fit-green 2>/dev/null || true
             sudo docker rm fit-blue fit-green 2>/dev/null || true
-            
-            echo '🧹 사용하지 않는 도커 리소스 정리 중...'
+
+            echo '🧹 도커 리소스 정리 중...'
             sudo docker system prune -a --volumes -f
 
             echo '🐳 Docker 이미지 다운로드 중...'
@@ -180,23 +155,22 @@ jobs:
             echo '🚀 새 컨테이너 시작 중...'
             sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
-              -v ~/.env:/usr/src/app/.env \
+              -v ~/\.env:/usr/src/app/.env \
               -e APP_PORT=$NEW_PORT \
               --log-driver json-file \
               --log-opt max-size=10m \
               --log-opt max-file=3 \
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
-              
+
             echo '🔌 네트워크 연결 중...'
             sudo docker network connect fit-network fit-$NEW_ENV || true
             sudo docker network connect redis-network fit-$NEW_ENV || true
 
             echo '🔍 컨테이너 상태 확인 중...'
-            CONTAINER_STATUS=\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)
-            if [ \"\$CONTAINER_STATUS\" != \"running\" ]; then
-              echo '❌ 컨테이너 실행 실패' > ~/deploy-error.log
-              sudo docker logs fit-$NEW_ENV >> ~/deploy-error.log
+            if [ \"\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)\" != \"running\" ]; then
+              echo '❌ 컨테이너 실행 실패'
+              sudo docker logs fit-$NEW_ENV
               exit 1
             fi
 
@@ -217,8 +191,8 @@ jobs:
               sleep 5
             done
 
-            echo '❌ 헬스 체크 실패' > ~/deploy-error.log
-            sudo docker logs fit-$NEW_ENV >> ~/deploy-error.log
+            echo '❌ 헬스 체크 실패'
+            sudo docker logs fit-$NEW_ENV
             sudo docker stop fit-$NEW_ENV
             sudo docker rm fit-$NEW_ENV
             exit 1
