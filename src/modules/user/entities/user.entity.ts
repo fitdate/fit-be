@@ -14,12 +14,9 @@ import { Pass } from 'src/modules/pass/entities/pass.entity';
 import { AuthProvider } from 'src/modules/auth/types/oatuth.types';
 import { Payment } from 'src/modules/payment/entities/payment.entity';
 import { ChatRoom } from 'src/modules/chat-room/entities/chat-room.entity';
-import { ApiProperty } from '@nestjs/swagger';
 
-import { AuthProvider } from 'src/modules/auth/types/oatuth.types';
 @Entity()
 export class User {
-
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
