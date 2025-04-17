@@ -135,20 +135,37 @@ jobs:
 
           echo "✅ Database connection test successful"
 
-      - name: Reset DB schema
+      - name: Setup Database
         run: |
-          echo "🗑️ 데이터베이스 스키마 초기화 중..."
+          echo "🔧 데이터베이스 설정 중..."
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
             
-            # 데이터베이스 삭제 및 재생성
-            psql -U postgres -h ${{ secrets.DB_HOST }} -p 5432 << EOF
-              DROP DATABASE IF EXISTS fit;
-              CREATE DATABASE fit;
-              GRANT ALL PRIVILEGES ON DATABASE fit TO ${{ secrets.DB_USER }};
+            # 1. 데이터베이스 사용자 권한 설정
+            psql -U ${{ secrets.DB_USER }} -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+              -- 사용자 권한 설정
+              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
+              ALTER USER ${{ secrets.DB_USER }} WITH CREATEDB;
+              ALTER USER ${{ secrets.DB_USER }} WITH CREATEROLE;
             EOF
             
-            # 데이터베이스 초기화
+            # 2. 데이터베이스 생성 및 권한 설정
+            psql -U ${{ secrets.DB_USER }} -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+              -- 기존 데이터베이스 삭제
+              DROP DATABASE IF EXISTS fit;
+              
+              -- 새 데이터베이스 생성
+              CREATE DATABASE fit;
+              
+              -- 데이터베이스 소유권 설정
+              ALTER DATABASE fit OWNER TO ${{ secrets.DB_USER }};
+              
+              -- 데이터베이스 권한 설정
+              GRANT ALL PRIVILEGES ON DATABASE fit TO ${{ secrets.DB_USER }};
+              GRANT CONNECT ON DATABASE fit TO ${{ secrets.DB_USER }};
+            EOF
+            
+            # 3. 데이터베이스 초기화
             psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
               -- 기존 스키마 제거
               DROP SCHEMA IF EXISTS public CASCADE;
@@ -159,12 +176,10 @@ jobs:
               -- 스키마 소유권 설정
               ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
               
-              -- 데이터베이스 사용자 권한 설정
-              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
-              
               -- 스키마 권한 설정
               GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON SCHEMA public TO public;
+              GRANT CREATE ON SCHEMA public TO ${{ secrets.DB_USER }};
               
               -- 기본 권한 설정
               ALTER DEFAULT PRIVILEGES IN SCHEMA public 
@@ -192,10 +207,10 @@ jobs:
               DROP TABLE IF EXISTS chat_room_users CASCADE;
             EOF
           " || {
-            echo "❌ Failed to reset database schema"
+            echo "❌ Failed to setup database"
             exit 1
           }
-          echo "✅ Database schema reset successful"
+          echo "✅ Database setup successful"
 
       - name: Deploy to EC2
         env:
