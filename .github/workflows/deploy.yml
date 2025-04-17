@@ -118,30 +118,39 @@ jobs:
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
             psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+              -- 기존 스키마 및 권한 제거
               DROP SCHEMA IF EXISTS public CASCADE;
+              
+              -- 스키마 생성 및 소유권 설정
               CREATE SCHEMA public;
+              ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
+              
+              -- 기본 권한 설정
+              GRANT USAGE ON SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT CREATE ON SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON SCHEMA public TO public;
-              ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${{ secrets.DB_USER }};
-              ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${{ secrets.DB_USER }};
+              
+              -- 기본 권한 설정
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+                GRANT ALL ON TABLES TO ${{ secrets.DB_USER }};
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+                GRANT ALL ON SEQUENCES TO ${{ secrets.DB_USER }};
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+                GRANT ALL ON FUNCTIONS TO ${{ secrets.DB_USER }};
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+                GRANT ALL ON TYPES TO ${{ secrets.DB_USER }};
+              
+              -- 기존 객체에 대한 권한 설정
               GRANT ALL ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL PROCEDURES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL ROUTINES IN SCHEMA public TO ${{ secrets.DB_USER }};
               GRANT ALL ON ALL TYPES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL DOMAINS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL LARGE OBJECTS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL OPERATORS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL OPERATOR CLASSES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL OPERATOR FAMILIES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL TEXT SEARCH CONFIGURATIONS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL TEXT SEARCH DICTIONARIES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL TEXT SEARCH PARSERS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL TEXT SEARCH TEMPLATES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL FOREIGN DATA WRAPPERS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL FOREIGN SERVERS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL USER MAPPINGS IN SCHEMA public TO ${{ secrets.DB_USER }};
+              
+              -- 시퀀스 생성 권한
+              GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
+              
+              -- uuid-ossp 확장 설치
+              CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
               
               -- chat_room_users 테이블 관련 제약 조건 강제 삭제
               DROP TABLE IF EXISTS chat_room_users CASCADE;
