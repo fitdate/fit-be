@@ -125,10 +125,12 @@ jobs:
               CREATE SCHEMA public;
               ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
               
-              -- 기본 권한 설정
-              GRANT USAGE ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT CREATE ON SCHEMA public TO ${{ secrets.DB_USER }};
+              -- 데이터베이스 사용자에게 슈퍼유저 권한 부여
+              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
+              
+              -- 스키마 권한 설정
               GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
+              GRANT ALL ON SCHEMA public TO public;
               
               -- 기본 권한 설정
               ALTER DEFAULT PRIVILEGES IN SCHEMA public 
