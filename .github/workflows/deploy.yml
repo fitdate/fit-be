@@ -63,17 +63,18 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # SSH 키 파일 생성 및 권한 설정
+          # SSH 키 파일 생성 및 형식 검증
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/fit-key.pem
           chmod 600 ~/.ssh/fit-key.pem
 
           # SSH 설정 파일 생성
           cat > ~/.ssh/config << EOL
           Host ${{ secrets.DB_HOST }}
-            User ${{ secrets.USERNAME }}
+            User ubuntu
             IdentityFile ~/.ssh/fit-key.pem
             StrictHostKeyChecking no
             ServerAliveInterval 30
+            PreferredAuthentications publickey
           EOL
           chmod 600 ~/.ssh/config
 
@@ -91,14 +92,23 @@ jobs:
       # 🧪 DB 서버 상태 확인
       - name: 🧪 Check Database Server Status
         run: |
-          echo "Attempting to connect to ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }}"
-          ssh -v ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} \
+          echo "=== SSH Connection Test ==="
+          echo "Host: ${{ secrets.DB_HOST }}"
+          echo "User: ubuntu"
+          echo "Key file: $(ls -la ~/.ssh/fit-key.pem)"
+
+          echo "=== Attempting SSH Connection ==="
+          ssh -vvv -i ~/.ssh/fit-key.pem ubuntu@${{ secrets.DB_HOST }} \
+          "echo 'SSH connection successful' || echo 'SSH connection failed'"
+
+          echo "=== Checking PostgreSQL Status ==="
+          ssh -vvv -i ~/.ssh/fit-key.pem ubuntu@${{ secrets.DB_HOST }} \
           "systemctl status postgresql || echo 'PostgreSQL service not found'"
 
       # 🧹 DB 초기화 및 세팅
       - name: 🧹 Setup Database
         run: |
-          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
+          ssh ubuntu@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
             psql -U myuser -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
               ALTER USER myuser WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
