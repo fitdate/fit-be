@@ -158,21 +158,21 @@ jobs:
       - name: 🚀 Deploy to EC2
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
+          USERNAME: ubuntu
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
           # Nginx 설정 업로드 및 적용
-          ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
-          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
-          scp nginx-config/fit-blue.conf nginx-config/fit-green.conf $USERNAME@$DB_HOST:~/
-          ssh $USERNAME@$DB_HOST "
+          ssh ubuntu@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
+          ssh ubuntu@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
+          scp nginx-config/fit-blue.conf nginx-config/fit-green.conf ubuntu@$DB_HOST:~/
+          ssh ubuntu@$DB_HOST "
             sudo mv ~/fit-*.conf /etc/nginx/sites-available/
           "
 
           # 현재 실행 포트 확인 및 Blue-Green 포트 결정
-          CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
+          CURRENT_PORT=$(ssh ubuntu@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
             NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
@@ -182,10 +182,10 @@ jobs:
           fi
 
           # .env 파일 업로드 및 새 컨테이너 실행
-          scp .env $USERNAME@$DB_HOST:~/
-          scp docker/docker-compose.yml $USERNAME@$DB_HOST:~/
+          scp .env ubuntu@$DB_HOST:~/
+          scp docker/docker-compose.yml ubuntu@$DB_HOST:~/
 
-          ssh $USERNAME@$DB_HOST "
+          ssh ubuntu@$DB_HOST "
             export DOCKER_USERNAME=$DOCKER_USERNAME
             docker-compose -f ~/docker-compose.yml pull
             docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
