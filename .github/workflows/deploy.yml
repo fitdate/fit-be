@@ -60,6 +60,9 @@ jobs:
       - name: 🔐 Configure SSH and Create .env
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "ServerAliveInterval 30" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
