@@ -1,6 +1,6 @@
 version: '3.8'
 
-services:
+services: # blue
   app-blue:
     container_name: fit-blue
     image: ${DOCKER_USERNAME}/fit-be:latest
@@ -20,7 +20,7 @@ services:
     depends_on:
       - redis-blue
 
-  app-green:
+  app-green: # green
     container_name: fit-green
     image: ${DOCKER_USERNAME}/fit-be:latest
     restart: unless-stopped
