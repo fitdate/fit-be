@@ -68,10 +68,19 @@ jobs:
           echo "ServerAliveInterval 30" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
+          # SSH 디버깅 정보 출력
+          echo "=== SSH Debug Info ==="
+          echo "SSH Key exists: $(ls -la ~/.ssh/fit-key.pem)"
+          echo "SSH Key permissions: $(stat -c %a ~/.ssh/fit-key.pem)"
+          echo "SSH Config contents:"
+          cat ~/.ssh/config
+          echo "=== End SSH Debug Info ==="
+
       # 🧪 DB 서버 상태 확인
       - name: 🧪 Check Database Server Status
         run: |
-          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} \
+          echo "Attempting to connect to ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }}"
+          ssh -v ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} \
           "systemctl status postgresql || echo 'PostgreSQL service not found'"
 
       # 🧹 DB 초기화 및 세팅
@@ -79,22 +88,22 @@ jobs:
         run: |
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            psql -U ${{ secrets.DB_USERNAME }} -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
-              ALTER USER ${{ secrets.DB_USERNAME }} WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
+            psql -U myuser -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
+              ALTER USER myuser WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
               SELECT pg_terminate_backend(pid)
               FROM pg_stat_activity
               WHERE datname = 'fit' AND pid <> pg_backend_pid();
               DROP DATABASE IF EXISTS fit;
               CREATE DATABASE fit;
-              ALTER DATABASE fit OWNER TO ${{ secrets.DB_USERNAME }};
-              GRANT ALL PRIVILEGES ON DATABASE fit TO ${{ secrets.DB_USERNAME }};
+              ALTER DATABASE fit OWNER TO myuser;
+              GRANT ALL PRIVILEGES ON DATABASE fit TO myuser;
             EOF
 
-            psql -U ${{ secrets.DB_USERNAME }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+            psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
               DROP SCHEMA IF EXISTS public CASCADE;
               CREATE SCHEMA public;
-              ALTER SCHEMA public OWNER TO ${{ secrets.DB_USERNAME }};
-              GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USERNAME }};
+              ALTER SCHEMA public OWNER TO myuser;
+              GRANT ALL ON SCHEMA public TO myuser;
               CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
             EOF
           "
