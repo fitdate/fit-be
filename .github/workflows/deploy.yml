@@ -12,6 +12,7 @@ on:
       - '.github/workflows/**'
       - 'Dockerfile'
       - 'nginx-config/**'
+      - 'docker-compose.yml'
       - '!frontend/**'
 
 jobs:
