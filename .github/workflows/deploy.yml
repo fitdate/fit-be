@@ -127,7 +127,6 @@ jobs:
               ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
               GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
               CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
-              DROP TABLE IF EXISTS chat_room_users CASCADE;
             EOF
           "
 
@@ -171,6 +170,7 @@ jobs:
               -p $NEW_PORT:3000 \
               -v ~/\.env:/usr/src/app/.env \
               -e APP_PORT=$NEW_PORT \
+              -e TYPEORM_SYNCHRONIZE=true \
               --log-driver json-file \
               --log-opt max-size=10m \
               --log-opt max-file=3 \
