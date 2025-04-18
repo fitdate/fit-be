@@ -74,6 +74,7 @@ import { AdminController } from './modules/admin/admin.controller';
       validationOptions: {
         allowUnknown: true,
         abortEarly: false,
+        stripUnknown: true, // 모르는 키가 있으면 무시
       },
     }),
     TypeOrmModule.forRootAsync({
