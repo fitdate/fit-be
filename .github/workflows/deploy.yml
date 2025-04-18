@@ -1,4 +1,4 @@
-name: Deploy Backend Application # 배포
+name: Deploy Backend Application
 
 on:
   push:
@@ -19,24 +19,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # 📦 코드 체크아웃
+      - name: 📦 Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
-      - name: Setup Node.js
+      # 🔧 Node.js 설정
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Login to DockerHub
+      # 🔐 DockerHub 로그인
+      - name: 🔐 Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Cache Docker layers
+      # 💾 Docker 캐시 설정
+      - name: 💾 Cache Docker layers
         uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
@@ -44,22 +48,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Set up Docker Buildx
+      # 🏗️ Docker Buildx 설정
+      - name: 🏗️ Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Install SSH key
+      # 🔑 SSH 키 설치
+      - name: 🔑 Install SSH key
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Configure SSH and Create .env
+      # 🔐 SSH 설정 및 .env 생성
+      - name: 🔐 Configure SSH and Create .env
         run: |
           mkdir -p ~/.ssh
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "ServerAliveInterval 30" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
-      - name: Build and push Docker image
+      # 🐳 Docker 이미지 빌드 및 푸시
+      - name: 🐳 Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -71,165 +79,60 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           load: true
 
-      - name: Move cache
+      # ♻️ Docker 캐시 이동
+      - name: ♻️ Move cache
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      - name: Check Database Server Status
+      # 🧪 DB 서버 상태 확인
+      - name: 🧪 Check Database Server Status
         run: |
-          echo "Checking database server status..."
-          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "systemctl status postgresql || echo 'PostgreSQL service not found'" || {
-            echo "❌ Failed to check database server status"
-            exit 1
-          }
-          echo "✅ Database server status check completed"
+          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} \
+          "systemctl status postgresql || echo 'PostgreSQL service not found'"
 
-      - name: Test Database Connection
+      # 🔗 DB 연결 테스트
+      - name: 🔗 Test Database Connection
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: fit
         run: |
-          if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASSWORD" ]; then
-            echo "❌ DB 관련 환경 변수가 비어있습니다."
-            exit 1
-          fi
+          ssh ${{ secrets.USERNAME }}@$DB_HOST "
+            export PGPASSWORD='$DB_PASSWORD'
+            psql -U $DB_USER -h $DB_HOST -p 5432 -c 'CREATE DATABASE \"$DB_NAME\"' || true
+            psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1'
+          "
 
-          echo "🔍 Database connection test configuration:"
-          echo "Host: $DB_HOST"
-          echo "Database: $DB_NAME"
-          echo "Username: $DB_USER"
-
-          echo "🔄 Creating database if not exists..."
-          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -h $DB_HOST -p 5432 -c 'CREATE DATABASE \"$DB_NAME\"' || true"
-
-          echo "🔄 Testing database connection..."
-          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1'" || {
-            echo "❌ Database connection test failed"
-            exit 1
-          }
-
-          echo "🔄 Setting up database permissions..."
-          ssh ${{ secrets.USERNAME }}@$DB_HOST "PGPASSWORD='$DB_PASSWORD' psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 << EOF
-            -- 데이터베이스 소유권 변경
-            ALTER DATABASE $DB_NAME OWNER TO $DB_USER;
-            
-            -- public 스키마 권한 설정
-            GRANT ALL ON SCHEMA public TO $DB_USER;
-            GRANT ALL ON ALL TABLES IN SCHEMA public TO $DB_USER;
-            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO $DB_USER;
-            GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO $DB_USER;
-            
-            -- 기본 권한 설정
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-              GRANT ALL ON TABLES TO $DB_USER;
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-              GRANT ALL ON SEQUENCES TO $DB_USER;
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-              GRANT ALL ON FUNCTIONS TO $DB_USER;
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-              GRANT ALL ON TYPES TO $DB_USER;
-          EOF"
-
-          echo "✅ Database connection test successful"
-
-      - name: Setup Database
+      # 🧹 DB 초기화 및 세팅
+      - name: 🧹 Setup Database
         run: |
-          echo "🔧 데이터베이스 설정 중..."
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            
-            # 1. 데이터베이스 사용자 권한 설정
             psql -U ${{ secrets.DB_USER }} -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
-              -- 사용자 권한 설정
-              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER;
-              ALTER USER ${{ secrets.DB_USER }} WITH CREATEDB;
-              ALTER USER ${{ secrets.DB_USER }} WITH CREATEROLE;
-              ALTER USER ${{ secrets.DB_USER }} WITH LOGIN;
-            EOF
-            
-            # 2. 데이터베이스 생성 및 권한 설정
-            psql -U ${{ secrets.DB_USER }} -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
-              -- 기존 데이터베이스 삭제 (다른 세션에서 사용 중이면 강제 종료)
-              SELECT pg_terminate_backend(pg_stat_activity.pid)
+              ALTER USER ${{ secrets.DB_USER }} WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
+              SELECT pg_terminate_backend(pid)
               FROM pg_stat_activity
-              WHERE pg_stat_activity.datname = 'fit'
-                AND pid <> pg_backend_pid();
-              
+              WHERE datname = 'fit' AND pid <> pg_backend_pid();
               DROP DATABASE IF EXISTS fit;
-              
-              -- 새 데이터베이스 생성
               CREATE DATABASE fit;
-              
-              -- 데이터베이스 소유권 설정
               ALTER DATABASE fit OWNER TO ${{ secrets.DB_USER }};
-              
-              -- 데이터베이스 권한 설정
               GRANT ALL PRIVILEGES ON DATABASE fit TO ${{ secrets.DB_USER }};
-              GRANT CONNECT ON DATABASE fit TO ${{ secrets.DB_USER }};
-              GRANT TEMPORARY ON DATABASE fit TO ${{ secrets.DB_USER }};
             EOF
-            
-            # 3. 데이터베이스 초기화
-            psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
-              -- 기존 스키마 제거
-              DROP SCHEMA IF EXISTS public CASCADE;
-              
-              -- 스키마 생성
-              CREATE SCHEMA public;
-              
-              -- 스키마 소유권 설정
-              ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
-              
-              -- 스키마 권한 설정
-              GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON SCHEMA public TO public;
-              GRANT CREATE ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT USAGE ON SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT USAGE ON SCHEMA public TO public;
-              
-              -- 기본 권한 설정
-              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-                GRANT ALL ON TABLES TO ${{ secrets.DB_USER }};
-              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-                GRANT ALL ON SEQUENCES TO ${{ secrets.DB_USER }};
-              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-                GRANT ALL ON FUNCTIONS TO ${{ secrets.DB_USER }};
-              ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-                GRANT ALL ON TYPES TO ${{ secrets.DB_USER }};
-              
-              -- 기존 객체에 대한 권한 설정
-              GRANT ALL ON ALL TABLES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO ${{ secrets.DB_USER }};
-              GRANT ALL ON ALL TYPES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              
-              -- 시퀀스 생성 권한
-              GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${{ secrets.DB_USER }};
-              
-              -- uuid-ossp 확장 설치
-              CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
-              
-              -- chat_room_users 테이블 관련 제약 조건 강제 삭제
-              DROP TABLE IF EXISTS chat_room_users CASCADE;
-              
-              -- 기존 제약 조건 삭제
-              DO \$\$
-              BEGIN
-                IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'PK_7b36b3577d455c6e10772dae103') THEN
-                  ALTER TABLE chat_room_users DROP CONSTRAINT "PK_7b36b3577d455c6e10772dae103";
-                END IF;
-              END \$\$;
-            EOF
-          " || {
-            echo "❌ Failed to setup database"
-            exit 1
-          }
-          echo "✅ Database setup successful"
 
-      - name: Deploy to EC2
+            psql -U ${{ secrets.DB_USER }} -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+              DROP SCHEMA IF EXISTS public CASCADE;
+              CREATE SCHEMA public;
+              ALTER SCHEMA public OWNER TO ${{ secrets.DB_USER }};
+              GRANT ALL ON SCHEMA public TO ${{ secrets.DB_USER }};
+              CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+              DROP TABLE IF EXISTS chat_room_users CASCADE;
+            EOF
+          "
+
+      # 🚀 EC2로 배포
+      - name: 🚀 Deploy to EC2
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           USERNAME: ${{ secrets.USERNAME }}
@@ -237,46 +140,33 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          ssh -o ConnectTimeout=10 $USERNAME@$DB_HOST "echo 'SSH connection test successful'"
-
+          # Nginx 설정 업로드 및 적용
           ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
-          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available"
-          scp nginx-config/fit-blue.conf $USERNAME@$DB_HOST:~/fit-blue.conf
-          scp nginx-config/fit-green.conf $USERNAME@$DB_HOST:~/fit-green.conf
-          ssh $USERNAME@$DB_HOST "sudo mv ~/fit-blue.conf /etc/nginx/sites-available/ && sudo mv ~/fit-green.conf /etc/nginx/sites-available/"
-          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-enabled"
+          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
+          scp nginx-config/fit-blue.conf nginx-config/fit-green.conf $USERNAME@$DB_HOST:~/
+          ssh $USERNAME@$DB_HOST "
+            sudo mv ~/fit-*.conf /etc/nginx/sites-available/
+          "
 
+          # 현재 실행 포트 확인 및 Blue-Green 포트 결정
           CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
           if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
             NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
-            CURRENT_ENV="blue"
           else
             NEW_PORT=$BLUE_PORT
             NEW_ENV="blue"
-            CURRENT_ENV="green"
           fi
 
+          # .env 파일 업로드 및 새 컨테이너 실행
           scp .env $USERNAME@$DB_HOST:~/
 
           ssh $USERNAME@$DB_HOST "
-            set -e
-            echo '🧹 기존 프로세스 정리 중...'
-            sudo kill -9 \$(sudo lsof -t -i:3000) 2>/dev/null || true
-            sudo kill -9 \$(sudo lsof -t -i:3001) 2>/dev/null || true
-            sudo docker stop fit-blue fit-green 2>/dev/null || true
-            sudo docker rm fit-blue fit-green 2>/dev/null || true
-
-            echo '🧹 도커 리소스 정리 중...'
+            sudo docker stop fit-blue fit-green || true
+            sudo docker rm fit-blue fit-green || true
             sudo docker system prune -a --volumes -f
+            sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
 
-            echo '🐳 Docker 이미지 다운로드 중...'
-            timeout 300 sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA || {
-              echo '❌ Docker 이미지 다운로드 타임아웃'
-              exit 1
-            }
-
-            echo '🚀 새 컨테이너 시작 중...'
             sudo docker run -d --name fit-$NEW_ENV \
               -p $NEW_PORT:3000 \
               -v ~/\.env:/usr/src/app/.env \
@@ -287,37 +177,6 @@ jobs:
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
 
-            echo '🔌 네트워크 연결 중...'
-            sudo docker network connect fit-network fit-$NEW_ENV || true
-            sudo docker network connect redis-network fit-$NEW_ENV
-
-            echo '🔍 컨테이너 상태 확인 중...'
-            if [ \"\$(sudo docker inspect -f '{{.State.Status}}' fit-$NEW_ENV)\" != \"running\" ]; then
-              echo '❌ 컨테이너 실행 실패'
-              sudo docker logs fit-$NEW_ENV
-              exit 1
-            fi
-
-            echo '🔄 Nginx 설정 업데이트 중...'
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/
+            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx
-
-            echo '🏥 헬스 체크 중...'
-            for i in {1..6}; do
-              if curl -s -f http://localhost:$NEW_PORT/health | grep -q '"status":"ok"'; then
-                sudo docker stop fit-$CURRENT_ENV 2>/dev/null || true
-                sudo docker rm fit-$CURRENT_ENV 2>/dev/null || true
-                sudo rm -f /etc/nginx/sites-enabled/fit-$CURRENT_ENV.conf
-                sudo nginx -t && sudo systemctl reload nginx
-                echo '✅ 배포 성공'
-                exit 0
-              fi
-              sleep 10
-            done
-
-            echo '❌ 헬스 체크 실패'
-            sudo docker logs fit-$NEW_ENV
-            sudo docker stop fit-$NEW_ENV
-            sudo docker rm fit-$NEW_ENV
-            exit 1
           "
