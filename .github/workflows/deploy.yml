@@ -193,8 +193,16 @@ jobs:
           # 환경 변수 디렉토리 생성 및 파일 복사
           ssh ubuntu@$DB_HOST "
             mkdir -p ~/blue ~/green
-            cp ~/.env ~/blue/.env.blue
-            cp ~/.env ~/green/.env.green
+            cat > ~/blue/.env.blue << EOL
+            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+            KAKAO_CALLBACK_URL=https://api.fit-date.co.kr/auth/kakao/login/callback
+            NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
+            NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
+            NAVER_CALLBACK_URL=https://api.fit-date.co.kr/auth/naver/login/callback
+            SOCIAL_FRONTEND_URL=https://fit-date.co.kr
+            EOL
+            cp ~/blue/.env.blue ~/green/.env.green
           "
 
           # .env 파일 업로드 및 새 컨테이너 실행
