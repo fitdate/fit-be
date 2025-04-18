@@ -1,15 +1,9 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
-  Column,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
 import { Profile } from '../../profile/entities/profile.entity';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
-export class Match {
+export class Match extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -21,10 +15,4 @@ export class Match {
 
   @ManyToOne(() => Profile, { eager: true })
   user2: Profile;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

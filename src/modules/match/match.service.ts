@@ -20,19 +20,19 @@ export class MatchService {
 
     // MBTI 유사도
     if (profile1.mbti && profile2.mbti) {
-      if (profile1.mbti.type === profile2.mbti.type) {
+      if (profile1.mbti.mbti === profile2.mbti.mbti) {
         similarity += 30;
       }
     }
 
     // 관심 카테고리 유사도
     if (profile1.interestCategory && profile2.interestCategory) {
-      const categories1 = Array.isArray(profile1.interestCategory)
-        ? profile1.interestCategory.map((cat) => cat.interestCategory.name)
-        : [];
-      const categories2 = Array.isArray(profile2.interestCategory)
-        ? profile2.interestCategory.map((cat) => cat.interestCategory.name)
-        : [];
+      const categories1 = profile1.interestCategory.map(
+        (cat) => cat.interestCategory.name,
+      );
+      const categories2 = profile2.interestCategory.map(
+        (cat) => cat.interestCategory.name,
+      );
       const commonCategories = categories1.filter((cat) =>
         categories2.includes(cat),
       );
@@ -49,12 +49,12 @@ export class MatchService {
 
     // 피드백 유사도
     if (profile1.userFeedbacks && profile2.userFeedbacks) {
-      const feedback1 = Array.isArray(profile1.userFeedbacks)
-        ? profile1.userFeedbacks.map((fb) => fb.feedback || '').join(' ')
-        : '';
-      const feedback2 = Array.isArray(profile2.userFeedbacks)
-        ? profile2.userFeedbacks.map((fb) => fb.feedback || '').join(' ')
-        : '';
+      const feedback1 = profile1.userFeedbacks
+        .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
+        .join(' ');
+      const feedback2 = profile2.userFeedbacks
+        .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
+        .join(' ');
       const commonWords = feedback1
         .split(' ')
         .filter((word) => feedback2.includes(word));
@@ -87,26 +87,68 @@ export class MatchService {
       }))
       .sort((a, b) => b.similarity - a.similarity);
 
-    // 상위 4개 프로필 선택
-    const topProfiles = profilesWithSimilarity
-      .slice(0, 4)
-      .map((item) => item.profile);
+    // 유사도 기반 가중치 적용하여 4명 선택
+    const selectedProfiles: Profile[] = [];
+    const totalSimilarity = profilesWithSimilarity.reduce(
+      (sum, item) => sum + item.similarity,
+      0,
+    );
 
-    // 2명씩 매칭
-    const matches = [];
-    for (let i = 0; i < topProfiles.length; i += 2) {
-      if (i + 1 < topProfiles.length) {
+    while (selectedProfiles.length < 4 && profilesWithSimilarity.length > 0) {
+      const random = Math.random() * totalSimilarity;
+      let currentSum = 0;
+      let selectedIndex = 0;
+
+      for (let i = 0; i < profilesWithSimilarity.length; i++) {
+        currentSum += profilesWithSimilarity[i].similarity;
+        if (currentSum >= random) {
+          selectedIndex = i;
+          break;
+        }
+      }
+
+      selectedProfiles.push(profilesWithSimilarity[selectedIndex].profile);
+      profilesWithSimilarity.splice(selectedIndex, 1);
+    }
+
+    // 최적의 매칭 쌍 찾기
+    const matches: { matchId: string; user1: Profile; user2: Profile }[] = [];
+    const usedIndices = new Set<number>();
+
+    for (let i = 0; i < selectedProfiles.length; i++) {
+      if (usedIndices.has(i)) continue;
+
+      let bestMatchIndex = -1;
+      let bestMatchScore = -1;
+
+      for (let j = i + 1; j < selectedProfiles.length; j++) {
+        if (usedIndices.has(j)) continue;
+
+        const matchScore = this.calculateSimilarity(
+          selectedProfiles[i],
+          selectedProfiles[j],
+        );
+
+        if (matchScore > bestMatchScore) {
+          bestMatchScore = matchScore;
+          bestMatchIndex = j;
+        }
+      }
+
+      if (bestMatchIndex !== -1) {
         const matchId = uuidv4();
-        const match = await this.create({
+        await this.create({
           matchId,
-          user1Id: topProfiles[i].user.id,
-          user2Id: topProfiles[i + 1].user.id,
+          user1Id: selectedProfiles[i].user.id,
+          user2Id: selectedProfiles[bestMatchIndex].user.id,
         });
         matches.push({
           matchId,
-          user1: topProfiles[i],
-          user2: topProfiles[i + 1],
+          user1: selectedProfiles[i],
+          user2: selectedProfiles[bestMatchIndex],
         });
+        usedIndices.add(i);
+        usedIndices.add(bestMatchIndex);
       }
     }
 
