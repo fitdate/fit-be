@@ -166,6 +166,11 @@ jobs:
           # Nginx 설정 업로드 및 적용
           ssh ubuntu@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
           ssh ubuntu@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
+
+          # Nginx 설정 파일 수정
+          sed -i 's/root \/usr\/share\/nginx\/html/root \/usr\/share\/nginx\/html;/' docker/nginx/fit-blue.conf
+          sed -i 's/root \/usr\/share\/nginx\/html/root \/usr\/share\/nginx\/html;/' docker/nginx/fit-green.conf
+
           scp docker/nginx/fit-blue.conf docker/nginx/fit-green.conf ubuntu@$DB_HOST:~/
           ssh ubuntu@$DB_HOST "
             sudo mv ~/fit-*.conf /etc/nginx/sites-available/
@@ -186,6 +191,9 @@ jobs:
           scp docker/docker-compose.yml ubuntu@$DB_HOST:~/
 
           ssh ubuntu@$DB_HOST "
+            # 환경 변수 파일 생성
+            cp ~/.env ~/$NEW_ENV/.env.$NEW_ENV
+            
             export DOCKER_USERNAME=$DOCKER_USERNAME
             docker-compose -f ~/docker-compose.yml pull
             docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
