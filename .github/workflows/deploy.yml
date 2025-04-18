@@ -102,15 +102,56 @@ jobs:
           "echo 'SSH connection successful' || echo 'SSH connection failed'"
 
           echo "=== Checking PostgreSQL Status ==="
-          ssh -vvv -i ~/.ssh/fit-key.pem ubuntu@${{ secrets.DB_HOST }} \
-          "systemctl status postgresql || echo 'PostgreSQL service not found'"
+          ssh ubuntu@${{ secrets.DB_HOST }} "
+            echo 'PostgreSQL status:'
+            sudo systemctl status postgresql || echo 'PostgreSQL service not found'
+            
+            echo 'PostgreSQL port:'
+            sudo netstat -tulpn | grep postgres || echo 'No PostgreSQL process found'
+            
+            echo 'PostgreSQL config:'
+            sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses || echo 'No PostgreSQL config found'
+          "
 
       # 🧹 DB 초기화 및 세팅
       - name: 🧹 Setup Database
         run: |
+          echo "=== Setting up Database ==="
           ssh ubuntu@${{ secrets.DB_HOST }} "
+            # 시스템 업데이트
+            sudo apt-get update
+            
+            # PostgreSQL 설치 확인
+            if ! command -v psql &> /dev/null; then
+              echo 'Installing PostgreSQL...'
+              sudo apt-get install -y postgresql postgresql-contrib
+            fi
+            
+            # PostgreSQL 설정 변경
+            sudo sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/\" /etc/postgresql/*/main/postgresql.conf
+            
+            # pg_hba.conf에 원격 접속 규칙 추가
+            echo 'host    all             all             0.0.0.0/0               scram-sha-256' | sudo tee -a /etc/postgresql/*/main/pg_hba.conf
+            
+            # 방화벽 설정
+            if command -v ufw &> /dev/null; then
+              sudo ufw allow 5432/tcp
+            fi
+            
+            # PostgreSQL 재시작
+            sudo systemctl restart postgresql
+            
+            # PostgreSQL 상태 확인
+            echo 'PostgreSQL status:'
+            sudo systemctl status postgresql
+            
+            # PostgreSQL 사용자 설정
+            sudo -u postgres psql -c \"CREATE USER myuser WITH PASSWORD '${{ secrets.DB_PASSWORD }}' SUPERUSER;\"
+            
             export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            psql -U myuser -h ${{ secrets.DB_HOST }} -p 5432 postgres << EOF
+            
+            # 데이터베이스 설정
+            psql -U myuser -h ${{ secrets.DB_HOST }} -p 5432 postgres << 'EOF'
               ALTER USER myuser WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
               SELECT pg_terminate_backend(pid)
               FROM pg_stat_activity
@@ -121,7 +162,7 @@ jobs:
               GRANT ALL PRIVILEGES ON DATABASE fit TO myuser;
             EOF
 
-            psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << EOF
+            psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << 'EOF'
               DROP SCHEMA IF EXISTS public CASCADE;
               CREATE SCHEMA public;
               ALTER SCHEMA public OWNER TO myuser;
