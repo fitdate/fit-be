@@ -166,4 +166,16 @@ export class ProfileService {
 
     return this.getProfileById(profile.id);
   }
+
+  async findAll(): Promise<Profile[]> {
+    return this.profileRepository.find({
+      relations: [
+        'user',
+        'mbti',
+        'userFeedbacks',
+        'userIntroductions',
+        'interestCategory',
+      ],
+    });
+  }
 }
