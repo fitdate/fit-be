@@ -186,14 +186,18 @@ jobs:
             NEW_ENV="blue"
           fi
 
+          # 환경 변수 디렉토리 생성 및 파일 복사
+          ssh ubuntu@$DB_HOST "
+            mkdir -p ~/blue ~/green
+            cp ~/.env ~/blue/.env.blue
+            cp ~/.env ~/green/.env.green
+          "
+
           # .env 파일 업로드 및 새 컨테이너 실행
           scp .env ubuntu@$DB_HOST:~/
           scp docker/docker-compose.yml ubuntu@$DB_HOST:~/
 
           ssh ubuntu@$DB_HOST "
-            # 환경 변수 파일 생성
-            cp ~/.env ~/$NEW_ENV/.env.$NEW_ENV
-            
             export DOCKER_USERNAME=$DOCKER_USERNAME
             docker-compose -f ~/docker-compose.yml pull
             docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
