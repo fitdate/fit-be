@@ -33,145 +33,32 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # 🔐 DockerHub 로그인
-      - name: 🔐 Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # 🐳 Docker 이미지 빌드 및 푸시
-      - name: 🐳 Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/fit-be:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
-
       # 🔑 SSH 키 설치
       - name: 🔑 Install SSH key
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 🔐 SSH 설정 및 .env 생성
-      - name: 🔐 Configure SSH and Create .env
+      # 🔐 SSH 설정 및 테스트
+      - name: 🔐 Configure SSH and Test Connection
         run: |
+          # SSH 디렉토리 생성 및 권한 설정
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
+
+          # SSH 키 파일 생성
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/fit-key.pem
           chmod 600 ~/.ssh/fit-key.pem
-          echo "${{ secrets.ENV_FILE }}" > .env
 
-      # 🧪 DB 서버 상태 확인
-      - name: 🧪 Check Database Server Status
-        run: |
-          ssh ubuntu@${{ secrets.DB_HOST }} "
-            echo 'PostgreSQL status:'
-            sudo systemctl status postgresql || echo 'PostgreSQL service not found'
-            
-            echo 'PostgreSQL port:'
-            sudo netstat -tulpn | grep postgres || echo 'No PostgreSQL process found'
-            
-            echo 'PostgreSQL config:'
-            sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses || echo 'No PostgreSQL config found'
-          "
+          # SSH 설정 파일 생성
+          cat > ~/.ssh/config << EOL
+          Host ${{ secrets.DB_HOST }}
+            User ubuntu
+            IdentityFile ~/.ssh/fit-key.pem
+            StrictHostKeyChecking no
+            ServerAliveInterval 30
+          EOL
+          chmod 600 ~/.ssh/config
 
-      # 🧹 DB 초기화 및 세팅
-      - name: 🧹 Setup Database
-        run: |
-          ssh ubuntu@${{ secrets.DB_HOST }} "
-            # 시스템 업데이트
-            sudo apt-get update
-            
-            # PostgreSQL 설치 확인
-            if ! command -v psql &> /dev/null; then
-              echo 'Installing PostgreSQL...'
-              sudo apt-get install -y postgresql postgresql-contrib
-            fi
-            
-            # PostgreSQL 설정 변경
-            sudo sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/\" /etc/postgresql/*/main/postgresql.conf
-            
-            # pg_hba.conf에 원격 접속 규칙 추가
-            echo 'host    all             all             0.0.0.0/0               scram-sha-256' | sudo tee -a /etc/postgresql/*/main/pg_hba.conf
-            
-            # 방화벽 설정
-            if command -v ufw &> /dev/null; then
-              sudo ufw allow 5432/tcp
-            fi
-            
-            # PostgreSQL 재시작
-            sudo systemctl restart postgresql
-            
-            # PostgreSQL 상태 확인
-            echo 'PostgreSQL status:'
-            sudo systemctl status postgresql
-            
-            # PostgreSQL 사용자 설정
-            sudo -u postgres psql -c \"CREATE USER myuser WITH PASSWORD '${{ secrets.DB_PASSWORD }}' SUPERUSER;\"
-            
-            export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            
-            # 데이터베이스 설정
-            psql -U myuser -h ${{ secrets.DB_HOST }} -p 5432 postgres << 'EOF'
-              ALTER USER myuser WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
-              SELECT pg_terminate_backend(pid)
-              FROM pg_stat_activity
-              WHERE datname = 'fit' AND pid <> pg_backend_pid();
-              DROP DATABASE IF EXISTS fit;
-              CREATE DATABASE fit;
-              ALTER DATABASE fit OWNER TO myuser;
-              GRANT ALL PRIVILEGES ON DATABASE fit TO myuser;
-            EOF
-
-            psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << 'EOF'
-              DROP SCHEMA IF EXISTS public CASCADE;
-              CREATE SCHEMA public;
-              ALTER SCHEMA public OWNER TO myuser;
-              GRANT ALL ON SCHEMA public TO myuser;
-              CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
-            EOF
-          "
-
-      # 🚀 EC2로 배포
-      - name: 🚀 Deploy to EC2
-        env:
-          DB_HOST: ${{ secrets.DB_HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          BLUE_PORT: 3000
-          GREEN_PORT: 3001
-        run: |
-          # Nginx 설정 업로드 및 적용
-          ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
-          ssh $USERNAME@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
-          scp nginx-config/fit-blue.conf nginx-config/fit-green.conf $USERNAME@$DB_HOST:~/
-          ssh $USERNAME@$DB_HOST "
-            sudo mv ~/fit-*.conf /etc/nginx/sites-available/
-          "
-
-          # 현재 실행 포트 확인 및 Blue-Green 포트 결정
-          CURRENT_PORT=$(ssh $USERNAME@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
-          if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
-            NEW_PORT=$GREEN_PORT
-            NEW_ENV="green"
-          else
-            NEW_PORT=$BLUE_PORT
-            NEW_ENV="blue"
-          fi
-
-          # .env 파일 업로드 및 새 컨테이너 실행
-          scp .env $USERNAME@$DB_HOST:~/
-          scp docker/docker-compose.yml $USERNAME@$DB_HOST:~/
-
-          ssh $USERNAME@$DB_HOST "
-            export DOCKER_USERNAME=$DOCKER_USERNAME
-            docker-compose -f ~/docker-compose.yml pull
-            docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
-
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
-            sudo nginx -t && sudo systemctl reload nginx
-          "
+          # SSH 연결 테스트
+          ssh -i ~/.ssh/fit-key.pem ubuntu@${{ secrets.DB_HOST }} "echo 'SSH connection successful'"
