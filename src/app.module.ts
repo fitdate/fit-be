@@ -24,7 +24,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { RBACGuard } from './modules/auth/guard/rbac.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { config } from './common/config/config';
+import { config, validationSchema } from './common/config/config';
 import { AllConfig } from './common/config/config.types';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthGuard } from './modules/auth/guard/jwt.guard';
@@ -62,13 +62,19 @@ import { AdminController } from './modules/admin/admin.controller';
 @Module({
   imports: [
     DevtoolsModule.register({
-      http: true,
+      http: process.env.dev !== 'production',
       port: 7001,
     }),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [config],
-      envFilePath: '.env',
+      envFilePath:
+        process.env.NODE_ENV === 'production' ? process.env.ENV_FILE : '.env',
+      validationSchema: validationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -90,13 +96,10 @@ import { AdminController } from './modules/admin/admin.controller';
         entities: [join(__dirname, '/**/*.entity{.ts,.js}')],
         migrations: [join(__dirname, '/migration/*{.ts,.js}')],
         migrationsRun: true,
-        synchronize: true,
+        synchronize: process.env.NODE_ENV === 'production' ? false : true,
         logging: true,
       }),
       inject: [ConfigService],
-    }),
-    DevtoolsModule.register({
-      http: process.env.dev !== 'production',
     }),
     AuthModule,
     ProfileModule,
@@ -144,17 +147,18 @@ export class AppModule implements NestModule {
     consumer
       .apply(BearerTokenMiddleware)
       .exclude(
-        { path: 'auth/login', method: RequestMethod.POST },
-        { path: 'auth/register', method: RequestMethod.POST },
-        { path: 'auth/send-verification-email', method: RequestMethod.POST },
-        { path: 'auth/verify-email', method: RequestMethod.POST },
-        { path: 'auth/google', method: RequestMethod.GET },
-        { path: 'auth/google/login/callback', method: RequestMethod.GET },
-        { path: 'health', method: RequestMethod.GET },
-        { path: 'docs', method: RequestMethod.GET },
+        ...[
+          'auth/login',
+          'auth/register',
+          'auth/send-verification-email',
+          'auth/verify-email',
+          'auth/google',
+          'auth/google/login/callback',
+          'health',
+          'docs',
+        ].map((path) => ({ path, method: RequestMethod.POST })),
       )
       .forRoutes(
-        AppController,
         AuthController,
         UserController,
         ProfileController,

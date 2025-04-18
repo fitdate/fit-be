@@ -39,18 +39,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 💾 Docker 캐시 설정
-      - name: 💾 Cache Docker layers
-        uses: actions/cache@v3
+      # 🐳 Docker 이미지 빌드 및 푸시
+      - name: 🐳 Build and push Docker image
+        uses: docker/build-push-action@v4
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      # 🏗️ Docker Buildx 설정
-      - name: 🏗️ Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/fit-be:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
 
       # 🔑 SSH 키 설치
       - name: 🔑 Install SSH key
@@ -66,67 +63,11 @@ jobs:
           echo "ServerAliveInterval 30" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
 
-      # 🐳 Docker 이미지 빌드 및 푸시
-      - name: 🐳 Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/fit-be:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-          load: true
-
-      # ♻️ Docker 캐시 이동
-      - name: ♻️ Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
       # 🧪 DB 서버 상태 확인
       - name: 🧪 Check Database Server Status
         run: |
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} \
           "systemctl status postgresql || echo 'PostgreSQL service not found'"
-
-      # 🔴 Redis 컨테이너 설정
-      - name: 🔴 Setup Redis Container
-        run: |
-          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
-            sudo docker network create redis-network || true
-            # Blue 환경 Redis
-            sudo docker stop redis-blue || true
-            sudo docker rm redis-blue || true
-            sudo docker run -d --name redis-blue \
-              -p 6379:6379 \
-              --network redis-network \
-              --restart unless-stopped \
-              redis:latest
-            # Green 환경 Redis
-            sudo docker stop redis-green || true
-            sudo docker rm redis-green || true
-            sudo docker run -d --name redis-green \
-              -p 6380:6379 \
-              --network redis-network \
-              --restart unless-stopped \
-              redis:latest
-          "
-
-      # 🔗 DB 연결 테스트
-      - name: 🔗 Test Database Connection
-        env:
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: fit
-        run: |
-          ssh ${{ secrets.USERNAME }}@$DB_HOST "
-            export PGPASSWORD='$DB_PASSWORD'
-            psql -U $DB_USER -h $DB_HOST -p 5432 -c 'CREATE DATABASE \"$DB_NAME\"' || true
-            psql -U $DB_USER -d $DB_NAME -h $DB_HOST -p 5432 -c 'SELECT 1'
-          "
 
       # 🧹 DB 초기화 및 세팅
       - name: 🧹 Setup Database
@@ -161,7 +102,6 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
-          REDIS_PORT: 6379
         run: |
           # Nginx 설정 업로드 및 적용
           ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
@@ -176,34 +116,19 @@ jobs:
           if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
             NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
-            REDIS_HOST="redis-green"
           else
             NEW_PORT=$BLUE_PORT
             NEW_ENV="blue"
-            REDIS_HOST="redis-blue"
           fi
 
           # .env 파일 업로드 및 새 컨테이너 실행
           scp .env $USERNAME@$DB_HOST:~/
+          scp docker/docker-compose.yml $USERNAME@$DB_HOST:~/
 
           ssh $USERNAME@$DB_HOST "
-            sudo docker stop fit-blue fit-green || true
-            sudo docker rm fit-blue fit-green || true
-            sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
-
-            sudo docker run -d --name fit-$NEW_ENV \
-              -p $NEW_PORT:3000 \
-              -v ~/\.env:/usr/src/app/.env \
-              -e APP_PORT=$NEW_PORT \
-              -e TYPEORM_SYNCHRONIZE=true \
-              -e REDIS_HOST=$REDIS_HOST \
-              -e REDIS_PORT=$REDIS_PORT \
-              --network redis-network \
-              --log-driver json-file \
-              --log-opt max-size=10m \
-              --log-opt max-file=3 \
-              --restart unless-stopped \
-              $DOCKER_USERNAME/fit-be:$GITHUB_SHA
+            export DOCKER_USERNAME=$DOCKER_USERNAME
+            docker-compose -f ~/docker-compose.yml pull
+            docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
 
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  app-blue:
+    container_name: fit-blue
+    image: ${DOCKER_USERNAME}/fit-be:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file:
+      - blue/.env.blue
+    environment:
+      - APP_PORT=3000
+      - REDIS_HOST=redis-blue
+      - REDIS_PORT=6379
+      - NODE_ENV=production
+      - ENV_FILE=.env.blue
+    networks:
+      - redis-network
+    depends_on:
+      - redis-blue
+
+  app-green:
+    container_name: fit-green
+    image: ${DOCKER_USERNAME}/fit-be:latest
+    restart: unless-stopped
+    ports:
+      - '3001:3000'
+    env_file:
+      - green/.env.green
+    environment:
+      - APP_PORT=3001
+      - REDIS_HOST=redis-green
+      - REDIS_PORT=6379
+      - NODE_ENV=production
+      - ENV_FILE=.env.green
+    networks:
+      - redis-network
+    depends_on:
+      - redis-green
+
+  redis-blue:
+    container_name: redis-blue
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    networks:
+      - redis-network
+    restart: unless-stopped
+
+  redis-green:
+    container_name: redis-green
+    image: redis:latest
+    ports:
+      - '6380:6379'
+    networks:
+      - redis-network
+    restart: unless-stopped
+
+networks:
+  redis-network:
+    driver: bridge
