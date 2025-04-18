@@ -11,8 +11,8 @@ on:
       - 'nest-cli.json'
       - '.github/workflows/**'
       - 'Dockerfile'
-      - 'nginx-config/**'
-      - 'docker-compose.yml'
+      - 'docker/nginx/**'
+      - 'docker/docker-compose.yml'
       - '!frontend/**'
 
 jobs:
