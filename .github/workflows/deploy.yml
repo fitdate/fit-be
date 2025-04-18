@@ -60,5 +60,8 @@ jobs:
           EOL
           chmod 600 ~/.ssh/config
 
+          # .env 파일 생성
+          echo "${{ secrets.ENV_FILE }}" > .env
+
           # SSH 연결 테스트
           ssh -i ~/.ssh/fit-key.pem ubuntu@${{ secrets.DB_HOST }} "echo 'SSH connection successful'"
