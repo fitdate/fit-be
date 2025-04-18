@@ -34,11 +34,11 @@ export interface RedisConfig {
 }
 
 export interface MailerConfig {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  tokenTtl: string;
+  MAILER_HOST: string;
+  MAILER_PORT: number;
+  MAILER_USER: string;
+  MAILER_PASSWORD: string;
+  MAILER_TOKEN_TTL: string;
 }
 
 export interface SocialConfig {

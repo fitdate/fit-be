@@ -12,12 +12,16 @@ import { AllConfig } from '../../common/config/config.types';
       inject: [ConfigService],
       useFactory: (configService: ConfigService<AllConfig>) => ({
         transport: {
-          host: configService.getOrThrow('mailer.host', { infer: true }),
-          port: configService.getOrThrow('mailer.port', { infer: true }),
+          host: configService.getOrThrow('mailer.MAILER_HOST', { infer: true }),
+          port: configService.getOrThrow('mailer.MAILER_PORT', { infer: true }),
           secure: true,
           auth: {
-            user: configService.getOrThrow('mailer.user', { infer: true }),
-            pass: configService.getOrThrow('mailer.password', { infer: true }),
+            user: configService.getOrThrow('mailer.MAILER_USER', {
+              infer: true,
+            }),
+            pass: configService.getOrThrow('mailer.MAILER_PASSWORD', {
+              infer: true,
+            }),
           },
         },
       }),
