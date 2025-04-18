@@ -91,6 +91,29 @@ jobs:
           ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} \
           "systemctl status postgresql || echo 'PostgreSQL service not found'"
 
+      # 🔴 Redis 컨테이너 설정
+      - name: 🔴 Setup Redis Container
+        run: |
+          ssh ${{ secrets.USERNAME }}@${{ secrets.DB_HOST }} "
+            sudo docker network create redis-network || true
+            # Blue 환경 Redis
+            sudo docker stop redis-blue || true
+            sudo docker rm redis-blue || true
+            sudo docker run -d --name redis-blue \
+              -p 6379:6379 \
+              --network redis-network \
+              --restart unless-stopped \
+              redis:latest
+            # Green 환경 Redis
+            sudo docker stop redis-green || true
+            sudo docker rm redis-green || true
+            sudo docker run -d --name redis-green \
+              -p 6380:6379 \
+              --network redis-network \
+              --restart unless-stopped \
+              redis:latest
+          "
+
       # 🔗 DB 연결 테스트
       - name: 🔗 Test Database Connection
         env:
@@ -138,6 +161,7 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
+          REDIS_PORT: 6379
         run: |
           # Nginx 설정 업로드 및 적용
           ssh $USERNAME@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
@@ -152,9 +176,11 @@ jobs:
           if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
             NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
+            REDIS_HOST="redis-green"
           else
             NEW_PORT=$BLUE_PORT
             NEW_ENV="blue"
+            REDIS_HOST="redis-blue"
           fi
 
           # .env 파일 업로드 및 새 컨테이너 실행
@@ -171,16 +197,14 @@ jobs:
               -v ~/\.env:/usr/src/app/.env \
               -e APP_PORT=$NEW_PORT \
               -e TYPEORM_SYNCHRONIZE=true \
+              -e REDIS_HOST=$REDIS_HOST \
+              -e REDIS_PORT=$REDIS_PORT \
+              --network redis-network \
               --log-driver json-file \
               --log-opt max-size=10m \
               --log-opt max-file=3 \
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
-
-            # 네트워크 연결
-            echo '🔌 네트워크 및 Redis 연결 중...'
-            sudo docker network connect fit-network fit-$NEW_ENV || true
-            sudo docker network connect redis-network fit-$NEW_ENV || true
 
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx
