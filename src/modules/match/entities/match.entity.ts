@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
 import { Profile } from '../../profile/entities/profile.entity';
-import { BaseTable } from 'src/common/entity/base-table.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
 
 @Entity()
 export class Match extends BaseTable {
