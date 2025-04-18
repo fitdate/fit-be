@@ -61,8 +61,9 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/fit-key.pem
+          chmod 400 ~/.ssh/fit-key.pem
+          echo "IdentityFile ~/.ssh/fit-key.pem" >> ~/.ssh/config
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "ServerAliveInterval 30" >> ~/.ssh/config
           echo "${{ secrets.ENV_FILE }}" > .env
