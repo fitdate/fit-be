@@ -408,9 +408,12 @@ export class AuthService {
     const codeKey = `verification-code:${verificationCode}`;
 
     // 시간 문자열을 초 단위로 변환
-    const tokenTtlStr = this.configService.getOrThrow('mailer.tokenTtl', {
-      infer: true,
-    });
+    const tokenTtlStr = this.configService.getOrThrow(
+      'mailer.MAILER_TOKEN_TTL',
+      {
+        infer: true,
+      },
+    );
     const tokenTtlSeconds = parseTimeToSeconds(tokenTtlStr);
 
     // 코드를 키로 이메일을 저장
