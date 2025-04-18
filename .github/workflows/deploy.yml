@@ -96,3 +96,60 @@ jobs:
             echo 'PostgreSQL config:'
             sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses || echo 'No PostgreSQL config found'
           "
+
+      # 🧹 DB 초기화 및 세팅
+      - name: 🧹 Setup Database
+        run: |
+          ssh ubuntu@${{ secrets.DB_HOST }} "
+            # 시스템 업데이트
+            sudo apt-get update
+            
+            # PostgreSQL 설치 확인
+            if ! command -v psql &> /dev/null; then
+              echo 'Installing PostgreSQL...'
+              sudo apt-get install -y postgresql postgresql-contrib
+            fi
+            
+            # PostgreSQL 설정 변경
+            sudo sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/\" /etc/postgresql/*/main/postgresql.conf
+            
+            # pg_hba.conf에 원격 접속 규칙 추가
+            echo 'host    all             all             0.0.0.0/0               scram-sha-256' | sudo tee -a /etc/postgresql/*/main/pg_hba.conf
+            
+            # 방화벽 설정
+            if command -v ufw &> /dev/null; then
+              sudo ufw allow 5432/tcp
+            fi
+            
+            # PostgreSQL 재시작
+            sudo systemctl restart postgresql
+            
+            # PostgreSQL 상태 확인
+            echo 'PostgreSQL status:'
+            sudo systemctl status postgresql
+            
+            # PostgreSQL 사용자 설정
+            sudo -u postgres psql -c \"CREATE USER myuser WITH PASSWORD '${{ secrets.DB_PASSWORD }}' SUPERUSER;\"
+            
+            export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
+            
+            # 데이터베이스 설정
+            psql -U myuser -h ${{ secrets.DB_HOST }} -p 5432 postgres << 'EOF'
+              ALTER USER myuser WITH SUPERUSER CREATEDB CREATEROLE LOGIN;
+              SELECT pg_terminate_backend(pid)
+              FROM pg_stat_activity
+              WHERE datname = 'fit' AND pid <> pg_backend_pid();
+              DROP DATABASE IF EXISTS fit;
+              CREATE DATABASE fit;
+              ALTER DATABASE fit OWNER TO myuser;
+              GRANT ALL PRIVILEGES ON DATABASE fit TO myuser;
+            EOF
+
+            psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << 'EOF'
+              DROP SCHEMA IF EXISTS public CASCADE;
+              CREATE SCHEMA public;
+              ALTER SCHEMA public OWNER TO myuser;
+              GRANT ALL ON SCHEMA public TO myuser;
+              CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";
+            EOF
+          "
