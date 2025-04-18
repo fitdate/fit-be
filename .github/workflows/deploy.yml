@@ -189,7 +189,6 @@ jobs:
           ssh $USERNAME@$DB_HOST "
             sudo docker stop fit-blue fit-green || true
             sudo docker rm fit-blue fit-green || true
-            sudo docker system prune -a --volumes -f
             sudo docker pull $DOCKER_USERNAME/fit-be:$GITHUB_SHA
 
             sudo docker run -d --name fit-$NEW_ENV \
