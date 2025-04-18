@@ -177,6 +177,11 @@ jobs:
               --restart unless-stopped \
               $DOCKER_USERNAME/fit-be:$GITHUB_SHA
 
+            # 네트워크 연결
+            echo '🔌 네트워크 및 Redis 연결 중...'
+            sudo docker network connect fit-network fit-$NEW_ENV || true
+            sudo docker network connect redis-network fit-$NEW_ENV || true
+
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx
           "
