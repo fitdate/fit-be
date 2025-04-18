@@ -167,80 +167,15 @@ jobs:
           ssh ubuntu@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
           ssh ubuntu@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
 
-          # Nginx 설정 파일 수정 및 업로드
-          cat > fit-blue.conf << 'EOL'
-          server {
-              listen 80;
-              server_name api.fit-date.co.kr;
-              
-              location / {
-                  proxy_pass http://localhost:3000;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_cache_bypass $http_upgrade;
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-              }
-              
-              location /docs {
-                  proxy_pass http://localhost:3000/docs;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_cache_bypass $http_upgrade;
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-              }
-              
-              error_page 500 502 503 504 /50x.html;
-              location = /50x.html {
-                  root /usr/share/nginx/html;
-              }
-          }
-          EOL
+          # 백엔드 API 설정 (api.conf)
+          scp docker/nginx/api.conf ubuntu@$DB_HOST:~/api.conf
+          ssh ubuntu@$DB_HOST "
+            sudo mv ~/api.conf /etc/nginx/sites-available/
+            sudo ln -sf /etc/nginx/sites-available/api.conf /etc/nginx/sites-enabled/api.conf
+          "
 
-          cat > fit-green.conf << 'EOL'
-          server {
-              listen 80;
-              server_name api.fit-date.co.kr;
-              
-              location / {
-                  proxy_pass http://localhost:3001;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_cache_bypass $http_upgrade;
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-              }
-              
-              location /docs {
-                  proxy_pass http://localhost:3001/docs;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_cache_bypass $http_upgrade;
-                  proxy_connect_timeout 600;
-                  proxy_send_timeout 600;
-                  proxy_read_timeout 600;
-              }
-              
-              error_page 500 502 503 504 /50x.html;
-              location = /50x.html {
-                  root /usr/share/nginx/html;
-              }
-          }
-          EOL
-
-          scp fit-blue.conf fit-green.conf ubuntu@$DB_HOST:~/
+          # 프론트엔드 Blue-Green 설정
+          scp docker/nginx/fit-blue.conf docker/nginx/fit-green.conf ubuntu@$DB_HOST:~/
           ssh ubuntu@$DB_HOST "
             sudo mv ~/fit-*.conf /etc/nginx/sites-available/
           "
@@ -273,6 +208,7 @@ jobs:
             echo '🚀 컨테이너 시작 중...'
             docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
 
+            # 프론트엔드 Blue-Green 설정 적용
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx
           "
