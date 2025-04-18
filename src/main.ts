@@ -9,7 +9,12 @@ async function bootstrap() {
 
   // CORS 설정
   app.enableCors({
-    origin: true,
+    origin: [
+      'http://localhost:3000',
+      'https://fit-date.com',
+      'https://api.fit-date.com',
+      'https://www.fit-date.com',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -50,6 +55,6 @@ async function bootstrap() {
   });
   SwaggerModule.setup('/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

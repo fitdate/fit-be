@@ -58,6 +58,7 @@ import { SeedManagerController } from './modules/seed/seed-manager.controller';
 import { S3Controller } from './modules/s3/s3.controller';
 import { MailerController } from './modules/mailer/mailer.controller';
 import { AdminController } from './modules/admin/admin.controller';
+import { SseModule } from './modules/sse/sse.module';
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { AdminController } from './modules/admin/admin.controller';
     S3Module,
     MailerModule,
     AdminModule,
+    SseModule,
   ],
   controllers: [AppController],
   providers: [

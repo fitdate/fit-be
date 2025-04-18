@@ -108,6 +108,11 @@ export const validationSchema = Joi.object({
   NAVER_CLIENT_SECRET: Joi.string().required(),
   NAVER_CALLBACK_URL: Joi.string().required(),
   SOCIAL_FRONTEND_URL: Joi.string().required(),
+  MAIL_HOST: Joi.string().required(),
+  MAIL_PORT: Joi.number().required(),
+  MAIL_USER: Joi.string().required(),
+  MAIL_PASS: Joi.string().required(),
+  MAIL_TOKEN_TTL: Joi.string().required(),
 });
 
 export const ConfigModuleOptions = {
