@@ -26,14 +26,27 @@ export class RedisService
         }),
         // password: this.configService.get('REDIS_PASSWORD'),
         retryStrategy: (times) => {
-          const delay = Math.min(times * 50, 2000);
+          if (times > 10) {
+            console.error(
+              'Redis connection failed after 10 retries. Giving up.',
+            );
+            return null; // Stop retrying after 10 attempts
+          }
+          const delay = Math.min(times * 1000, 10000); // 1s, 2s, ..., max 10s delay
+          console.log(
+            `Redis connection failed (Attempt ${times}). Retrying in ${delay}ms...`,
+          );
           return delay;
         },
-        maxRetriesPerRequest: 3,
+        // maxRetriesPerRequest: 3, // This option is for command retries, not initial connection
       });
 
-      this.redisClient.on('error', (error) => {
-        console.error('Redis connection error:', error);
+      this.redisClient.on('error', (error: any) => {
+        // Log only if it's not a connection retry error, as retryStrategy already logs
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (error.code !== 'ENOTFOUND' && error.syscall !== 'getaddrinfo') {
+          console.error('Redis client error:', error);
+        }
       });
 
       this.redisClient.on('connect', () => {
