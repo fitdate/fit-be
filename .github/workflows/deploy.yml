@@ -203,6 +203,9 @@ jobs:
 
           ssh ubuntu@$DB_HOST "
             export DOCKER_USERNAME=$DOCKER_USERNAME
+            echo '🔄 Docker Compose 업데이트 중...'
+            sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f ~/docker-compose.yml pull --quiet
             echo '🚀 컨테이너 시작 중...'
