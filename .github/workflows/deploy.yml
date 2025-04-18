@@ -82,3 +82,17 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/fit-be:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
+
+      # 🧪 DB 서버 상태 확인
+      - name: 🧪 Check Database Server Status
+        run: |
+          ssh ubuntu@${{ secrets.DB_HOST }} "
+            echo 'PostgreSQL status:'
+            sudo systemctl status postgresql || echo 'PostgreSQL service not found'
+            
+            echo 'PostgreSQL port:'
+            sudo netstat -tulpn | grep postgres || echo 'No PostgreSQL process found'
+            
+            echo 'PostgreSQL config:'
+            sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses || echo 'No PostgreSQL config found'
+          "
