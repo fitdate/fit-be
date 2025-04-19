@@ -1,12 +1,4 @@
-import { IsNotEmpty, IsString, IsArray, IsUUID } from 'class-validator';
+import { PartialType } from '@nestjs/swagger';
+import { CreateChatRoomDto } from './create-chat-room.dto';
 
-export class UpdateChatRoomDto {
-  @IsString()
-  @IsNotEmpty()
-  title: string;
-
-  @IsArray()
-  @IsUUID('4', { each: true })
-  @IsNotEmpty()
-  participants: string[];
-}
+export class UpdateChatRoomDto extends PartialType(CreateChatRoomDto) {}

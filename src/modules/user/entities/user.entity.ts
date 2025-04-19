@@ -14,7 +14,6 @@ import { AuthProvider } from '../../auth/types/oatuth.types';
 import { Payment } from '../../payment/entities/payment.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { ChatRoomUser } from '../../chat-room/entities/chat-room-user.entity';
 
 @Entity('users')
 export class User extends BaseTable {
@@ -74,10 +73,6 @@ export class User extends BaseTable {
 
   @OneToMany(() => Payment, (payment) => payment.user)
   payments: Payment[];
-
-  @ApiProperty({ type: () => [ChatRoomUser] })
-  @OneToMany(() => ChatRoomUser, (chatRoomUser) => chatRoomUser.user)
-  chatRoomUsers: ChatRoomUser[];
 
   @Column({ type: 'varchar', default: UserRole.USER })
   role: UserRole;
