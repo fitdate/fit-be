@@ -17,12 +17,6 @@ services:
       - redis-network
     depends_on:
       - redis-blue
-    healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   app-green:
     container_name: fit-green
@@ -42,12 +36,6 @@ services:
       - redis-network
     depends_on:
       - redis-green
-    healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   redis-blue:
     container_name: redis-blue
