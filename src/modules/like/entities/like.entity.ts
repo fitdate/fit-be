@@ -13,7 +13,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class Like extends BaseTable {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  likeId: string;
+  id: string;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.likes)

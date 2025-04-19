@@ -18,7 +18,7 @@ import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  userId: string;
+  id: string;
 
   @Column({ unique: true })
   email: string;

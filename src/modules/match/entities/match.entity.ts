@@ -13,7 +13,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class Match extends BaseTable {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  matchId: string;
+  id: string;
 
   @ApiProperty()
   @Column({ unique: true })

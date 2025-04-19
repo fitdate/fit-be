@@ -5,7 +5,7 @@ import { UserInterestCategory } from '../../user-interest-category/entities/user
 @Entity()
 export class InterestCategory extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
-  interestCategoryId: string;
+  id: string;
 
   @Column()
   name: string;

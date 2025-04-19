@@ -15,7 +15,7 @@ import { PaymentMethod } from '../types/payment.types';
 export class Payment extends BaseTable {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  paymentId: string;
+  id: string;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, { onDelete: 'CASCADE', eager: true })
