@@ -15,10 +15,12 @@ export class ChatRoomUser extends BaseTable {
   userId: string;
 
   @ApiProperty({ type: () => ChatRoom })
-  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.chatRoomUsers)
+  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.chatRoomUsers, {
+    onDelete: 'CASCADE',
+  })
   chatRoom: ChatRoom;
 
   @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, (user) => user.chatRoomUsers)
+  @ManyToOne(() => User, (user) => user.chatRoomUsers, { onDelete: 'CASCADE' })
   user: User;
 }
