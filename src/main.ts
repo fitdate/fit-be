@@ -20,6 +20,8 @@ async function bootstrap() {
         path: 'health',
         method: RequestMethod.GET,
       },
+      { path: 'api/v1/docs', method: RequestMethod.GET },
+      { path: 'api/v1/docs/(.*)', method: RequestMethod.GET }, // 정적 리소스
     ],
   });
 
