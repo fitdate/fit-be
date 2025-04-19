@@ -98,6 +98,7 @@ import { AdminController } from './modules/admin/admin.controller';
         migrations: [join(__dirname, '/migration/*{.ts,.js}')],
         migrationsRun: false,
         synchronize: true,
+        dropSchema: true, // 개발 환경에서만 사용
         logging: true,
       }),
       inject: [ConfigService],

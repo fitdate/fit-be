@@ -7,11 +7,11 @@ import { ApiProperty } from '@nestjs/swagger';
 @Entity('chat_room_users')
 export class ChatRoomUser extends BaseTable {
   @ApiProperty()
-  @PrimaryColumn('uuid')
+  @PrimaryColumn('uuid', { name: 'chat_room_id' })
   chatRoomId: string;
 
   @ApiProperty()
-  @PrimaryColumn('uuid')
+  @PrimaryColumn('uuid', { name: 'user_id' })
   userId: string;
 
   @ApiProperty({ type: () => ChatRoom })
