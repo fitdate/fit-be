@@ -3,23 +3,34 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToMany,
   JoinTable,
 } from 'typeorm';
-import { ChatRoomUser } from './chat-room-user.entity';
+import { Message } from '../../message/entities/message.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
 import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { ChatRoomUser } from './chat-room-user.entity';
 
 @Entity('chat_rooms')
-export class ChatRoom {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class ChatRoom extends BaseTable {
+  @ApiProperty()
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
+  @ApiProperty()
   @Column()
-  name: string;
+  title: string;
 
+  @ApiProperty()
+  @Column({ default: true })
+  isActive: boolean;
+
+  @ApiProperty({ type: () => [Message] })
+  @OneToMany(() => Message, (message) => message.chatRoom)
+  messages: Message[];
+
+  @ApiProperty({ type: () => [ChatRoomUser] })
   @OneToMany(() => ChatRoomUser, (chatRoomUser) => chatRoomUser.chatRoom)
   chatRoomUsers: ChatRoomUser[];
 
@@ -37,10 +48,4 @@ export class ChatRoom {
     },
   })
   users: User[];
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

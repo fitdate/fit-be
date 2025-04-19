@@ -1,21 +1,23 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import { ChatRoom } from './chat-room.entity';
+import { Entity, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
+import { ChatRoom } from './chat-room.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('chat_room_users')
-export class ChatRoomUser {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class ChatRoomUser extends BaseTable {
+  @ApiProperty()
+  @PrimaryColumn('uuid')
+  chatRoomId: string;
 
-  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.users)
+  @ApiProperty()
+  @PrimaryColumn('uuid')
+  userId: string;
+
+  @ApiProperty({ type: () => ChatRoom })
+  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.users, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'chat_room_id' })
   chatRoom: ChatRoom;
 
@@ -23,10 +25,4 @@ export class ChatRoomUser {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: Promise<User> | User;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }

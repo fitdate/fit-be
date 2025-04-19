@@ -1,1 +1,40 @@
-export class Message {}
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { BaseTable } from '../../../common/entity/base-table.entity';
+import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
+import { ApiProperty } from '@nestjs/swagger';
+
+@Entity('messages')
+export class Message extends BaseTable {
+  @ApiProperty()
+  @Column()
+  content: string;
+
+  @ApiProperty()
+  @Column()
+  senderId: string;
+
+  @ApiProperty()
+  @Column()
+  senderName: string;
+
+  @ApiProperty()
+  @Column({ default: 'text' })
+  type: string;
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  fileUrl: string;
+
+  @ApiProperty()
+  @Column({ default: false })
+  isRead: boolean;
+
+  @ApiProperty()
+  @Column()
+  chatRoomId: string;
+
+  @ApiProperty({ type: () => ChatRoom })
+  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.messages)
+  @JoinColumn({ name: 'chat_room_id' })
+  chatRoom: ChatRoom;
+}
