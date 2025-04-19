@@ -59,32 +59,11 @@ export const config = () => ({
 });
 
 export const validationSchema = Joi.object({
-  // DB_URL: Joi.string().uri().allow(''),
-  DB_HOST: Joi.when('DB_URL', {
-    is: Joi.string().min(1),
-    then: Joi.forbidden(),
-    otherwise: Joi.string().required(),
-  }),
-  DB_PORT: Joi.when('DB_URL', {
-    is: Joi.string().min(1),
-    then: Joi.forbidden(),
-    otherwise: Joi.number().default(5432),
-  }),
-  DB_USERNAME: Joi.when('DB_URL', {
-    is: Joi.string().min(1),
-    then: Joi.forbidden(),
-    otherwise: Joi.string().required(),
-  }),
-  DB_PASSWORD: Joi.when('DB_URL', {
-    is: Joi.string().min(1),
-    then: Joi.forbidden(),
-    otherwise: Joi.string().required(),
-  }),
-  DB_NAME: Joi.when('DB_URL', {
-    is: Joi.string().min(1),
-    then: Joi.forbidden(),
-    otherwise: Joi.string().required(),
-  }),
+  DB_HOST: Joi.string().required(),
+  DB_PORT: Joi.number().default(5432),
+  DB_USERNAME: Joi.string().required(),
+  DB_PASSWORD: Joi.string().required(),
+  DB_NAME: Joi.string().required(),
   APP_NAME: Joi.string().required(),
   APP_ENV: Joi.string().required(),
   APP_PORT: Joi.number().required(),
