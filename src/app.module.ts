@@ -97,8 +97,7 @@ import { AdminController } from './modules/admin/admin.controller';
         entities: [join(__dirname, '/**/*.entity{.ts,.js}')],
         migrations: [join(__dirname, '/migration/*{.ts,.js}')],
         migrationsRun: true,
-        // synchronize: process.env.NODE_ENV === 'production' ? false : true, -> 개발 끝나면 이 코드로..
-        synchronize: true,
+        synchronize: process.env.NODE_ENV === 'production' ? false : true,
         logging: true,
       }),
       inject: [ConfigService],
