@@ -1,34 +1,24 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
-  Column,
-} from 'typeorm';
-import { User } from '../../user/entities/user.entity';
+import { Entity, ManyToOne, PrimaryColumn } from 'typeorm';
 import { ChatRoom } from './chat-room.entity';
+import { User } from '../../user/entities/user.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('chat_room_users')
 export class ChatRoomUser extends BaseTable {
   @ApiProperty()
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn('uuid')
+  chatRoomId: string;
 
   @ApiProperty()
-  @Column('uuid')
+  @PrimaryColumn('uuid')
   userId: string;
 
   @ApiProperty({ type: () => ChatRoom })
-  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.users, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'chat_room_id' })
+  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.chatRoomUsers)
   chatRoom: ChatRoom;
 
   @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, (user) => user.chatRooms, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @ManyToOne(() => User, (user) => user.chatRoomUsers)
   user: User;
 }
