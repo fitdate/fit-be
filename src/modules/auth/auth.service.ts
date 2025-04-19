@@ -267,6 +267,63 @@ export class AuthService {
     }
   }
 
+  async handleKakaoCallback(
+    user: { email: string; name?: string },
+    req: Request,
+    res: Response,
+  ): Promise<string> {
+    try {
+      const socialUserInfo: SocialUserInfo = {
+        email: user.email,
+        name: user.name,
+        authProvider: AuthProvider.KAKAO,
+      };
+      const result = await this.kakaoLogin(socialUserInfo, req.headers.origin);
+
+      res.cookie('accessToken', result.accessToken, result.accessOptions);
+      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
+
+      const frontendUrl =
+        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
+        this.configService.get('app.host', { infer: true });
+
+      return `${frontendUrl}${result.redirectUrl}`;
+    } catch (error) {
+      throw new UnauthorizedException(
+        '카카오 로그인 처리 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    }
+  }
+
+  async handleNaverCallback(
+    user: { email: string; name?: string },
+    req: Request,
+    res: Response,
+  ): Promise<string> {
+    try {
+      const socialUserInfo: SocialUserInfo = {
+        email: user.email,
+        name: user.name,
+        authProvider: AuthProvider.NAVER,
+      };
+      const result = await this.naverLogin(socialUserInfo, req.headers.origin);
+
+      res.cookie('accessToken', result.accessToken, result.accessOptions);
+      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
+
+      const frontendUrl =
+        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
+        this.configService.get('app.host', { infer: true });
+
+      return `${frontendUrl}${result.redirectUrl}`;
+    } catch (error) {
+      throw new UnauthorizedException(
+        '네이버 로그인 처리 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    }
+  }
   // 토큰 생성
   generateTokens(
     userId: string,
@@ -517,6 +574,26 @@ export class AuthService {
       {
         ...userData,
         authProvider: AuthProvider.GOOGLE,
+      },
+      origin,
+    );
+  }
+
+  async kakaoLogin(userData: SocialUserInfo, origin?: string) {
+    return this.processSocialLogin(
+      {
+        ...userData,
+        authProvider: AuthProvider.KAKAO,
+      },
+      origin,
+    );
+  }
+
+  async naverLogin(userData: SocialUserInfo, origin?: string) {
+    return this.processSocialLogin(
+      {
+        ...userData,
+        authProvider: AuthProvider.NAVER,
       },
       origin,
     );

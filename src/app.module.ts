@@ -58,7 +58,6 @@ import { SeedManagerController } from './modules/seed/seed-manager.controller';
 import { S3Controller } from './modules/s3/s3.controller';
 import { MailerController } from './modules/mailer/mailer.controller';
 import { AdminController } from './modules/admin/admin.controller';
-import { SseModule } from './modules/sse/sse.module';
 
 @Module({
   imports: [
@@ -119,7 +118,6 @@ import { SseModule } from './modules/sse/sse.module';
     S3Module,
     MailerModule,
     AdminModule,
-    SseModule,
   ],
   controllers: [AppController],
   providers: [
@@ -152,6 +150,10 @@ export class AppModule implements NestModule {
         { path: 'auth/verify-email', method: RequestMethod.POST },
         { path: 'auth/google', method: RequestMethod.GET },
         { path: 'auth/google/login/callback', method: RequestMethod.GET },
+        { path: 'auth/kakao', method: RequestMethod.GET },
+        { path: 'auth/kakao/login/callback', method: RequestMethod.GET },
+        { path: 'auth/naver', method: RequestMethod.GET },
+        { path: 'auth/naver/login/callback', method: RequestMethod.GET },
         { path: 'health', method: RequestMethod.GET },
         { path: 'docs', method: RequestMethod.GET },
       )

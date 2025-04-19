@@ -120,4 +120,63 @@ export class AuthController {
       });
     }
   }
+
+  // Kakao OAuth 로그인
+  @SkipProfileComplete()
+  @Public()
+  @Get('kakao')
+  @ApiOperation({ summary: '카카오 로그인 시작' })
+  @ApiResponse({
+    status: 302,
+    description: '카카오 로그인 페이지로 리다이렉트',
+  })
+  @UseGuards(AuthGuard('kakao'))
+  kakaoAuth() {}
+
+  // Kakao OAuth 콜백
+  @SkipProfileComplete()
+  @Public()
+  @Get('kakao/login/callback')
+  @ApiOperation({ summary: '카카오 로그인 콜백' })
+  @ApiResponse({ status: 302, description: '프론트엔드로 리다이렉트' })
+  @UseGuards(AuthGuard('kakao'))
+  async kakaoCallback(@Req() req: Request, @Res() res: Response) {
+    try {
+      const redirectUrl = await this.authService.handleKakaoCallback(
+        req.user as { email: string; name?: string },
+        req,
+        res,
+      );
+      return res.redirect(redirectUrl);
+    } catch (error) {
+      throw new BadRequestException('카카오 로그인에 실패했습니다.', {
+        cause: error,
+      });
+    }
+  }
+
+  // Naver OAuth 로그인
+  @SkipProfileComplete()
+  @Public()
+  @Get('naver')
+  @ApiOperation({ summary: '네이버 로그인 시작' })
+  @ApiResponse({
+    status: 302,
+    description: '네이버 로그인 페이지로 리다이렉트',
+  })
+  @UseGuards(AuthGuard('naver'))
+  async naverCallback(@Req() req: Request, @Res() res: Response) {
+    try {
+      const redirectUrl = await this.authService.handleNaverCallback(
+        req.user as { email: string; name?: string },
+        req,
+        res,
+      );
+      return res.redirect(redirectUrl);
+    } catch (error) {
+      throw new BadRequestException('네이버 로그인에 실패했습니다.', {
+        cause: error,
+      });
+    }
+  }
 }

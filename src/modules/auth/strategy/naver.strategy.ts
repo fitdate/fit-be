@@ -41,7 +41,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
     try {
       const naverProfile = profile as NaverProfile;
       const email =
-       naverProfile.emails[0]?.value || naverProfile._json.email || '';
+        naverProfile.emails[0]?.value || naverProfile._json.email || '';
       if (!email || email.length === 0) {
         throw new UnauthorizedException(
           '네이버 로그인 실패: 이메일이 없습니다.',

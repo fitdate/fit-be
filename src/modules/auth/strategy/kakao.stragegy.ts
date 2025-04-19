@@ -29,6 +29,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     private readonly configService: ConfigService<AllConfig>,
     private readonly authService: AuthService,
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
       clientID: configService.getOrThrow('social.kakao.clientId', {
         infer: true,
