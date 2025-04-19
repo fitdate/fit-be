@@ -7,9 +7,12 @@ import { RequestMethod } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS 설정
   app.enableCors({
-    origin: true,
+    origin: [
+      'https://api.fit-date.co.kr',
+      'https://fit-date.co.kr',
+      'https://www.fit-date.co.kr',
+    ], // 정확한 origin 명시
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
