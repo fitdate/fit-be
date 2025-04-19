@@ -163,21 +163,25 @@ jobs:
           BLUE_PORT: 3000
           GREEN_PORT: 3001
         run: |
-          # Nginx 설정 업로드 및 적용
-          ssh ubuntu@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
-          ssh ubuntu@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
-
-          # 백엔드 API 설정 (api.conf)
+          # Nginx 설정 파일 업로드
           scp docker/nginx/api.conf ubuntu@$DB_HOST:~/api.conf
+          scp docker/nginx/fit-blue.conf ubuntu@$DB_HOST:~/fit-blue.conf
+          scp docker/nginx/fit-green.conf ubuntu@$DB_HOST:~/fit-green.conf
+
+          # Nginx 설정 파일 이동 및 링크 생성
           ssh ubuntu@$DB_HOST "
             sudo mv ~/api.conf /etc/nginx/sites-available/
             sudo ln -sf /etc/nginx/sites-available/api.conf /etc/nginx/sites-enabled/api.conf
+            sudo mv ~/fit-blue.conf /etc/nginx/sites-available/
+            sudo ln -sf /etc/nginx/sites-available/fit-blue.conf /etc/nginx/sites-enabled/fit-blue.conf
+            sudo mv ~/fit-green.conf /etc/nginx/sites-available/
+            sudo ln -sf /etc/nginx/sites-available/fit-green.conf /etc/nginx/sites-enabled/fit-green.conf
           "
 
           # 프론트엔드 Blue-Green 설정
           scp docker/nginx/fit-blue.conf docker/nginx/fit-green.conf ubuntu@$DB_HOST:~/
           ssh ubuntu@$DB_HOST "
-            sudo mv ~/fit-*.conf /etc/nginx/sites-available/
+            sudo nginx -t && sudo systemctl reload nginx
           "
 
           # 현재 실행 포트 확인 및 Blue-Green 포트 결정
@@ -218,8 +222,4 @@ jobs:
             docker-compose -f ~/docker-compose.yml pull --quiet
             echo '🚀 컨테이너 시작 중...'
             docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
-
-            # 프론트엔드 Blue-Green 설정 적용
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
-            sudo nginx -t && sudo systemctl reload nginx
           "
