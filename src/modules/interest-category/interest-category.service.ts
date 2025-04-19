@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InterestCategory } from './entities/interest-category.entity';
@@ -14,14 +14,14 @@ export class InterestCategoryService {
     return this.interestCategoryRepository.find();
   }
 
-  async findOne(id: number): Promise<InterestCategory> {
-    const category = await this.interestCategoryRepository.findOne({
+  async findOne(id: string): Promise<InterestCategory> {
+    const interestCategory = await this.interestCategoryRepository.findOne({
       where: { id },
     });
-    if (!category) {
-      throw new Error('Interest category not found');
+    if (!interestCategory) {
+      throw new NotFoundException('Interest category not found');
     }
-    return category;
+    return interestCategory;
   }
 
   async create(
@@ -37,7 +37,7 @@ export class InterestCategoryService {
     interestCategory: Partial<InterestCategory>,
   ): Promise<InterestCategory> {
     await this.interestCategoryRepository.update(id, interestCategory);
-    return this.findOne(id);
+    return this.findOne(id.toString());
   }
 
   async remove(id: number): Promise<void> {

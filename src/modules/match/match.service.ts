@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProfileService } from '../profile/profile.service';
@@ -157,10 +157,11 @@ export class MatchService {
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
     const match = this.matchRepository.create({
-      matchId: createMatchDto.matchId,
+      id: createMatchDto.matchId,
       user1: { id: createMatchDto.user1Id },
       user2: { id: createMatchDto.user2Id },
     });
+
     return this.matchRepository.save(match);
   }
 
@@ -170,16 +171,20 @@ export class MatchService {
     });
   }
 
-  async findOne(id: string): Promise<Match | null> {
-    return this.matchRepository.findOne({
+  async findOne(id: string): Promise<Match> {
+    const match = await this.matchRepository.findOne({
       where: { id },
       relations: ['user1', 'user2'],
     });
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+    return match;
   }
 
   async findByMatchId(matchId: string): Promise<Match | null> {
     return this.matchRepository.findOne({
-      where: { matchId },
+      where: { id: matchId },
       relations: ['user1', 'user2'],
     });
   }
