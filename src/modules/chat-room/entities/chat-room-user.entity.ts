@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { ChatRoom } from './chat-room.entity';
 import { User } from '../../user/entities/user.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('chat_room_users')
 export class ChatRoomUser {
@@ -18,9 +19,10 @@ export class ChatRoomUser {
   @JoinColumn({ name: 'chat_room_id' })
   chatRoom: ChatRoom;
 
-  @ManyToOne(() => User)
+  @ApiProperty({ type: () => User })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: Promise<User> | User;
 
   @CreateDateColumn()
   createdAt: Date;
