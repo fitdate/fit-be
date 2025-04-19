@@ -32,11 +32,11 @@ export const config = () => ({
     port: Number(process.env.REDIS_PORT),
   },
   mailer: {
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT),
-    user: process.env.MAIL_USER,
-    password: process.env.MAIL_PASS,
-    tokenTtl: process.env.MAIL_TOKEN_TTL,
+    host: process.env.MAILER_HOST,
+    port: Number(process.env.MAILER_PORT),
+    user: process.env.MAILER_USER,
+    password: process.env.MAILER_PASSWORD,
+    tokenTtl: process.env.MAILER_TOKEN_TTL,
   },
   social: {
     google: {
@@ -98,6 +98,11 @@ export const validationSchema = Joi.object({
   SEED_ENABLE_INTEREST_CATEGORY: Joi.boolean().required(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
+  MAILER_HOST: Joi.string().required(),
+  MAILER_PORT: Joi.number().required(),
+  MAILER_USER: Joi.string().required(),
+  MAILER_PASSWORD: Joi.string().required(),
+  MAILER_TOKEN_TTL: Joi.string().required(),
   GOOGLE_CLIENT_ID: Joi.string().required(),
   GOOGLE_CLIENT_SECRET: Joi.string().required(),
   GOOGLE_CALLBACK_URL: Joi.string().required(),
