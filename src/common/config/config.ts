@@ -58,6 +58,7 @@ export const config = () => ({
   },
 });
 
+// DB_URL이 생기면 코드 수정해야함
 export const validationSchema = Joi.object({
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().default(5432),
