@@ -149,7 +149,7 @@ jobs:
 
             # 스키마 초기화
             psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << 'EOF'
-              -- 스키마 삭제 및 재생성
+              -- 모든 테이블과 제약조건 삭제
               DROP SCHEMA IF EXISTS public CASCADE;
               CREATE SCHEMA public;
               ALTER SCHEMA public OWNER TO myuser;
@@ -165,6 +165,16 @@ jobs:
               
               -- TypeORM 메타데이터 테이블 삭제
               DROP TABLE IF EXISTS typeorm_metadata;
+              
+              -- 모든 제약조건 삭제
+              DO $$ 
+              DECLARE 
+                r RECORD;
+              BEGIN
+                FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                  EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                END LOOP;
+              END $$;
             EOF
           "
 
