@@ -20,8 +20,10 @@ async function bootstrap() {
         path: 'health',
         method: RequestMethod.GET,
       },
-      { path: 'api/v1/docs', method: RequestMethod.GET },
-      { path: 'api/v1/docs/(.*)', method: RequestMethod.GET }, // 정적 리소스
+      {
+        path: 'docs',
+        method: RequestMethod.GET,
+      },
     ],
   });
 
@@ -46,7 +48,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config, {
     extraModels: [TossPaymentResponse],
   });
-  SwaggerModule.setup('api/v1/docs', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
