@@ -23,7 +23,7 @@ export class InterestCategoryController {
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<InterestCategory> {
-    return this.interestCategoryService.findOne(+id);
+    return this.interestCategoryService.findOne(id);
   }
 
   @Post()
