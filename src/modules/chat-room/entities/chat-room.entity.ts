@@ -1,15 +1,8 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  ManyToMany,
-  JoinTable,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Message } from '../../message/entities/message.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { User } from '../../user/entities/user.entity';
+import { ChatRoomUser } from './chat-room-user.entity';
 
 @Entity('chat_rooms')
 export class ChatRoom extends BaseTable {
@@ -29,18 +22,7 @@ export class ChatRoom extends BaseTable {
   @OneToMany(() => Message, (message) => message.chatRoom)
   messages: Message[];
 
-  @ApiProperty({ type: () => [User] })
-  @ManyToMany(() => User, (user) => user.chatRooms)
-  @JoinTable({
-    name: 'chat_room_users',
-    joinColumn: {
-      name: 'chat_room_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'user_id',
-      referencedColumnName: 'id',
-    },
-  })
-  users: User[];
+  @ApiProperty({ type: () => [ChatRoomUser] })
+  @OneToMany(() => ChatRoomUser, (chatRoomUser) => chatRoomUser.chatRoom)
+  chatRoomUsers: ChatRoomUser[];
 }
