@@ -15,7 +15,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class ChatRoom extends BaseTable {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  chatRoomId: string;
 
   @ApiProperty()
   @Column()
@@ -35,11 +35,11 @@ export class ChatRoom extends BaseTable {
     name: 'chat_room_users',
     joinColumn: {
       name: 'chat_room_id',
-      referencedColumnName: 'id',
+      referencedColumnName: 'chatRoomId',
     },
     inverseJoinColumn: {
       name: 'user_id',
-      referencedColumnName: 'id',
+      referencedColumnName: 'userId',
     },
   })
   users: User[];

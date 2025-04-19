@@ -11,8 +11,8 @@ import { BaseTable } from '../../../common/entity/base-table.entity';
 
 @Entity()
 export class UserInterestCategory extends BaseTable {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  userInterestCategoryId: string;
 
   @ManyToOne(() => User)
   @JoinColumn()

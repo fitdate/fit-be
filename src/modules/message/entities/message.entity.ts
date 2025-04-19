@@ -13,7 +13,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class Message extends BaseTable {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  messageId: string;
 
   @ApiProperty()
   @Column()
@@ -38,9 +38,10 @@ export class Message extends BaseTable {
 
   @ApiProperty({ type: () => ChatRoom })
   @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.messages)
-  @JoinColumn()
+  @JoinColumn({ name: 'chat_room_id' })
   chatRoom: ChatRoom;
 
+  @ApiProperty()
   @Column()
   chatRoomId: string;
 }

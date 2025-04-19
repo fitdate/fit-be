@@ -5,16 +5,17 @@ import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
 export class Pass extends BaseTable {
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  passId: string;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.passes)
-  @JoinColumn()
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.passedBy)
-  @JoinColumn()
+  @JoinColumn({ name: 'passed_user_id' })
   passedUser: User;
 }

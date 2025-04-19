@@ -7,20 +7,25 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
 export class Like extends BaseTable {
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  likeId: string;
 
+  @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.likes)
-  @JoinColumn()
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.likedBy)
-  @JoinColumn()
+  @JoinColumn({ name: 'liked_user_id' })
   likedUser: User;
 
+  @ApiProperty()
   @Column({ default: false })
   isNotified: boolean;
 }
