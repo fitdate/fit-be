@@ -14,21 +14,28 @@ import { Pass } from '../../pass/entities/pass.entity';
 import { AuthProvider } from '../../auth/types/oatuth.types';
 import { Payment } from '../../payment/entities/payment.entity';
 import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
+import { BaseTable } from '../../../common/entity/base-table.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
-@Entity()
-export class User {
+@Entity('users')
+export class User extends BaseTable {
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ApiProperty()
   @Column({ unique: true })
   email: string;
 
+  @ApiProperty()
   @Column()
   password: string;
 
+  @ApiProperty()
   @Column({ unique: true })
   nickname: string;
 
+  @ApiProperty()
   @Column()
   name: string;
 
@@ -69,6 +76,7 @@ export class User {
   @OneToMany(() => Payment, (payment) => payment.user)
   payments: Payment[];
 
+  @ApiProperty({ type: () => [ChatRoom] })
   @ManyToMany(() => ChatRoom, (chatRoom) => chatRoom.users)
   chatRooms: ChatRoom[];
 
