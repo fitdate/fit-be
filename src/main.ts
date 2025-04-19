@@ -36,7 +36,6 @@ async function bootstrap() {
     .setTitle('FIT API')
     .setDescription('FIT API 문서')
     .setVersion('1.0')
-    .addServer('http://localhost:3000')
     .addServer('https://api.fit-date.co.kr')
     .addBearerAuth(
       {
