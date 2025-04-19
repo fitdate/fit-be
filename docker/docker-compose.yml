@@ -13,12 +13,10 @@ services:
       - REDIS_PORT=6379
       - NODE_ENV=production
       - ENV_FILE=.env.blue
-      - DB_HOST=postgres-blue
     networks:
       - redis-network
     depends_on:
       - redis-blue
-      - postgres-blue
 
   app-green:
     container_name: fit-green
@@ -34,12 +32,10 @@ services:
       - REDIS_PORT=6379
       - NODE_ENV=production
       - ENV_FILE=.env.green
-      - DB_HOST=postgres-green
     networks:
       - redis-network
     depends_on:
       - redis-green
-      - postgres-green
 
   redis-blue:
     container_name: redis-blue
@@ -59,40 +55,6 @@ services:
       - redis-network
     restart: unless-stopped
 
-  postgres-blue:
-    container_name: postgres-blue
-    image: postgres:latest
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_blue_data:/var/lib/postgresql/data
-    networks:
-      - redis-network
-
-  postgres-green:
-    container_name: postgres-green
-    image: postgres:latest
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - '5433:5432'
-    volumes:
-      - postgres_green_data:/var/lib/postgresql/data
-    networks:
-      - redis-network
-
 networks:
   redis-network:
     driver: bridge
-
-volumes:
-  postgres_blue_data:
-  postgres_green_data:
