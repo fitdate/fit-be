@@ -59,7 +59,7 @@ export const config = () => ({
 });
 
 export const validationSchema = Joi.object({
-  DB_URL: Joi.string().uri().allow(''),
+  // DB_URL: Joi.string().uri().allow(''),
   DB_HOST: Joi.when('DB_URL', {
     is: Joi.string().min(1),
     then: Joi.forbidden(),
