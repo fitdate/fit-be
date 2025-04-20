@@ -148,8 +148,12 @@ jobs:
             sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
             
+            echo '🔄 Docker Hub 로그인 중...'
+            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+            
             echo '🔄 이미지 다운로드 중...'
-            docker-compose -f /home/ubuntu/docker-compose.yml pull --quiet
+            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            docker-compose -f /home/ubuntu/docker-compose.yml pull
 
             echo '🚀 앱 컨테이너 시작 중...'
             docker-compose -f /home/ubuntu/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV postgres
