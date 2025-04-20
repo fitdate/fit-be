@@ -87,10 +87,25 @@ jobs:
       - name: 🧹 Clean up Docker images
         run: |
           ssh ubuntu@${{ secrets.DB_HOST }} "
-            # 사용하지 않는 도커 이미지, 컨테이너, 볼륨, 네트워크 삭제
-            docker system prune -af --volumes
-            # 모든 사용하지 않는 이미지 삭제
-            docker image prune -af
+            # 이전 prune 작업이 있는지 확인하고 대기
+            timeout 300 bash -c 'while docker system df | grep -q \"prune\"; do sleep 5; done'
+            
+            # 디스크 사용량 확인
+            echo '현재 디스크 사용량:'
+            df -h
+            
+            # 실행 중이지 않은 컨테이너만 삭제
+            docker container prune -f || true
+            
+            # 사용하지 않는 볼륨만 삭제
+            docker volume prune -f || true
+            
+            # 사용하지 않는 이미지만 삭제
+            docker image prune -f || true
+            
+            # 정리 후 디스크 사용량 확인
+            echo '정리 후 디스크 사용량:'
+            df -h
           "
 
       # 🧪 DB 서버 상태 확인
