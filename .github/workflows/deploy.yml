@@ -216,7 +216,7 @@ jobs:
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f ~/docker-compose.yml pull --quiet
             echo '🚀 컨테이너 시작 중...'
-            docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV
+            docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green
 
             # 프론트엔드 Blue-Green 설정 적용
             sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
