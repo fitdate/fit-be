@@ -150,17 +150,35 @@ jobs:
             
             echo '🔄 Docker Hub 로그인 중...'
             echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+            # 환경 변수 설정
+            echo 'DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' > /home/ubuntu/.env
+            export $(cat /home/ubuntu/.env | xargs)
             
-            # 환경 변수 영구 설정
-            echo 'export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' >> ~/.bashrc
-            source ~/.bashrc
+            # 이전 컨테이너 정리
+            echo '🧹 이전 컨테이너 정리 중...'
+            docker-compose -f /home/ubuntu/docker-compose.yml down
+            docker system prune -f
+
+            # 사용 중인 포트 확인 및 해제
+            echo '🔍 포트 상태 확인 중...'
+            sudo lsof -i :6379 | grep LISTEN | awk '{print $2}' | xargs -r sudo kill -9
+            sudo lsof -i :6380 | grep LISTEN | awk '{print $2}' | xargs -r sudo kill -9
             
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f /home/ubuntu/docker-compose.yml pull
 
             echo '🚀 앱 컨테이너 시작 중...'
-            docker-compose -f /home/ubuntu/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV postgres
-
+            # 데이터베이스와 Redis 먼저 시작
+            docker-compose -f /home/ubuntu/docker-compose.yml up -d postgres redis-$NEW_ENV
+            
+            # 데이터베이스와 Redis가 준비될 때까지 대기
+            echo '⏳ 데이터베이스와 Redis 대기 중...'
+            sleep 3
+            
+            # 앱 컨테이너 시작
+            docker-compose -f /home/ubuntu/docker-compose.yml up -d app-$NEW_ENV
+            
             # 앱 상태 확인
             echo '🔍 앱 상태 확인 중...'
             timeout 3 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 1; done'
@@ -168,9 +186,8 @@ jobs:
             # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'
             cp /home/ubuntu/nginx/fit-$NEW_ENV.conf /home/ubuntu/nginx/default.conf
-            cp /home/ubuntu/nginx/api.conf /home/ubuntu/nginx/api.conf
-
-            # Nginx 컨테이너 시작 또는 재시작
+            
+            # Nginx 컨테이너 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d nginx
 
             # 시스템 상태 확인
