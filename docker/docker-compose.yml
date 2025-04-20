@@ -13,10 +13,15 @@ services:
       - REDIS_PORT=6379
       - NODE_ENV=production
       - ENV_FILE=.env.blue
+      - DB_HOST=postgres
+      - DB_PORT=5432
     networks:
       - redis-network
+      - postgres-network
     depends_on:
       redis-blue:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
@@ -39,10 +44,15 @@ services:
       - REDIS_PORT=6379
       - NODE_ENV=production
       - ENV_FILE=.env.green
+      - DB_HOST=postgres
+      - DB_PORT=5432
     networks:
       - redis-network
+      - postgres-network
     depends_on:
       redis-green:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
@@ -50,6 +60,27 @@ services:
       timeout: 5s
       retries: 1
       start_period: 20s
+
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=fit
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - postgres-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U myuser -d fit']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   redis-blue:
     container_name: redis-blue
@@ -84,3 +115,8 @@ services:
 networks:
   redis-network:
     driver: bridge
+  postgres-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
