@@ -193,10 +193,17 @@ jobs:
 
             # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'
-            cp /home/ubuntu/nginx/fit-$NEW_ENV.conf /home/ubuntu/nginx/default.conf
+            # 현재 환경에 맞게 api.conf 수정
+            sed -i "s/app-blue/app-$NEW_ENV/g" /home/ubuntu/nginx/api.conf
+            cp /home/ubuntu/nginx/api.conf /home/ubuntu/nginx/default.conf
             
             # Nginx 컨테이너 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d nginx
+
+            # 스웨거 설정 확인
+            echo '🔍 스웨거 설정 확인 중...'
+            sleep 5  # Nginx가 완전히 시작될 때까지 대기
+            curl -s https://api.fit-date.co.kr/docs | grep -q "Swagger UI" && echo "✅ 스웨거 설정 성공" || echo "❌ 스웨거 설정 실패"
 
             # 이전 환경의 앱 컨테이너 중지
             echo '🧹 이전 환경 정리 중...'
