@@ -1,26 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ChatRoom } from './entities/chat-room.entity';
 import { CreateChatRoomDto } from './dto/create-chat-room.dto';
 import { UpdateChatRoomDto } from './dto/update-chat-room.dto';
 
 @Injectable()
 export class ChatRoomService {
-  create(createChatRoomDto: CreateChatRoomDto) {
-    return 'This action adds a new chatRoom';
+  constructor(
+    @InjectRepository(ChatRoom)
+    private readonly chatRoomRepository: Repository<ChatRoom>,
+  ) {}
+
+  async create(createChatRoomDto: CreateChatRoomDto): Promise<ChatRoom> {
+    const chatRoom = this.chatRoomRepository.create(createChatRoomDto);
+    return this.chatRoomRepository.save(chatRoom);
   }
 
-  findAll() {
-    return `This action returns all chatRoom`;
+  async findAll(): Promise<ChatRoom[]> {
+    return this.chatRoomRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} chatRoom`;
+  async findOne(id: string): Promise<ChatRoom> {
+    const chatRoom = await this.chatRoomRepository.findOne({ where: { id } });
+    if (!chatRoom) {
+      throw new NotFoundException(`ChatRoom with ID ${id} not found`);
+    }
+    return chatRoom;
   }
 
-  update(id: number, updateChatRoomDto: UpdateChatRoomDto) {
-    return `This action updates a #${id} chatRoom`;
+  async update(
+    id: string,
+    updateChatRoomDto: UpdateChatRoomDto,
+  ): Promise<ChatRoom> {
+    await this.chatRoomRepository.update(id, updateChatRoomDto);
+    return this.findOne(id);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} chatRoom`;
+  async remove(id: string): Promise<void> {
+    await this.chatRoomRepository.delete(id);
   }
 }
