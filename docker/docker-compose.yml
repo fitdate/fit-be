@@ -16,7 +16,14 @@ services:
     networks:
       - redis-network
     depends_on:
-      - redis-blue
+      redis-blue:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   app-green:
     container_name: fit-green
@@ -35,7 +42,14 @@ services:
     networks:
       - redis-network
     depends_on:
-      - redis-green
+      redis-green:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis-blue:
     container_name: redis-blue
@@ -45,6 +59,12 @@ services:
     networks:
       - redis-network
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis-green:
     container_name: redis-green
@@ -54,6 +74,12 @@ services:
     networks:
       - redis-network
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   redis-network:
