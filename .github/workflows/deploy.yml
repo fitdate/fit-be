@@ -151,8 +151,11 @@ jobs:
             echo '🔄 Docker Hub 로그인 중...'
             echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
             
+            # 환경 변수 영구 설정
+            echo 'export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' >> ~/.bashrc
+            source ~/.bashrc
+            
             echo '🔄 이미지 다운로드 중...'
-            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
             docker-compose -f /home/ubuntu/docker-compose.yml pull
 
             echo '🚀 앱 컨테이너 시작 중...'
@@ -160,7 +163,7 @@ jobs:
 
             # 앱 상태 확인
             echo '🔍 앱 상태 확인 중...'
-            timeout 60 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 5; done'
+            timeout 3 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 1; done'
 
             # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'
