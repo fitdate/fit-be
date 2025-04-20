@@ -10,6 +10,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - redis-network
+      - postgres-network
     restart: unless-stopped
     depends_on:
       - app-blue
@@ -110,6 +111,7 @@ services:
       - '6379:6379'
     networks:
       - redis-network
+      - postgres-network
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
@@ -125,6 +127,7 @@ services:
       - '6380:6379'
     networks:
       - redis-network
+      - postgres-network
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
@@ -136,6 +139,8 @@ services:
 networks:
   redis-network:
     driver: bridge
+  postgres-network:
+    driver: bridge
 
 volumes:
-  postgres-data:
+  postgres_data:

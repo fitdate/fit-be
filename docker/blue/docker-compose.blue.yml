@@ -9,7 +9,10 @@ services:
       - .env.blue
     networks:
       - redis-network
+      - postgres-network
 
 networks:
   redis-network:
-    external: true
+    name: docker_redis-network
+  postgres-network:
+    name: docker_postgres-network
