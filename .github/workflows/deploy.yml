@@ -64,7 +64,7 @@ jobs:
           mkdir -p blue green
 
           # 공통 환경 변수 파일 생성
-          echo "${{ secrets.ENV_FILE_COMMON }}" > .env.common
+          echo "${{ secrets.ENV_FILE_COMMON }}" > .env
 
           # Blue 환경 변수 파일 생성
           echo "${{ secrets.ENV_FILE_BLUE }}" > blue/.env.blue
