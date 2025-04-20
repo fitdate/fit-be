@@ -2,6 +2,7 @@ import {
   Column,
   Entity,
   JoinColumn,
+  ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -14,7 +15,7 @@ import { AuthProvider } from '../../auth/types/oatuth.types';
 import { Payment } from '../../payment/entities/payment.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
-
+import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
 @Entity('users')
 export class User extends BaseTable {
   @ApiProperty()
@@ -85,4 +86,7 @@ export class User extends BaseTable {
 
   @Column({ type: 'varchar' })
   authProvider: AuthProvider;
+
+  @ManyToMany(() => ChatRoom, (chatRoom) => chatRoom.users)
+  chatRooms: ChatRoom[];
 }

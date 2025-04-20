@@ -165,6 +165,18 @@ export class AuthController {
     description: '네이버 로그인 페이지로 리다이렉트',
   })
   @UseGuards(AuthGuard('naver'))
+  naverAuth() {}
+
+  // Naver OAuth 콜백
+  @SkipProfileComplete()
+  @Public()
+  @Get('naver/login/callback')
+  @ApiOperation({ summary: '네이버 로그인 콜백' })
+  @ApiResponse({
+    status: 302,
+    description: '프론트엔드로 리다이렉트',
+  })
+  @UseGuards(AuthGuard('naver'))
   async naverCallback(@Req() req: Request, @Res() res: Response) {
     try {
       const redirectUrl = await this.authService.handleNaverCallback(
