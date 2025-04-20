@@ -204,6 +204,10 @@ jobs:
               -- UUID 확장 설치
               CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
               
+              -- chat_room_users 관련 메타데이터 삭제
+              DELETE FROM typeorm_metadata WHERE "table" = 'chat_room_users';
+              DROP TABLE IF EXISTS chat_room_users CASCADE;
+              
               -- 테이블 생성 권한 부여
               GRANT ALL ON ALL TABLES IN SCHEMA public TO myuser;
               GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO myuser;
