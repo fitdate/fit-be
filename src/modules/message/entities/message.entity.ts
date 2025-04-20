@@ -1,10 +1,18 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('messages')
 export class Message extends BaseTable {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
   @ApiProperty()
   @Column()
   content: string;

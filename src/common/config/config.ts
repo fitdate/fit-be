@@ -44,21 +44,20 @@ export const config = () => ({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackUrl: process.env.GOOGLE_CALLBACK_URL,
     },
-    // kakao: {
-    //   clientId: process.env.KAKAO_CLIENT_ID,
-    //   clientSecret: process.env.KAKAO_CLIENT_SECRET,
-    //   callbackUrl: process.env.KAKAO_CALLBACK_URL,
-    // },
-    // naver: {
-    //   clientId: process.env.NAVER_CLIENT_ID,
-    //   clientSecret: process.env.NAVER_CLIENT_SECRET,
-    //   callbackUrl: process.env.NAVER_CALLBACK_URL,
-    // },
-    // socialFrontendUrl: process.env.SOCIAL_FRONTEND_URL,
+    kakao: {
+      clientId: process.env.KAKAO_CLIENT_ID,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET,
+      callbackUrl: process.env.KAKAO_CALLBACK_URL,
+    },
+    naver: {
+      clientId: process.env.NAVER_CLIENT_ID,
+      clientSecret: process.env.NAVER_CLIENT_SECRET,
+      callbackUrl: process.env.NAVER_CALLBACK_URL,
+    },
+    socialFrontendUrl: process.env.SOCIAL_FRONTEND_URL,
   },
 });
 
-// DB_URL이 생기면 코드 수정해야함
 export const validationSchema = Joi.object({
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().default(5432),
@@ -69,6 +68,8 @@ export const validationSchema = Joi.object({
   APP_ENV: Joi.string().required(),
   APP_PORT: Joi.number().required(),
   APP_HOST: Joi.string().required(),
+  JWT_ACCESS_TOKEN_SECRET: Joi.string().required(),
+  JWT_REFRESH_TOKEN_SECRET: Joi.string().required(),
   JWT_ACCESS_TOKEN_TTL: Joi.string().required(),
   JWT_REFRESH_TOKEN_TTL: Joi.string().required(),
   JWT_TOKEN_AUDIENCE: Joi.string().required(),
@@ -86,13 +87,13 @@ export const validationSchema = Joi.object({
   GOOGLE_CLIENT_ID: Joi.string().required(),
   GOOGLE_CLIENT_SECRET: Joi.string().required(),
   GOOGLE_CALLBACK_URL: Joi.string().required(),
-  // KAKAO_CLIENT_ID: Joi.string().required(),
-  // KAKAO_CLIENT_SECRET: Joi.string().required(),
-  // KAKAO_CALLBACK_URL: Joi.string().required(),
-  // NAVER_CLIENT_ID: Joi.string().required(),
-  // NAVER_CLIENT_SECRET: Joi.string().required(),
-  // NAVER_CALLBACK_URL: Joi.string().required(),
-  // SOCIAL_FRONTEND_URL: Joi.string().required(),
+  KAKAO_CLIENT_ID: Joi.string().required(),
+  KAKAO_CLIENT_SECRET: Joi.string().required(),
+  KAKAO_CALLBACK_URL: Joi.string().required(),
+  NAVER_CLIENT_ID: Joi.string().required(),
+  NAVER_CLIENT_SECRET: Joi.string().required(),
+  NAVER_CALLBACK_URL: Joi.string().required(),
+  SOCIAL_FRONTEND_URL: Joi.string().required(),
 });
 
 export const ConfigModuleOptions = {
