@@ -10,7 +10,6 @@ import { Message } from '../../message/entities/message.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { ChatRoomUser } from './chat-room-user.entity';
 
 @Entity('chat_rooms')
 export class ChatRoom extends BaseTable {
@@ -29,10 +28,6 @@ export class ChatRoom extends BaseTable {
   @ApiProperty({ type: () => [Message] })
   @OneToMany(() => Message, (message) => message.chatRoom)
   messages: Message[];
-
-  @ApiProperty({ type: () => [ChatRoomUser] })
-  @OneToMany(() => ChatRoomUser, (chatRoomUser) => chatRoomUser.chatRoom)
-  chatRoomUsers: ChatRoomUser[];
 
   @ApiProperty({ type: () => [User] })
   @ManyToMany(() => User)
