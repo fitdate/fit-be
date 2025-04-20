@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { ChatRoom } from 'src/modules/chat-room/entities/chat-room.entity';
+import { ChatRoom } from '../../chat-room/entities/chat-room.entity';
 
 @Entity('messages')
 export class Message extends BaseTable {
