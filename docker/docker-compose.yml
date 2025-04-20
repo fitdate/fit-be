@@ -1,4 +1,25 @@
 services:
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - redis-network
+    restart: unless-stopped
+    depends_on:
+      - app-blue
+      - app-green
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
   app-blue:
     container_name: fit-blue
     image: ${DOCKER_USERNAME}/fit-be:latest
@@ -112,11 +133,30 @@ services:
       retries: 1
       start_period: 20s
 
+  postgres:
+    container_name: postgres
+    image: postgres:15
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=fit
+    networks:
+      - redis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d fit"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 networks:
   redis-network:
     driver: bridge
-  postgres-network:
-    driver: bridge
 
 volumes:
-  postgres_data:
+  postgres-data:

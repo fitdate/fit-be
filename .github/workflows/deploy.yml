@@ -129,67 +129,73 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          # Nginx 설정 업로드 및 적용
+          # Nginx 설정 업로드
           echo "📦 Nginx 설정 업로드 시작..."
-          ssh ubuntu@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
-          ssh ubuntu@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
-
-          # 백엔드 API 설정 (api.conf)
-          echo "📦 API 설정 업로드 중..."
-          scp docker/nginx/api.conf ubuntu@$DB_HOST:~/api.conf
-          ssh ubuntu@$DB_HOST "
-            sudo mv ~/api.conf /etc/nginx/sites-available/
-            sudo ln -sf /etc/nginx/sites-available/api.conf /etc/nginx/sites-enabled/api.conf
-          "
-
-          # 프론트엔드 Blue-Green 설정
-          echo "📦 Blue-Green 설정 업로드 중..."
-          scp docker/nginx/fit-blue.conf docker/nginx/fit-green.conf ubuntu@$DB_HOST:~/
-          ssh ubuntu@$DB_HOST "
-            sudo mv ~/fit-*.conf /etc/nginx/sites-available/
-          "
-
-          # 현재 실행 포트 확인 및 Blue-Green 포트 결정
-          echo "🔍 현재 실행 포트 확인 중..."
-          CURRENT_PORT=$(ssh ubuntu@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
-          CURRENT_PORT=$(echo "$CURRENT_PORT" | tr -d '\r' | tr -d '\n')
-          if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
-            NEW_PORT=$GREEN_PORT
-            NEW_ENV="green"
-          else
-            NEW_PORT=$BLUE_PORT
-            NEW_ENV="blue"
-          fi
-          echo "📌 새 환경: $NEW_ENV (포트: $NEW_PORT)"
-
+          ssh ubuntu@$DB_HOST "mkdir -p ~/nginx"
+          
+          # Nginx 설정 파일 업로드
+          scp docker/nginx/*.conf ubuntu@$DB_HOST:~/nginx/
+          
           # .env 파일 업로드 및 새 컨테이너 실행
           echo "📦 환경 설정 파일 업로드 중..."
           scp .env ubuntu@$DB_HOST:~/
+          scp -r blue green ubuntu@$DB_HOST:~/
           scp docker/docker-compose.yml ubuntu@$DB_HOST:~/
+
+          # 현재 실행 중인 환경 확인 (도커를 통해 확인)
+          echo "🔍 현재 실행 환경 확인 중..."
+          CURRENT_ENV=$(ssh ubuntu@$DB_HOST "docker ps | grep -q 'fit-blue' && echo 'blue' || echo 'green'")
+          echo "📌 현재 환경: $CURRENT_ENV"
+          
+          # 새 환경 결정
+          if [ "$CURRENT_ENV" = "blue" ]; then
+            NEW_ENV="green"
+            NEW_PORT=$GREEN_PORT
+          else
+            NEW_ENV="blue"
+            NEW_PORT=$BLUE_PORT
+          fi
+          echo "📌 새 환경: $NEW_ENV (포트: $NEW_PORT)"
 
           echo "🚀 새 컨테이너 시작 중..."
           ssh ubuntu@$DB_HOST "
             export DOCKER_USERNAME=$DOCKER_USERNAME
+            export DB_PASSWORD=$DB_PASSWORD
             echo '🔄 Docker Compose 업데이트 중...'
             sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose --retry 3 --retry-delay 5
             sudo chmod +x /usr/local/bin/docker-compose
+            
             echo '🔄 이미지 다운로드 중...'
-            docker-compose -f ~/docker-compose.yml pull
-            echo '🚀 컨테이너 시작 중...'
-            timeout 3 docker-compose -f ~/docker-compose.yml up app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green postgres || {
-              echo '❌ 컨테이너 시작 실패'
-              docker-compose -f ~/docker-compose.yml logs
-              exit 1
-            }
-
-            # 프론트엔드 Blue-Green 설정 적용
+            docker-compose -f ~/docker-compose.yml pull --quiet
+            
+            echo '🚀 앱 컨테이너 시작 중...'
+            docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV postgres
+            
+            # 앱 상태 확인
+            echo '🔍 앱 상태 확인 중...'
+            timeout 60 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 5; done'
+            
+            # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
-            sudo nginx -t && sudo systemctl reload nginx || {
-              echo '❌ Nginx 설정 적용 실패'
-              exit 1
-            }
+            cp ~/nginx/fit-$NEW_ENV.conf ~/nginx/default.conf
+            cp ~/nginx/api.conf ~/nginx/api.conf
+            
+            # Nginx 컨테이너 시작 또는 재시작
+            docker-compose -f ~/docker-compose.yml up -d nginx
+            
+            # 시스템 상태 확인
+            echo '🔍 전체 컨테이너 상태 확인 중...'
+            docker-compose -f ~/docker-compose.yml ps
+            
+            # 이전 환경 중지 옵션
+            # echo '🛑 이전 환경 중지 중...'
+            # if [ \"$NEW_ENV\" = \"blue\" ]; then
+            #   docker-compose -f ~/docker-compose.yml stop app-green redis-green
+            # else
+            #   docker-compose -f ~/docker-compose.yml stop app-blue redis-blue
+            # fi
             
             echo '✅ 배포 완료'
           "
