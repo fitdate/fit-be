@@ -15,7 +15,8 @@ services:
       - ENV_FILE=.env.blue
       - DB_HOST=postgres
       - DB_PORT=5432
-      - TYPEORM_SYNCHRONIZE=false
+      - TYPEORM_SYNCHRONIZE=true
+      - TYPEORM_DROP_SCHEMA=true
     networks:
       - redis-network
       - postgres-network
@@ -47,7 +48,8 @@ services:
       - ENV_FILE=.env.green
       - DB_HOST=postgres
       - DB_PORT=5432
-      - TYPEORM_SYNCHRONIZE=false
+      - TYPEORM_SYNCHRONIZE=true
+      - TYPEORM_DROP_SCHEMA=true
     networks:
       - redis-network
       - postgres-network
