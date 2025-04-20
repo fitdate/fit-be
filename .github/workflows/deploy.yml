@@ -65,14 +65,20 @@ jobs:
 
           # 공통 환경 변수 파일 생성
           echo "${{ secrets.ENV_FILE_COMMON }}" > .env
+          echo "🔍 .env 파일 내용:"
+          cat .env
 
           # Blue 환경 변수 파일 생성
           echo "${{ secrets.ENV_FILE_BLUE }}" > blue/.env.blue
           cat .env >> blue/.env.blue
+          echo "🔍 blue/.env.blue 파일 내용:"
+          cat blue/.env.blue
 
           # Green 환경 변수 파일 생성
           echo "${{ secrets.ENV_FILE_GREEN }}" > green/.env.green
           cat .env >> green/.env.green
+          echo "🔍 green/.env.green 파일 내용:"
+          cat green/.env.green
 
           # SSH 연결 테스트
           ssh -i ~/.ssh/fit-key.pem ubuntu@${{ secrets.DB_HOST }} "echo 'SSH connection successful'"
