@@ -3,7 +3,7 @@ import { IntroductionService } from './introduction.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Introduction } from '../entities/introduction.entity';
 
-@ApiTags('introduction')
+@ApiTags('Introduction')
 @Controller('introduction')
 export class IntroductionController {
   constructor(private readonly introductionService: IntroductionService) {}

@@ -9,7 +9,7 @@ import {
 import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 
-@ApiTags('like')
+@ApiTags('Like')
 @ApiBearerAuth()
 @Controller('like')
 @UseGuards(JwtAuthGuard)

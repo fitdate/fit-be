@@ -5,7 +5,7 @@ import { TossPaymentResponse } from './types/toss-payment.types';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { Payment } from './entities/payment.entity';
 
-@ApiTags('결제')
+@ApiTags('Payment')
 @Controller('payment')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}

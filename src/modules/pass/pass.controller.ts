@@ -11,7 +11,7 @@ import {
 } from '@nestjs/swagger';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 
-@ApiTags('pass')
+@ApiTags('Pass')
 @ApiBearerAuth()
 @Controller('pass')
 @UseGuards(JwtAuthGuard)

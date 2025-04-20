@@ -3,7 +3,7 @@ import { InterestCategoryService } from './interest-category.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { InterestCategory } from '../entities/interest-category.entity';
 
-@ApiTags('interest-category')
+@ApiTags('Interest Category')
 @Controller('interest-category')
 export class InterestCategoryController {
   constructor(
