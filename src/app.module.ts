@@ -149,16 +149,18 @@ export class AppModule implements NestModule {
     consumer
       .apply(BearerTokenMiddleware)
       .exclude(
-        ...[
-          'auth/login',
-          'auth/register',
-          'auth/send-verification-email',
-          'auth/verify-email',
-          'auth/google',
-          'auth/google/login/callback',
-          'health',
-          'docs',
-        ].map((path) => ({ path, method: RequestMethod.POST })),
+        { path: 'auth/login', method: RequestMethod.POST },
+        { path: 'auth/register', method: RequestMethod.POST },
+        { path: 'auth/send-verification-email', method: RequestMethod.POST },
+        { path: 'auth/verify-email', method: RequestMethod.POST },
+        { path: 'auth/google', method: RequestMethod.GET },
+        { path: 'auth/google/login/callback', method: RequestMethod.GET },
+        { path: 'auth/kakao', method: RequestMethod.GET },
+        { path: 'auth/kakao/login/callback', method: RequestMethod.GET },
+        { path: 'auth/naver', method: RequestMethod.GET },
+        { path: 'auth/naver/login/callback', method: RequestMethod.GET },
+        { path: 'health', method: RequestMethod.GET },
+        { path: 'docs', method: RequestMethod.GET },
       )
       .forRoutes(
         AuthController,
