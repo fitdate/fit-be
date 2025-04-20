@@ -121,117 +121,6 @@ jobs:
             df -h
           "
 
-      # 🧪 DB 서버 상태 확인
-      - name: 🧪 Check Database Server Status
-        run: |
-          ssh ubuntu@${{ secrets.DB_HOST }} "
-            echo 'PostgreSQL status:'
-            sudo systemctl status postgresql || echo 'PostgreSQL service not found'
-            
-            echo 'PostgreSQL port:'
-            sudo netstat -tulpn | grep postgres || echo 'No PostgreSQL process found'
-            
-            echo 'PostgreSQL config:'
-            sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses || echo 'No PostgreSQL config found'
-          "
-
-      # 🧹 DB 초기화 및 세팅
-      - name: 🧹 Setup Database
-        run: |
-          ssh ubuntu@${{ secrets.DB_HOST }} "
-            # 시스템 업데이트
-            sudo apt-get update
-            
-            # PostgreSQL 설치 확인
-            if ! command -v psql &> /dev/null; then
-              echo 'Installing PostgreSQL...'
-              sudo apt-get install -y postgresql postgresql-contrib
-            fi
-            
-            # PostgreSQL 설정 변경
-            sudo sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/\" /etc/postgresql/*/main/postgresql.conf
-            
-            # pg_hba.conf 설정 변경
-            sudo tee /etc/postgresql/*/main/pg_hba.conf << 'EOF'
-            # TYPE  DATABASE        USER            ADDRESS                 METHOD
-            local   all             postgres                                peer
-            local   all             all                                     md5
-            host    all             all             127.0.0.1/32            md5
-            host    all             all             ::1/128                 md5
-            host    all             all             0.0.0.0/0               md5
-            EOF
-            
-            # 방화벽 설정
-            if command -v ufw &> /dev/null; then
-              sudo ufw allow 5432/tcp
-            fi
-            
-            # PostgreSQL 재시작
-            sudo systemctl restart postgresql
-            
-            # PostgreSQL 상태 확인
-            echo 'PostgreSQL status:'
-            sudo systemctl status postgresql
-            
-            # PostgreSQL 사용자 설정
-            sudo -u postgres psql -c \"ALTER USER postgres WITH PASSWORD '${{ secrets.DB_PASSWORD }}';\"
-            sudo -u postgres psql -c \"CREATE USER myuser WITH PASSWORD '${{ secrets.DB_PASSWORD }}' SUPERUSER;\"
-            
-            export PGPASSWORD='${{ secrets.DB_PASSWORD }}'
-            
-            # 데이터베이스 초기화
-            psql -U postgres -h localhost -p 5432 postgres << 'EOF'
-              -- 기존 연결 종료
-              SELECT pg_terminate_backend(pid)
-              FROM pg_stat_activity
-              WHERE datname = 'fit' AND pid <> pg_backend_pid();
-              
-              -- 데이터베이스 삭제 및 재생성
-              DROP DATABASE IF EXISTS fit;
-              CREATE DATABASE fit;
-              ALTER DATABASE fit OWNER TO myuser;
-              GRANT ALL PRIVILEGES ON DATABASE fit TO myuser;
-            EOF
-
-            # 스키마 초기화
-            psql -U myuser -d fit -h ${{ secrets.DB_HOST }} -p 5432 << 'EOF'
-              -- 모든 테이블과 제약조건 삭제
-              DROP SCHEMA IF EXISTS public CASCADE;
-              CREATE SCHEMA public;
-              ALTER SCHEMA public OWNER TO myuser;
-              GRANT ALL ON SCHEMA public TO myuser;
-              
-              -- UUID 확장 설치
-              CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-              
-              -- 테이블 생성 권한 부여
-              GRANT ALL ON ALL TABLES IN SCHEMA public TO myuser;
-              GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO myuser;
-              GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO myuser;
-              
-              -- TypeORM 메타데이터 테이블 삭제
-              DROP TABLE IF EXISTS typeorm_metadata;
-              
-              -- 모든 시퀀스 초기화
-              DO $$ DECLARE
-                r RECORD;
-              BEGIN
-                FOR r IN (SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public') LOOP
-                  EXECUTE 'DROP SEQUENCE IF EXISTS ' || quote_ident(r.sequence_name) || ' CASCADE';
-                END LOOP;
-              END $$;
-              
-              -- 모든 테이블 삭제
-              DO $$ DECLARE
-                r RECORD;
-              BEGIN
-                FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-                  EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
-                END LOOP;
-              END $$;
-            EOF
-          "
-
       # 🚀 EC2로 배포
       - name: 🚀 Deploy to EC2
         env:
@@ -240,27 +129,15 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           BLUE_PORT: 3000
           GREEN_PORT: 3001
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           # Nginx 설정 업로드 및 적용
           echo "📦 Nginx 설정 업로드 시작..."
-          ssh ubuntu@$DB_HOST "mkdir -p ~/nginx-config && chmod 755 ~/nginx-config"
-          ssh ubuntu@$DB_HOST "sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled"
-
-          # 백엔드 API 설정 (api.conf)
-          echo "📦 API 설정 업로드 중..."
-          scp docker/nginx/api.conf ubuntu@$DB_HOST:~/api.conf
-          ssh ubuntu@$DB_HOST "
-            sudo mv ~/api.conf /etc/nginx/sites-available/
-            sudo ln -sf /etc/nginx/sites-available/api.conf /etc/nginx/sites-enabled/api.conf
-          "
-
-          # 프론트엔드 Blue-Green 설정
-          echo "📦 Blue-Green 설정 업로드 중..."
-          scp docker/nginx/fit-blue.conf docker/nginx/fit-green.conf ubuntu@$DB_HOST:~/
-          ssh ubuntu@$DB_HOST "
-            sudo mv ~/fit-*.conf /etc/nginx/sites-available/
-          "
-
+          ssh ubuntu@$DB_HOST "mkdir -p ~/nginx"
+          
+          # Nginx 설정 파일 업로드
+          scp docker/nginx/*.conf ubuntu@$DB_HOST:~/nginx/
+          
           # 현재 실행 포트 확인 및 Blue-Green 포트 결정
           echo "🔍 현재 실행 포트 확인 중..."
           CURRENT_PORT=$(ssh ubuntu@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
@@ -277,30 +154,39 @@ jobs:
           # .env 파일 업로드 및 새 컨테이너 실행
           echo "📦 환경 설정 파일 업로드 중..."
           scp .env ubuntu@$DB_HOST:~/
+          scp -r blue green ubuntu@$DB_HOST:~/
           scp docker/docker-compose.yml ubuntu@$DB_HOST:~/
 
           echo "🚀 새 컨테이너 시작 중..."
           ssh ubuntu@$DB_HOST "
             export DOCKER_USERNAME=$DOCKER_USERNAME
+            export DB_PASSWORD=$DB_PASSWORD
             echo '🔄 Docker Compose 업데이트 중...'
             sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose --retry 3 --retry-delay 5
             sudo chmod +x /usr/local/bin/docker-compose
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f ~/docker-compose.yml pull --quiet
             echo '🚀 컨테이너 시작 중...'
-            timeout 15 docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green || {
-              echo '❌ 컨테이너 시작 실패'
-              docker-compose -f ~/docker-compose.yml logs
-              exit 1
-            }
-
-            # 프론트엔드 Blue-Green 설정 적용
+            docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV postgres
+            
+            # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'
-            sudo ln -sf /etc/nginx/sites-available/fit-$NEW_ENV.conf /etc/nginx/sites-enabled/default
-            sudo nginx -t && sudo systemctl reload nginx || {
-              echo '❌ Nginx 설정 적용 실패'
-              exit 1
-            }
+            
+            # 기존 active_conf 파일로 저장
+            if [ -f /etc/nginx/sites-enabled/default ]; then
+              ACTIVE_CONF=\$(readlink -f /etc/nginx/sites-enabled/default)
+              cp \$ACTIVE_CONF ~/nginx/current.conf
+            fi
+            
+            # 새로 배포되는 환경에 맞는 Nginx 설정 적용
+            cp ~/nginx/fit-$NEW_ENV.conf ~/nginx/default.conf
+            
+            # Nginx 컨테이너 시작 또는 재시작
+            docker-compose -f ~/docker-compose.yml up -d nginx
+            
+            # 컨테이너 상태 확인
+            echo '🔍 컨테이너 상태 확인 중...'
+            docker-compose -f ~/docker-compose.yml ps
             
             echo '✅ 배포 완료'
           "
