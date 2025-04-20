@@ -203,18 +203,7 @@ jobs:
               
               -- UUID 확장 설치
               CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-              
-              -- TypeORM 메타데이터 테이블 초기화
-              DROP TABLE IF EXISTS typeorm_metadata CASCADE;
-              CREATE TABLE IF NOT EXISTS typeorm_metadata (
-                "type" varchar NOT NULL,
-                "database" varchar DEFAULT NULL,
-                "schema" varchar DEFAULT NULL,
-                "table" varchar DEFAULT NULL,
-                "name" varchar DEFAULT NULL,
-                "value" text
-              );
-              
+
               -- chat_room_users 관련 메타데이터 삭제
               DELETE FROM typeorm_metadata WHERE "table" = 'chat_room_users';
               DROP TABLE IF EXISTS chat_room_users CASCADE;
@@ -223,6 +212,27 @@ jobs:
               GRANT ALL ON ALL TABLES IN SCHEMA public TO myuser;
               GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO myuser;
               GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO myuser;
+              
+              -- TypeORM 메타데이터 테이블 삭제
+              DROP TABLE IF EXISTS typeorm_metadata;
+              
+              -- 모든 시퀀스 초기화
+              DO $$ DECLARE
+                r RECORD;
+              BEGIN
+                FOR r IN (SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public') LOOP
+                  EXECUTE 'DROP SEQUENCE IF EXISTS ' || quote_ident(r.sequence_name) || ' CASCADE';
+                END LOOP;
+              END $$;
+              
+              -- 모든 테이블 삭제
+              DO $$ DECLARE
+                r RECORD;
+              BEGIN
+                FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                  EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                END LOOP;
+              END $$;
             EOF
           "
 

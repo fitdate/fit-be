@@ -373,7 +373,7 @@ export class AuthService {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge,
-      domain,
+      domain: '.fit-date.co.kr', //배포할때 삭제하기,
       path: '/',
     };
   }
