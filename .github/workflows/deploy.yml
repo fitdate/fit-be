@@ -288,7 +288,7 @@ jobs:
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f ~/docker-compose.yml pull --quiet
             echo '🚀 컨테이너 시작 중...'
-            timeout 15 docker-compose -f ~/docker-compose.yml up -d app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green || {
+            timeout 15 docker-compose -f ~/docker-compose.yml up app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green || {
               echo '❌ 컨테이너 시작 실패'
               docker-compose -f ~/docker-compose.yml logs
               exit 1

@@ -11,8 +11,6 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { MatchModule } from './modules/match/match.module';
 import { LikeModule } from './modules/like/like.module';
 import { PassModule } from './modules/pass/pass.module';
-import { ChatRoomModule } from './modules/chat-room/chat-room.module';
-import { MessageModule } from './modules/message/message.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { MbtiModule } from './modules/profile/mbti/mbti.module';
@@ -44,8 +42,6 @@ import { ProfileController } from './modules/profile/profile.controller';
 import { MatchController } from './modules/match/match.controller';
 import { LikeController } from './modules/like/like.controller';
 import { PassController } from './modules/pass/pass.controller';
-import { ChatRoomController } from './modules/chat-room/chat-room.controller';
-import { MessageController } from './modules/message/message.controller';
 import { NotificationController } from './modules/notification/notification.controller';
 import { PaymentController } from './modules/payment/payment.controller';
 import { InterestCategoryController } from './modules/profile/interest-category/common/interest-category.controller';
@@ -94,11 +90,8 @@ import { AdminController } from './modules/admin/admin.controller';
         database: configService.getOrThrow('database.name', {
           infer: true,
         }),
-        entities: [join(__dirname, '/**/*.entity{.ts,.js}')],
-        migrations: [join(__dirname, '/migration/*{.ts,.js}')],
-        migrationsRun: false,
+        entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         synchronize: true,
-        dropSchema: true, // 개발 환경에서만 사용
         logging: true,
       }),
       inject: [ConfigService],
@@ -108,8 +101,6 @@ import { AdminController } from './modules/admin/admin.controller';
     MatchModule,
     LikeModule,
     PassModule,
-    ChatRoomModule,
-    MessageModule,
     NotificationModule,
     PaymentModule,
     InterestCategoryModule,
@@ -169,8 +160,6 @@ export class AppModule implements NestModule {
         MatchController,
         LikeController,
         PassController,
-        ChatRoomController,
-        MessageController,
         NotificationController,
         PaymentController,
         InterestCategoryController,
