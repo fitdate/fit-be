@@ -184,7 +184,7 @@ jobs:
             echo '⏳ 데이터베이스와 Redis 대기 중...'
             sleep 3
             
-            # 앱 컨테이너 시작
+            # 새 환경의 앱 컨테이너만 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d app-$NEW_ENV
             
             # 앱 상태 확인
@@ -197,6 +197,14 @@ jobs:
             
             # Nginx 컨테이너 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d nginx
+
+            # 이전 환경의 앱 컨테이너 중지
+            echo '🧹 이전 환경 정리 중...'
+            if [ "$CURRENT_ENV" = "blue" ]; then
+              docker-compose -f /home/ubuntu/docker-compose.yml stop app-blue redis-blue || true
+            else
+              docker-compose -f /home/ubuntu/docker-compose.yml stop app-green redis-green || true
+            fi
 
             # 시스템 상태 확인
             echo '🔍 전체 컨테이너 상태 확인 중...'
