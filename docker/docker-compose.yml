@@ -133,27 +133,6 @@ services:
       retries: 1
       start_period: 20s
 
-  postgres:
-    container_name: postgres
-    image: postgres:15
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=myuser
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=fit
-    networks:
-      - redis-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myuser -d fit"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
 networks:
   redis-network:
     driver: bridge
