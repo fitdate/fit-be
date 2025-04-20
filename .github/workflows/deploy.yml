@@ -290,9 +290,9 @@ jobs:
             sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)\" -o /usr/local/bin/docker-compose --retry 3 --retry-delay 5
             sudo chmod +x /usr/local/bin/docker-compose
             echo '🔄 이미지 다운로드 중...'
-            docker-compose -f ~/docker-compose.yml pull --quiet
+            docker-compose -f ~/docker-compose.yml pull
             echo '🚀 컨테이너 시작 중...'
-            timeout 15 docker-compose -f ~/docker-compose.yml up app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green || {
+            timeout 3 docker-compose -f ~/docker-compose.yml up app-$NEW_ENV redis-$NEW_ENV redis-blue redis-green || {
               echo '❌ 컨테이너 시작 실패'
               docker-compose -f ~/docker-compose.yml logs
               exit 1
