@@ -183,6 +183,7 @@ export class AppModule implements NestModule {
         S3Controller,
         MailerController,
         AdminController,
+        AppController,
       );
   }
 }

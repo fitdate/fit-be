@@ -25,16 +25,6 @@ export class ChatRoom extends BaseTable {
 
   @ApiProperty({ type: () => [User] })
   @ManyToMany(() => User)
-  @JoinTable({
-    name: 'chat_room_users',
-    joinColumn: {
-      name: 'chat_room_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'user_id',
-      referencedColumnName: 'id',
-    },
-  })
+  @JoinTable()
   users: User[];
 }
