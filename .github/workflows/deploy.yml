@@ -83,6 +83,16 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/fit-be:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/fit-be:latest
 
+      # 🧹 도커 이미지 정리
+      - name: 🧹 Clean up Docker images
+        run: |
+          ssh ubuntu@${{ secrets.DB_HOST }} "
+            # 사용하지 않는 도커 이미지, 컨테이너, 볼륨, 네트워크 삭제
+            docker system prune -af --volumes
+            # 모든 사용하지 않는 이미지 삭제
+            docker image prune -af
+          "
+
       # 🧪 DB 서버 상태 확인
       - name: 🧪 Check Database Server Status
         run: |
@@ -196,7 +206,8 @@ jobs:
 
           # 현재 실행 포트 확인 및 Blue-Green 포트 결정
           CURRENT_PORT=$(ssh ubuntu@$DB_HOST "curl -s localhost/port || echo $BLUE_PORT")
-          if [ \"$CURRENT_PORT\" = \"$BLUE_PORT\" ]; then
+          CURRENT_PORT=$(echo "$CURRENT_PORT" | tr -d '\r' | tr -d '\n')
+          if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
             NEW_PORT=$GREEN_PORT
             NEW_ENV="green"
           else
