@@ -1,6 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { ChatRoom } from 'src/modules/chat-room/entities/chat-room.entity';
 
 @Entity('messages')
 export class Message extends BaseTable {
@@ -29,4 +36,9 @@ export class Message extends BaseTable {
   @ApiProperty()
   @Column({ default: false })
   isRead: boolean;
+
+  @ApiProperty({ type: () => ChatRoom })
+  @ManyToOne(() => ChatRoom, (chatRoom) => chatRoom.messages)
+  @JoinColumn({ name: 'chat_room_id' })
+  chatRoom: ChatRoom;
 }
