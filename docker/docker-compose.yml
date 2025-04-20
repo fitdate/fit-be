@@ -15,8 +15,6 @@ services:
       - ENV_FILE=.env.blue
       - DB_HOST=postgres
       - DB_PORT=5432
-      - TYPEORM_SYNCHRONIZE=true
-      - TYPEORM_DROP_SCHEMA=true
     networks:
       - redis-network
       - postgres-network
@@ -48,8 +46,6 @@ services:
       - ENV_FILE=.env.green
       - DB_HOST=postgres
       - DB_PORT=5432
-      - TYPEORM_SYNCHRONIZE=true
-      - TYPEORM_DROP_SCHEMA=true
     networks:
       - redis-network
       - postgres-network
@@ -70,7 +66,7 @@ services:
     image: postgres:latest
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=myuser
+      - POSTGRES_USER=ubuntu
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=fit
     ports:
@@ -80,7 +76,7 @@ services:
     networks:
       - postgres-network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U myuser -d fit']
+      test: ['CMD-SHELL', 'pg_isready -U ubuntu -d fit']
       interval: 10s
       timeout: 5s
       retries: 3
