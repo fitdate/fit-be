@@ -24,7 +24,7 @@ export class ChatRoom extends BaseTable {
   messages: Message[];
 
   @ApiProperty({ type: () => [User] })
-  @ManyToMany(() => User)
+  @ManyToMany(() => User, (user) => user.chatRooms)
   @JoinTable()
   users: User[];
 }
