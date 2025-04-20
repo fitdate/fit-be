@@ -130,12 +130,12 @@ export class AuthService {
       role,
     } = registerDto;
 
-    const isEmailVerified = await this.checkEmailVerification(email);
-    if (!isEmailVerified) {
-      throw new UnauthorizedException(
-        '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
-      );
-    }
+    // const isEmailVerified = await this.checkEmailVerification(email);
+    // if (!isEmailVerified) {
+    //   throw new UnauthorizedException(
+    //     '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
+    //   );
+    // }
 
     const userEmail = await this.userService.findUserByEmail(email);
     if (userEmail) {
@@ -163,8 +163,8 @@ export class AuthService {
     });
 
     // 인증 완료 후 Redis에서 인증 상태 삭제
-    const verifiedKey = `email-verified:${email}`;
-    await this.redisService.del(verifiedKey);
+    // const verifiedKey = `email-verified:${email}`;
+    // await this.redisService.del(verifiedKey);
 
     return user;
   }
