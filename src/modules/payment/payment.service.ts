@@ -11,6 +11,8 @@ import {
   PaymentStatus,
   TopPayingUser,
 } from './types/payment.types';
+import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PaymentService {
@@ -19,6 +21,7 @@ export class PaymentService {
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly configService: ConfigService,
   ) {}
 
   // 새로운 결제 정보 생성
@@ -32,11 +35,13 @@ export class PaymentService {
     paymentKey: string,
     orderId: string,
     amount: number,
-  ): Promise<{ data: TossPaymentResponse }> {
-    const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
-    const encryptedSecretKey = Buffer.from(`${secretKey}:`).toString('base64');
-
+    req: Request,
+  ): Promise<TossPaymentResponse> {
     try {
+      const encryptedSecretKey = Buffer.from(
+        `${this.configService.getOrThrow('toss.secretKey', { infer: true })}:`,
+      ).toString('base64');
+
       const response = await axios.post<TossPaymentResponse>(
         'https://api.tosspayments.com/v1/payments/confirm',
         {
@@ -48,7 +53,9 @@ export class PaymentService {
           headers: {
             Authorization: `Basic ${encryptedSecretKey}`,
             'Content-Type': 'application/json',
+            Cookie: `accessToken=${req.cookies.accessToken}`,
           },
+          withCredentials: true,
         },
       );
 
@@ -57,7 +64,7 @@ export class PaymentService {
         { status: 'DONE', paymentKey },
       );
 
-      return { data: response.data };
+      return response.data;
     } catch (error) {
       await this.paymentRepository.update({ orderId }, { status: 'CANCELED' });
       throw error;

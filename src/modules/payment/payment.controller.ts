@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import { TossPaymentResponse } from './types/toss-payment.types';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { Payment } from './entities/payment.entity';
+import { Request } from 'express';
 
 @ApiTags('Payment')
 @Controller('payment')
@@ -25,11 +26,13 @@ export class PaymentController {
   // 토스페이먼츠 결제 확인 처리
   async confirmPayment(
     @Query() confirmPaymentDto: ConfirmPaymentDto,
-  ): Promise<{ data: TossPaymentResponse }> {
+    @Req() req: Request,
+  ): Promise<TossPaymentResponse> {
     return this.paymentService.confirmPayment(
       confirmPaymentDto.paymentKey,
       confirmPaymentDto.orderId,
       confirmPaymentDto.amount,
+      req,
     );
   }
 
