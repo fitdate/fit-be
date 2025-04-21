@@ -218,7 +218,6 @@ export class AuthService {
     this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
-    const tokens = this.generateTokens(user.id, user.role, origin);
     this.logger.log(
       `Successfully logged in user with email: ${loginDto.email}`,
     );
