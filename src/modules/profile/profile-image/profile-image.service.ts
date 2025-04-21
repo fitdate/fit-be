@@ -44,11 +44,11 @@ export class ProfileImageService {
     this.logger.log('S3 client initialized successfully');
   }
 
-  async uploadProfileImages(userId: string, file: MulterFile) {
-    this.logger.log(`Uploading profile image for user ID: ${userId}`);
-    if (!file) {
-      this.logger.warn('No file provided');
-      throw new BadRequestException('No file provided');
+  async uploadProfileImages(userId: string, files: MulterFile[]) {
+    this.logger.log(`Uploading profile images for user ID: ${userId}`);
+    if (!files || files.length === 0) {
+      this.logger.warn('No files provided');
+      throw new BadRequestException('No files provided');
     }
 
     try {
@@ -69,106 +69,166 @@ export class ProfileImageService {
         where: { profile: { id: profile.id } },
       });
 
-      const fileExtension = file.originalname.split('.').pop();
-      const uniqueFileName = `${uuidv4()}.${fileExtension}`;
-      const s3Key = `profile-images/${uniqueFileName}`;
+      const uploadedImages: ProfileImage[] = [];
+      for (const file of files) {
+        const fileExtension = file.originalname.split('.').pop();
+        const uniqueFileName = `${uuidv4()}.${fileExtension}`;
+        const s3Key = `profile-images/${uniqueFileName}`;
 
-      const upload = new Upload({
-        client: this.s3Client,
-        params: {
-          Bucket: this.configService.getOrThrow('aws.bucketName', {
-            infer: true,
-          }),
-          Key: s3Key,
-          Body: file.buffer,
-          ContentType: file.mimetype,
-        },
-      });
+        const upload = new Upload({
+          client: this.s3Client,
+          params: {
+            Bucket: this.configService.getOrThrow('aws.bucketName', {
+              infer: true,
+            }),
+            Key: s3Key,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+          },
+        });
 
-      await upload.done();
+        await upload.done();
 
-      const profileImage = this.profileImageRepository.create({
-        imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
-        profile: { id: profile.id },
-        isMain: existingImages === 0, // 첫 이미지는 메인으로 설정
-      });
+        const profileImage = this.profileImageRepository.create({
+          imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
+          profile: { id: profile.id },
+          isMain: existingImages + uploadedImages.length === 0, // 첫 이미지는 메인으로 설정
+        });
 
-      await this.profileImageRepository.save(profileImage);
-      this.logger.log(`Profile image uploaded successfully: ${uniqueFileName}`);
+        await this.profileImageRepository.save(profileImage);
+        uploadedImages.push(profileImage);
+        this.logger.log(
+          `Profile image uploaded successfully: ${uniqueFileName}`,
+        );
+      }
 
-      return profileImage;
+      return uploadedImages;
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('Failed to upload profile image', errorMessage);
+      this.logger.error('Failed to upload profile images', errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 업로드에 실패했습니다.',
       );
     }
   }
 
-  async updateProfileImage(
+  async updateProfileImages(
     profileId: string,
-    file: MulterFile,
-    oldImageName: string | null,
+    files: MulterFile[],
+    oldImageIds: string[],
   ) {
-    this.logger.log(`Updating profile image for profile ID: ${profileId}`);
-    if (!file) {
-      this.logger.warn('No file provided');
-      throw new BadRequestException('No file provided');
+    this.logger.log(`Updating profile images for profile ID: ${profileId}`);
+    if (!files || files.length === 0) {
+      this.logger.warn('No files provided');
+      throw new BadRequestException('No files provided');
     }
 
     try {
-      if (oldImageName) {
-        this.logger.log(`Deleting old image: ${oldImageName}`);
+      // 기존 이미지 삭제
+      if (oldImageIds && oldImageIds.length > 0) {
+        for (const imageId of oldImageIds) {
+          await this.deleteProfileImage(imageId);
+        }
+      }
+
+      // 새 이미지 업로드
+      const uploadedImages: ProfileImage[] = [];
+      for (const file of files) {
+        const fileExtension = file.originalname.split('.').pop();
+        const uniqueFileName = `${uuidv4()}.${fileExtension}`;
+        const s3Key = `profile-images/${uniqueFileName}`;
+
+        const upload = new Upload({
+          client: this.s3Client,
+          params: {
+            Bucket: this.configService.getOrThrow('aws.bucketName', {
+              infer: true,
+            }),
+            Key: s3Key,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+          },
+        });
+
+        await upload.done();
+
+        const profileImage = this.profileImageRepository.create({
+          imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
+          profile: { id: profileId },
+          isMain: uploadedImages.length === 0, // 첫 이미지는 메인으로 설정
+        });
+
+        await this.profileImageRepository.save(profileImage);
+        uploadedImages.push(profileImage);
+        this.logger.log(
+          `Profile image uploaded successfully: ${uniqueFileName}`,
+        );
+      }
+
+      return uploadedImages;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to update profile images', errorMessage);
+      throw new InternalServerErrorException(
+        '프로필 이미지 업데이트에 실패했습니다.',
+      );
+    }
+  }
+
+  async deleteProfileImages(ids: string[]) {
+    this.logger.log(`Deleting profile images with IDs: ${ids.join(', ')}`);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const deletedImages: ProfileImage[] = [];
+      for (const id of ids) {
+        const profileImage = await queryRunner.manager.findOne(ProfileImage, {
+          where: { id },
+          relations: ['profile'],
+        });
+
+        if (!profileImage) {
+          this.logger.warn(`Profile image not found: ${id}`);
+          continue;
+        }
+
+        // S3에서 삭제
+        this.logger.log(`Deleting from S3: ${profileImage.imageUrl}`);
+        const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
         await this.s3Client.send(
           new DeleteObjectCommand({
             Bucket: this.configService.getOrThrow('aws.bucketName', {
               infer: true,
             }),
-            Key: `profile-images/${oldImageName}`,
+            Key: s3Key,
           }),
         );
+
+        // DB에서 삭제
+        await queryRunner.manager.remove(profileImage);
+        deletedImages.push(profileImage);
       }
 
-      const s3Key = `profile-images/${file.originalname}`;
-
-      const upload = new Upload({
-        client: this.s3Client,
-        params: {
-          Bucket: this.configService.getOrThrow('aws.bucketName', {
-            infer: true,
-          }),
-          Key: s3Key,
-          Body: file.buffer,
-          ContentType: file.mimetype,
-        },
-      });
-
-      await upload.done();
-
-      const profileImage = await this.profileImageRepository.findOne({
-        where: { profile: { id: profileId } },
-      });
-
-      if (profileImage) {
-        profileImage.imageUrl = `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`;
-        await this.profileImageRepository.save(profileImage);
-        this.logger.log(
-          `Profile image updated successfully: ${file.originalname}`,
-        );
-      } else {
-        this.logger.warn(`No profile image found for profile ID: ${profileId}`);
-      }
-
-      return profileImage;
+      await queryRunner.commitTransaction();
+      this.logger.log(`Profile images deleted successfully: ${ids.join(', ')}`);
+      return { message: 'Profile images deleted successfully' };
     } catch (error: unknown) {
+      await queryRunner.rollbackTransaction();
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('Failed to update profile image', errorMessage);
-      throw new InternalServerErrorException(
-        '프로필 이미지 업데이트에 실패했습니다.',
+      this.logger.error(
+        `Failed to delete profile images: ${ids.join(', ')}`,
+        errorMessage,
       );
+      throw new InternalServerErrorException(
+        '프로필 이미지 삭제에 실패했습니다.',
+      );
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -236,5 +296,37 @@ export class ProfileImageService {
     return this.profileImageRepository.findOne({
       where: { id: imageId },
     });
+  }
+
+  async getProfileImages(userId: string) {
+    this.logger.log(`Getting profile images for user ID: ${userId}`);
+    try {
+      // 프로필 찾기
+      const profile = await this.profileRepository.findOne({
+        where: { user: { id: userId } },
+      });
+
+      if (!profile) {
+        throw new BadRequestException(
+          `Profile not found for user ID: ${userId}. Please create a profile first.`,
+        );
+      }
+
+      // 프로필 이미지들 가져오기
+      const images = await this.profileImageRepository.find({
+        where: { profile: { id: profile.id } },
+        order: { isMain: 'DESC' }, // 메인 이미지가 먼저 오도록 정렬
+      });
+
+      this.logger.log(`Successfully retrieved ${images.length} profile images`);
+      return images;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to get profile images', errorMessage);
+      throw new InternalServerErrorException(
+        '프로필 이미지 조회에 실패했습니다.',
+      );
+    }
   }
 }

@@ -10,7 +10,7 @@ import { GoogleStrategy } from './strategy/google.strategy';
 import { MailerModule } from '../mailer/mailer.module';
 import { RedisModule } from '../redis/redis.module';
 import { LocationModule } from '../location/location.module';
-
+import { ProfileModule } from '../profile/profile.module';
 @Module({
   imports: [
     UserModule,
@@ -18,6 +18,7 @@ import { LocationModule } from '../location/location.module';
     MailerModule,
     RedisModule,
     LocationModule,
+    ProfileModule,
   ],
   controllers: [AuthController],
   providers: [
