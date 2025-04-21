@@ -57,7 +57,6 @@ export class ProfileImageService {
           Key: s3Key,
           Body: file.buffer,
           ContentType: file.mimetype,
-          ACL: 'public-read',
         },
       });
 
@@ -119,7 +118,6 @@ export class ProfileImageService {
           Key: s3Key,
           Body: file.buffer,
           ContentType: file.mimetype,
-          ACL: 'public-read',
         },
       });
 
