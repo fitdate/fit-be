@@ -4,30 +4,18 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { CreateProfileImageDto } from './dto/create-profile-image.dto';
 import { Repository } from 'typeorm';
 import { ProfileImage } from './entities/profile-image.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
-import { createReadStream } from 'fs';
 import { MulterFile } from './types/multer.types';
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 
 @Injectable()
 export class ProfileImageService {
   private readonly logger = new Logger(ProfileImageService.name);
-  private readonly IMAGE_FOLDER = join(
-    process.cwd(),
-    'public',
-    'profile-images',
-  );
-  private readonly TEMP_FOLDER = join(process.cwd(), 'public', 'temp');
   private readonly s3Client: S3Client;
 
   constructor(
@@ -50,84 +38,46 @@ export class ProfileImageService {
     this.logger.log('S3 client initialized successfully');
   }
 
-  async createProfileImages(createProfileImageDto: CreateProfileImageDto) {
-    this.logger.log(
-      `Creating profile images for profile ID: ${createProfileImageDto.profileId}`,
-    );
-    const imageNames = createProfileImageDto.profileImageName;
-    if (!imageNames || !Array.isArray(imageNames)) {
-      this.logger.warn('Invalid profile image names provided');
-      throw new BadRequestException('Profile image names are required');
-    }
-
-    try {
-      const profileImages = await Promise.all(
-        imageNames.map(async (imageName) => {
-          this.logger.log(`Processing image: ${imageName}`);
-          const tempPath = join(this.TEMP_FOLDER, imageName);
-          const s3Key = `profile-images/${imageName}`;
-
-          this.logger.log(`Uploading to S3: ${s3Key}`);
-          await this.s3Client.send(
-            new PutObjectCommand({
-              Bucket: this.configService.getOrThrow('aws.bucketName', {
-                infer: true,
-              }),
-              Key: s3Key,
-              Body: createReadStream(tempPath),
-              ContentType:
-                'image/jpeg, image/png, image/gif, image/webp, image/jpg',
-              ACL: 'public-read',
-            }),
-          );
-
-          const profileImage = this.profileImageRepository.create({
-            imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
-            profile: { id: createProfileImageDto.profileId },
-          });
-
-          await this.profileImageRepository.save(profileImage);
-          this.logger.log(`Profile image saved successfully: ${imageName}`);
-
-          return profileImage;
-        }),
-      );
-
-      this.logger.log(
-        `Successfully created ${profileImages.length} profile images`,
-      );
-      return profileImages;
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('Failed to save profile images', errorMessage);
-      throw new InternalServerErrorException(
-        '프로필 이미지 저장에 실패했습니다.',
-      );
-    }
-  }
-
   async uploadProfileImages(profileId: string, file: MulterFile) {
     this.logger.log(`Uploading profile image for profile ID: ${profileId}`);
+    if (!file) {
+      this.logger.warn('No file provided');
+      throw new BadRequestException('No file provided');
+    }
+
     try {
-      if (!file.filename) {
-        this.logger.warn('File name is missing');
-        throw new BadRequestException('File name is missing');
-      }
+      const s3Key = `profile-images/${file.originalname}`;
 
-      const createProfileImageDto = new CreateProfileImageDto();
-      createProfileImageDto.profileId = profileId;
-      createProfileImageDto.profileImageName = [file.filename];
+      const upload = new Upload({
+        client: this.s3Client,
+        params: {
+          Bucket: this.configService.getOrThrow('aws.bucketName', {
+            infer: true,
+          }),
+          Key: s3Key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          ACL: 'public-read',
+        },
+      });
 
-      this.logger.log(`Processing file: ${file.filename}`);
-      return await this.createProfileImages(createProfileImageDto);
+      await upload.done();
+
+      const profileImage = this.profileImageRepository.create({
+        imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
+        profile: { id: profileId },
+      });
+
+      await this.profileImageRepository.save(profileImage);
+      this.logger.log(
+        `Profile image uploaded successfully: ${file.originalname}`,
+      );
+
+      return profileImage;
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `Failed to upload profile image: ${file.filename}`,
-        errorMessage,
-      );
+      this.logger.error('Failed to upload profile image', errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 업로드에 실패했습니다.',
       );
@@ -136,13 +86,13 @@ export class ProfileImageService {
 
   async updateProfileImage(
     profileId: string,
-    newImageName: string,
+    file: MulterFile,
     oldImageName: string | null,
   ) {
     this.logger.log(`Updating profile image for profile ID: ${profileId}`);
-    if (!newImageName) {
-      this.logger.warn('Profile image name is missing');
-      throw new BadRequestException('Profile image name is required');
+    if (!file) {
+      this.logger.warn('No file provided');
+      throw new BadRequestException('No file provided');
     }
 
     try {
@@ -158,20 +108,22 @@ export class ProfileImageService {
         );
       }
 
-      this.logger.log(`Uploading new image: ${newImageName}`);
-      const tempPath = join(this.TEMP_FOLDER, newImageName);
-      const s3Key = `profile-images/${newImageName}`;
-      await this.s3Client.send(
-        new PutObjectCommand({
+      const s3Key = `profile-images/${file.originalname}`;
+
+      const upload = new Upload({
+        client: this.s3Client,
+        params: {
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
           }),
           Key: s3Key,
-          Body: createReadStream(tempPath),
-          ContentType: 'image/jpeg',
+          Body: file.buffer,
+          ContentType: file.mimetype,
           ACL: 'public-read',
-        }),
-      );
+        },
+      });
+
+      await upload.done();
 
       const profileImage = await this.profileImageRepository.findOne({
         where: { profile: { id: profileId } },
@@ -180,7 +132,9 @@ export class ProfileImageService {
       if (profileImage) {
         profileImage.imageUrl = `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`;
         await this.profileImageRepository.save(profileImage);
-        this.logger.log(`Profile image updated successfully: ${newImageName}`);
+        this.logger.log(
+          `Profile image updated successfully: ${file.originalname}`,
+        );
       } else {
         this.logger.warn(`No profile image found for profile ID: ${profileId}`);
       }
