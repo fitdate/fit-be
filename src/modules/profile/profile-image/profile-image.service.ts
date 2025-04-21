@@ -9,7 +9,11 @@ import { Repository } from 'typeorm';
 import { ProfileImage } from './entities/profile-image.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { join } from 'path';
-import { readdir, rename, unlink } from 'fs/promises';
+import * as AWS from 'aws-sdk';
+import { ConfigService } from '@nestjs/config';
+import { AllConfig } from 'src/common/config/config.types';
+import { createReadStream } from 'fs';
+import { MulterFile } from './types/multer.types';
 
 @Injectable()
 export class ProfileImageService {
@@ -20,50 +24,92 @@ export class ProfileImageService {
     'profile-images',
   );
   private readonly TEMP_FOLDER = join(process.cwd(), 'public', 'temp');
+  private readonly s3: AWS.S3;
+
   constructor(
     @InjectRepository(ProfileImage)
     private profileImageRepository: Repository<ProfileImage>,
-  ) {}
+    private configService: ConfigService<AllConfig>,
+  ) {
+    this.s3 = new AWS.S3({
+      region: this.configService.getOrThrow('aws.region', { infer: true }),
+      credentials: {
+        accessKeyId: this.configService.getOrThrow('aws.accessKeyId', {
+          infer: true,
+        }),
+        secretAccessKey: this.configService.getOrThrow('aws.secretAccessKey', {
+          infer: true,
+        }),
+      },
+    });
+  }
 
-  async getManyProfileImages(): Promise<string[]> {
+  async createProfileImages(createProfileImageDto: CreateProfileImageDto) {
+    const imageNames = createProfileImageDto.profileImageName;
+    if (!imageNames || !Array.isArray(imageNames)) {
+      throw new BadRequestException('Profile image names are required');
+    }
+
     try {
-      const files = await readdir(this.IMAGE_FOLDER);
-      return files.map((filename) => `/profile-images/${filename}`);
-    } catch (e) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.error('이미지 목록 불러오기 실패', e.stack);
+      const profileImages = await Promise.all(
+        imageNames.map(async (imageName) => {
+          const tempPath = join(this.TEMP_FOLDER, imageName);
+          const s3Upload = await this.s3
+            .upload({
+              Bucket: this.configService.getOrThrow('aws.bucketName', {
+                infer: true,
+              }),
+              Key: `profile-images/${imageName}`,
+              Body: createReadStream(tempPath),
+              ContentType: 'image/jpeg',
+              ACL: 'public-read',
+            })
+            .promise();
+
+          const profileImage = this.profileImageRepository.create({
+            imageUrl: s3Upload.Location,
+            profile: { id: createProfileImageDto.profileId },
+          });
+
+          await this.profileImageRepository.save(profileImage);
+          this.logger.log(`Profile image saved successfully: ${imageName}`);
+
+          return profileImage;
+        }),
+      );
+
+      return profileImages;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to save profile images', errorMessage);
       throw new InternalServerErrorException(
-        '프로필 이미지 목록을 불러올 수 없습니다.',
+        '프로필 이미지 저장에 실패했습니다.',
       );
     }
   }
 
-  async createProfileImages(createProfileImageDto: CreateProfileImageDto) {
-    const imageName = createProfileImageDto.profileImageName;
-
-    const tempPath = join(this.TEMP_FOLDER, imageName);
-    const targetPath = join(this.IMAGE_FOLDER, imageName);
-
+  async uploadProfileImages(
+    profileId: string,
+    imageName: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _file: MulterFile,
+  ) {
     try {
-      // temp 디렉토리에 직접 저장
-      const profileImage = this.profileImageRepository.create({
-        imageUrl: `/temp/${imageName}`,
-        profile: { id: createProfileImageDto.profileId },
-      });
+      const createProfileImageDto = new CreateProfileImageDto();
+      createProfileImageDto.profileId = profileId;
+      createProfileImageDto.profileImageName = [imageName];
 
-      await this.profileImageRepository.save(profileImage);
-      this.logger.log(`Profile image saved successfully: ${imageName}`);
-    } catch (e) {
-      this.logger.error(`Failed to save profile image: ${imageName}`, e.stack);
-
-      try {
-        await unlink(tempPath);
-        this.logger.log('Temporary file cleaned up successfully');
-      } catch (deleteErr) {
-        this.logger.error('Failed to clean up temporary file', deleteErr.stack);
-      }
+      return await this.createProfileImages(createProfileImageDto);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to upload profile image: ${imageName}`,
+        errorMessage,
+      );
       throw new InternalServerErrorException(
-        '프로필 이미지 저장에 실패했습니다.',
+        '프로필 이미지 업로드에 실패했습니다.',
       );
     }
   }
@@ -71,60 +117,106 @@ export class ProfileImageService {
   async updateProfileImage(
     profileId: string,
     newImageName: string,
-    oldImageName: string,
+    oldImageName: string | null,
   ) {
-    if (newImageName === undefined || newImageName === null) {
+    if (!newImageName) {
       this.logger.warn('Profile image name is missing');
       throw new BadRequestException('Profile image name is required');
     }
-    if (!oldImageName) {
-      this.logger.warn('Image file is missing');
-      throw new BadRequestException('Image file is required');
-    }
-
-    const oldPath = join(this.IMAGE_FOLDER, oldImageName);
-    const newPath = join(this.IMAGE_FOLDER, newImageName);
 
     try {
-      await unlink(oldPath);
-      this.logger.log(`Old image deleted successfully: ${oldImageName}`);
-    } catch (e) {
-      this.logger.warn(
-        `Failed to delete old image (may not exist): ${oldImageName}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        e.stack,
-      );
-    }
+      // Delete old image from S3 if exists
+      if (oldImageName) {
+        await this.s3
+          .deleteObject({
+            Bucket: this.configService.getOrThrow('aws.bucketName', {
+              infer: true,
+            }),
+            Key: `profile-images/${oldImageName}`,
+          })
+          .promise();
+      }
 
-    try {
-      await rename(
-        join(process.cwd(), 'public', 'temp', newImageName),
-        newPath,
+      // Upload new image to S3
+      const tempPath = join(this.TEMP_FOLDER, newImageName);
+      const s3Upload = await this.s3
+        .upload({
+          Bucket: this.configService.getOrThrow('aws.bucketName', {
+            infer: true,
+          }),
+          Key: `profile-images/${newImageName}`,
+          Body: createReadStream(tempPath),
+          ContentType: 'image/jpeg',
+          ACL: 'public-read',
+        })
+        .promise();
+
+      // Update database record
+      const profileImage = await this.profileImageRepository.findOne({
+        where: { profile: { id: profileId } },
+      });
+
+      if (profileImage) {
+        profileImage.imageUrl = s3Upload.Location;
+        await this.profileImageRepository.save(profileImage);
+      }
+
+      this.logger.log(`Profile image updated successfully: ${newImageName}`);
+      return profileImage;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Failed to update profile image', errorMessage);
+      throw new InternalServerErrorException(
+        '프로필 이미지 업데이트에 실패했습니다.',
       );
-      this.logger.log(`New image saved successfully: ${newImageName}`);
-    } catch (e) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.error('Failed to save new image', e.stack);
-      throw new InternalServerErrorException('프로필 이미지 변경 실패');
     }
   }
 
-  async deleteProfileImage(imageName: string) {
-    const imagePath = join(
-      process.cwd(),
-      'public',
-      'profile-images',
-      imageName,
-    );
-
+  async deleteProfileImage(id: string, imageName?: string) {
     try {
-      await unlink(imagePath);
-      this.logger.log(`Profile image deleted successfully: ${imageName}`);
-    } catch (e) {
-      this.logger.error(
-        `Failed to delete profile image (may not exist): ${imageName}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        e.stack,
+      // Find the profile image by id
+      const profileImage = await this.profileImageRepository.findOne({
+        where: { id },
+        relations: ['profile'],
+      });
+
+      if (!profileImage) {
+        throw new BadRequestException('Profile image not found');
+      }
+
+      // If imageName is provided, verify it matches the profile image
+      if (imageName) {
+        const urlImageName = profileImage.imageUrl.split('/').pop();
+        if (urlImageName !== imageName) {
+          throw new BadRequestException(
+            'Image name does not match the profile image',
+          );
+        }
+      }
+
+      // Delete from S3
+      const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
+      await this.s3
+        .deleteObject({
+          Bucket: this.configService.getOrThrow('aws.bucketName', {
+            infer: true,
+          }),
+          Key: s3Key,
+        })
+        .promise();
+
+      // Delete from database
+      await this.profileImageRepository.remove(profileImage);
+
+      this.logger.log(`Profile image deleted successfully: ${profileImage.id}`);
+      return { message: 'Profile image deleted successfully' };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to delete profile image: ${id}`, errorMessage);
+      throw new InternalServerErrorException(
+        '프로필 이미지 삭제에 실패했습니다.',
       );
     }
   }

@@ -56,6 +56,13 @@ export const config = () => ({
     },
     socialFrontendUrl: process.env.SOCIAL_FRONTEND_URL,
   },
+  aws: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION,
+    bucketName: process.env.AWS_BUCKET_NAME,
+    cloudfrontDomain: process.env.AWS_CLOUDFRONT_DOMAIN,
+  },
 });
 
 export const validationSchema = Joi.object({
@@ -94,6 +101,11 @@ export const validationSchema = Joi.object({
   NAVER_CLIENT_SECRET: Joi.string().required(),
   NAVER_CALLBACK_URL: Joi.string().required(),
   SOCIAL_FRONTEND_URL: Joi.string().required(),
+  AWS_ACCESS_KEY_ID: Joi.string().required(),
+  AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+  AWS_REGION: Joi.string().required(),
+  AWS_BUCKET_NAME: Joi.string().required(),
+  AWS_CLOUDFRONT_DOMAIN: Joi.string().required(),
 });
 
 export const ConfigModuleOptions = {

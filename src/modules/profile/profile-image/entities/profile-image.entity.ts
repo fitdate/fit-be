@@ -3,8 +3,8 @@ import { Profile } from '../../entities/profile.entity';
 
 @Entity()
 export class ProfileImage {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => Profile, (profile) => profile.profileImage)
   profile: Profile;

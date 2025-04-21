@@ -59,6 +59,15 @@ export interface SocialConfig {
   };
   socialFrontendUrl: string;
 }
+
+export interface AwsConfig {
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+  bucketName: string;
+  cloudfrontDomain: string;
+}
+
 export interface AllConfig {
   database: DatabaseConfig;
   app: AppConfig;
@@ -67,4 +76,5 @@ export interface AllConfig {
   mailer: MailerConfig;
   redis: RedisConfig;
   social: SocialConfig;
+  aws: AwsConfig;
 }
