@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      # 🔧 Node.js 설정
+      # 🔧 Node.js 설정!
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
