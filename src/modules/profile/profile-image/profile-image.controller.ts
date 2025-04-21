@@ -24,6 +24,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { UserId } from 'src/common/decorator/get-user.decorator';
+import { DeleteProfileImageDto } from './dto/delete-profile-image.dto';
 
 @ApiTags('Profile Image')
 @Controller('profile-image')
@@ -132,12 +133,16 @@ export class ProfileImageController {
     description: 'Profile images deleted successfully',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async deleteProfileImages(@Body('ids') ids: string[]) {
-    if (!ids || ids.length === 0) {
+  async deleteProfileImages(
+    @Body() deleteProfileImageDto: DeleteProfileImageDto,
+  ) {
+    if (!deleteProfileImageDto.ids || deleteProfileImageDto.ids.length === 0) {
       throw new BadRequestException('No image IDs provided');
     }
 
-    return this.profileImageService.deleteProfileImages(ids);
+    return this.profileImageService.deleteProfileImages(
+      deleteProfileImageDto.ids,
+    );
   }
 
   @Patch('set-main-image')
