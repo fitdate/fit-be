@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
@@ -22,6 +22,8 @@ import { JwtTokenResponse, LoginResponse } from './types/auth.types';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly userService: UserService,
     private readonly hashService: HashService,
@@ -97,6 +99,9 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
+    this.logger.log(
+      `Attempting to register user with email: ${registerDto.email}`,
+    );
     const {
       email,
       password,
@@ -104,7 +109,7 @@ export class AuthService {
       name,
       birthday,
       gender,
-      phoneNumber,
+      phone,
       address,
       role,
     } = registerDto;
@@ -126,7 +131,28 @@ export class AuthService {
       throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
     }
 
+    if (!nickname) {
+      throw new UnauthorizedException('닉네임을 입력해주세요.');
+    }
+
+    if (!birthday) {
+      throw new UnauthorizedException('생년월일을 입력해주세요.');
+    }
+
+    if (!gender) {
+      throw new UnauthorizedException('성별을 입력해주세요.');
+    }
+
+    if (!address) {
+      throw new UnauthorizedException('주소를 입력해주세요.');
+    }
+
+    if (!phone) {
+      throw new UnauthorizedException('전화번호를 입력해주세요.');
+    }
+
     const userAddress = this.locationService.getRegionByRegionKey(address);
+    const userAuthProvider = AuthProvider.EMAIL;
 
     const hashedPassword = await this.hashService.hash(password);
     const user = await this.userService.createUser({
@@ -136,17 +162,20 @@ export class AuthService {
       name,
       birthday,
       gender,
-      phoneNumber,
+      phone,
       address: userAddress,
       role,
       isProfileComplete: true,
-      authProvider: AuthProvider.EMAIL,
+      authProvider: userAuthProvider,
     });
 
     // 인증 완료 후 Redis에서 인증 상태 삭제
     // const verifiedKey = `email-verified:${email}`;
     // await this.redisService.del(verifiedKey);
 
+    this.logger.log(
+      `Successfully registered user with email: ${registerDto.email}`,
+    );
     return user;
   }
 
@@ -159,6 +188,7 @@ export class AuthService {
   }
 
   async validate(email: string, password: string) {
+    this.logger.log(`Validating user with email: ${email}`);
     const user = await this.userService.findUserByEmail(email);
     if (!user) {
       throw new UnauthorizedException(
@@ -177,6 +207,7 @@ export class AuthService {
       );
     }
 
+    this.logger.log(`Successfully validated user with email: ${email}`);
     return user;
   }
 
@@ -184,8 +215,13 @@ export class AuthService {
     loginDto: EmailLoginDto,
     origin?: string,
   ): Promise<JwtTokenResponse> {
+    this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
+    const tokens = this.generateTokens(user.id, user.role, origin);
+    this.logger.log(
+      `Successfully logged in user with email: ${loginDto.email}`,
+    );
     return this.generateTokens(user.id, user.role, origin);
   }
 
@@ -229,6 +265,7 @@ export class AuthService {
     req: Request,
     res: Response,
   ): Promise<string> {
+    this.logger.log(`Processing Google callback for user: ${user.email}`);
     try {
       const socialUserInfo: SocialUserInfo = {
         email: user.email,
@@ -247,8 +284,16 @@ export class AuthService {
         this.configService.get('app.host', { infer: true });
 
       // 리다이렉트 URL 구성
+      this.logger.log(
+        `Successfully processed Google callback for user: ${user.email}`,
+      );
       return `${frontendUrl}${result.redirectUrl}`;
     } catch (error) {
+      this.logger.error(
+        `Failed to process Google callback for user: ${user.email}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        error.stack,
+      );
       throw new UnauthorizedException(
         '구글 로그인 처리 중 오류가 발생했습니다.',
         { cause: error },
@@ -261,6 +306,7 @@ export class AuthService {
     req: Request,
     res: Response,
   ): Promise<string> {
+    this.logger.log(`Processing Kakao callback for user: ${user.email}`);
     try {
       const socialUserInfo: SocialUserInfo = {
         email: user.email,
@@ -276,8 +322,16 @@ export class AuthService {
         this.configService.get('social.socialFrontendUrl', { infer: true }) ||
         this.configService.get('app.host', { infer: true });
 
+      this.logger.log(
+        `Successfully processed Kakao callback for user: ${user.email}`,
+      );
       return `${frontendUrl}${result.redirectUrl}`;
     } catch (error) {
+      this.logger.error(
+        `Failed to process Kakao callback for user: ${user.email}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        error.stack,
+      );
       throw new UnauthorizedException(
         '카카오 로그인 처리 중 오류가 발생했습니다.',
         { cause: error },
@@ -290,6 +344,7 @@ export class AuthService {
     req: Request,
     res: Response,
   ): Promise<string> {
+    this.logger.log(`Processing Naver callback for user: ${user.email}`);
     try {
       const socialUserInfo: SocialUserInfo = {
         email: user.email,
@@ -305,8 +360,16 @@ export class AuthService {
         this.configService.get('social.socialFrontendUrl', { infer: true }) ||
         this.configService.get('app.host', { infer: true });
 
+      this.logger.log(
+        `Successfully processed Naver callback for user: ${user.email}`,
+      );
       return `${frontendUrl}${result.redirectUrl}`;
     } catch (error) {
+      this.logger.error(
+        `Failed to process Naver callback for user: ${user.email}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        error.stack,
+      );
       throw new UnauthorizedException(
         '네이버 로그인 처리 중 오류가 발생했습니다.',
         { cause: error },
@@ -443,6 +506,9 @@ export class AuthService {
   async sendVerificationEmail(
     sendVerificationEmailDto: SendVerificationEmailDto,
   ): Promise<{ success: boolean }> {
+    this.logger.log(
+      `Sending verification email to: ${sendVerificationEmailDto.email}`,
+    );
     const { email } = sendVerificationEmailDto;
     const user = await this.userService.findUserByEmail(email);
     if (user) {
@@ -468,12 +534,16 @@ export class AuthService {
 
     // 생성한 인증 코드를 전달하여 이메일 발송
     await this.mailerService.sendEmailVerification(email, verificationCode);
+    this.logger.log(
+      `Successfully sent verification email to: ${sendVerificationEmailDto.email}`,
+    );
     return { success: true };
   }
 
   async verifyEmail(
     verifyEmailDto: VerifyEmailDto,
   ): Promise<{ verified: boolean; email: string }> {
+    this.logger.log(`Verifying email with code: ${verifyEmailDto.code}`);
     const { code } = verifyEmailDto;
     try {
       // Redis에서 코드로 이메일 찾기
@@ -494,11 +564,17 @@ export class AuthService {
       // 인증 코드 삭제
       await this.redisService.del(codeKey);
 
+      this.logger.log(`Successfully verified email: ${email}`);
       return {
         verified: true,
         email,
       };
     } catch (error) {
+      this.logger.error(
+        `Failed to verify email with code: ${verifyEmailDto.code}`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        error.stack,
+      );
       throw new UnauthorizedException(
         '인증에 실패했습니다. 유효하지 않거나 만료된 인증 코드입니다.',
         {

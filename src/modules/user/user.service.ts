@@ -29,11 +29,10 @@ export class UserService {
 
   private isProfileDataComplete(data: UpdateUserDto): boolean {
     const requiredFields = [
-      'name',
       'nickname',
       'gender',
       'birthday',
-      'phoneNumber',
+      'phone',
       'address',
     ];
 

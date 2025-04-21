@@ -9,8 +9,16 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 import { GoogleStrategy } from './strategy/google.strategy';
 import { MailerModule } from '../mailer/mailer.module';
 import { RedisModule } from '../redis/redis.module';
+import { LocationModule } from '../location/location.module';
+
 @Module({
-  imports: [UserModule, JwtModule.register({}), MailerModule, RedisModule],
+  imports: [
+    UserModule,
+    JwtModule.register({}),
+    MailerModule,
+    RedisModule,
+    LocationModule,
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
