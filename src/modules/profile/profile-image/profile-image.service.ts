@@ -28,14 +28,15 @@ export class ProfileImageService {
     'profile-images',
   );
   private readonly TEMP_FOLDER = join(process.cwd(), 'public', 'temp');
-  private readonly s3: S3Client;
+  private readonly s3Client: S3Client;
 
   constructor(
     @InjectRepository(ProfileImage)
     private profileImageRepository: Repository<ProfileImage>,
     private configService: ConfigService<AllConfig>,
   ) {
-    this.s3 = new S3Client({
+    this.logger.log('Initializing S3 client');
+    this.s3Client = new S3Client({
       region: this.configService.getOrThrow('aws.region', { infer: true }),
       credentials: {
         accessKeyId: this.configService.getOrThrow('aws.accessKeyId', {
@@ -46,6 +47,7 @@ export class ProfileImageService {
         }),
       },
     });
+    this.logger.log('S3 client initialized successfully');
   }
 
   async createProfileImages(createProfileImageDto: CreateProfileImageDto) {
@@ -66,7 +68,7 @@ export class ProfileImageService {
           const s3Key = `profile-images/${imageName}`;
 
           this.logger.log(`Uploading to S3: ${s3Key}`);
-          await this.s3.send(
+          await this.s3Client.send(
             new PutObjectCommand({
               Bucket: this.configService.getOrThrow('aws.bucketName', {
                 infer: true,
@@ -146,7 +148,7 @@ export class ProfileImageService {
     try {
       if (oldImageName) {
         this.logger.log(`Deleting old image: ${oldImageName}`);
-        await this.s3.send(
+        await this.s3Client.send(
           new DeleteObjectCommand({
             Bucket: this.configService.getOrThrow('aws.bucketName', {
               infer: true,
@@ -159,7 +161,7 @@ export class ProfileImageService {
       this.logger.log(`Uploading new image: ${newImageName}`);
       const tempPath = join(this.TEMP_FOLDER, newImageName);
       const s3Key = `profile-images/${newImageName}`;
-      await this.s3.send(
+      await this.s3Client.send(
         new PutObjectCommand({
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
@@ -221,7 +223,7 @@ export class ProfileImageService {
 
       this.logger.log(`Deleting from S3: ${profileImage.imageUrl}`);
       const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
-      await this.s3.send(
+      await this.s3Client.send(
         new DeleteObjectCommand({
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
