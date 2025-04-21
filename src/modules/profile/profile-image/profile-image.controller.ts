@@ -101,11 +101,7 @@ export class ProfileImageController {
 
     const oldImageName = updateProfileImageDto.oldImageNames?.[0] || null;
 
-    return this.profileImageService.updateProfileImage(
-      id,
-      file,
-      oldImageName,
-    );
+    return this.profileImageService.updateProfileImage(id, file, oldImageName);
   }
 
   @Delete(':id')
