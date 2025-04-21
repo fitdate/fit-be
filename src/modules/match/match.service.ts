@@ -7,6 +7,7 @@ import { Match } from './entities/match.entity';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/dto/create-notification.dto';
 
 @Injectable()
 export class MatchService {
@@ -170,15 +171,15 @@ export class MatchService {
     await this.notificationService.create({
       title: '새로운 매칭이 생성되었습니다!',
       content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-      type: 'MATCH',
-      receiverId: createMatchDto.user1Id,
+      type: NotificationType.MATCH,
+      receiverId: Number(createMatchDto.user1Id),
     });
 
     await this.notificationService.create({
       title: '새로운 매칭이 생성되었습니다!',
       content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-      type: 'MATCH',
-      receiverId: createMatchDto.user2Id,
+      type: NotificationType.MATCH,
+      receiverId: Number(createMatchDto.user2Id),
     });
 
     return savedMatch;

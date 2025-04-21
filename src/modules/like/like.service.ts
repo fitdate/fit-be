@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Like } from './entities/like.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/dto/create-notification.dto';
 
 @Injectable()
 export class LikeService {
@@ -58,8 +59,8 @@ export class LikeService {
           await this.notificationService.create({
             title: '새로운 좋아요가 도착했습니다!',
             content: `${user.nickname}님이 좋아요를 눌렀습니다.`,
-            type: 'LIKE',
-            receiverId: likedUserId,
+            type: NotificationType.LIKE,
+            receiverId: Number(likedUserId),
           });
 
           // 알림 전송 완료 표시
