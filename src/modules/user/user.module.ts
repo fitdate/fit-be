@@ -10,6 +10,10 @@ import { LocationModule } from '../location/location.module';
   imports: [TypeOrmModule.forFeature([User]), LocationModule],
   controllers: [UserController],
   providers: [UserService, UserStatisticsService],
-  exports: [UserService, UserStatisticsService],
+  exports: [
+    UserService,
+    UserStatisticsService,
+    TypeOrmModule.forFeature([User]),
+  ],
 })
 export class UserModule {}
