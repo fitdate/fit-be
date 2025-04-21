@@ -54,6 +54,8 @@ import { SeedManagerController } from './modules/seed/seed-manager.controller';
 import { S3Controller } from './modules/s3/s3.controller';
 import { MailerController } from './modules/mailer/mailer.controller';
 import { AdminController } from './modules/admin/admin.controller';
+import { ChatModule } from './modules/chat/chat.module';
+import { ChatController } from './modules/chat/chat.controller';
 
 @Module({
   imports: [
@@ -122,6 +124,7 @@ import { AdminController } from './modules/admin/admin.controller';
     S3Module,
     MailerModule,
     AdminModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
@@ -181,6 +184,7 @@ export class AppModule implements NestModule {
         MailerController,
         AdminController,
         AppController,
+        ChatController,
       );
   }
 }

@@ -5,6 +5,7 @@ import {
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
+  ManyToMany,
 } from 'typeorm';
 import { UserRole } from '../../../common/enum/user-role.enum';
 import { Profile } from '../../profile/entities/profile.entity';
@@ -14,6 +15,8 @@ import { AuthProvider } from '../../auth/types/oatuth.types';
 import { Payment } from '../../payment/entities/payment.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { ChatMessage } from '../../chat/entities/chat-message.entity';
+import { ChatRoom } from '../../chat/entities/chat-room.entity';
 
 @Entity('users')
 export class User extends BaseTable {
@@ -85,4 +88,16 @@ export class User extends BaseTable {
 
   @Column({ type: 'varchar' })
   authProvider: AuthProvider;
+
+  @Column({ nullable: true })
+  chatToken: string;
+
+  @Column({ default: false })
+  chatOnline: boolean;
+
+  @OneToMany(() => ChatMessage, (message) => message.user)
+  messages: ChatMessage[];
+
+  @ManyToMany(() => ChatRoom, (room) => room.users)
+  chatRooms: ChatRoom[];
 }
