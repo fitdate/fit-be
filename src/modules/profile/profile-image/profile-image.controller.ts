@@ -7,6 +7,7 @@ import {
   Put,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { ProfileImageService } from './profile-image.service';
 import { CreateProfileImageDto } from './dto/create-profile-image.dto';
@@ -53,12 +54,18 @@ export class ProfileImageController {
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  @UseInterceptors(FilesInterceptor('images', 5))
-  uploadProfileImages(
+  @UseInterceptors(FilesInterceptor('images', 6))
+  async uploadProfileImages(
     @UploadedFiles(
       new ProfileImageFilePipe({
         maxSize: 5,
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif'],
+        allowedMimeTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'image/jpg',
+        ],
         resize: { width: 1024, height: 1024 },
         quality: 100,
       }),
@@ -66,7 +73,15 @@ export class ProfileImageController {
     files: Array<MulterFile>,
     @Body() createProfileImageDto: CreateProfileImageDto,
   ) {
-    return this.profileImageService.createProfileImages(createProfileImageDto);
+    const uploadPromises = files.map((file) =>
+      this.profileImageService.uploadProfileImages(
+        createProfileImageDto.profileId,
+        file.filename,
+        file,
+      ),
+    );
+
+    return Promise.all(uploadPromises);
   }
 
   @Put(':id')
@@ -83,8 +98,11 @@ export class ProfileImageController {
             format: 'binary',
           },
         },
-        profileImageName: {
-          type: 'string',
+        oldImageNames: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
         },
       },
     },
@@ -95,25 +113,36 @@ export class ProfileImageController {
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  @UseInterceptors(FilesInterceptor('images', 1))
-  updateProfileImage(
+  @UseInterceptors(FilesInterceptor('images', 6))
+  async updateProfileImage(
     @Param('id') id: string,
     @Body() updateProfileImageDto: UpdateProfileImageDto,
     @UploadedFiles(
       new ProfileImageFilePipe({
         maxSize: 5,
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif'],
+        allowedMimeTypes: [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'image/jpg',
+        ],
         resize: { width: 1024, height: 1024 },
         quality: 100,
       }),
     )
     files: Array<MulterFile>,
   ) {
-    return this.profileImageService.updateProfileImage(
-      id,
-      updateProfileImageDto.profileImageName ?? '',
-      files[0].filename,
-    );
+    const updatePromises = files.map((file, index) => {
+      const oldImageName = updateProfileImageDto.oldImageNames?.[index] || null;
+      return this.profileImageService.updateProfileImage(
+        id,
+        file.filename,
+        oldImageName,
+      );
+    });
+
+    return Promise.all(updatePromises);
   }
 
   @Delete(':id')
@@ -123,7 +152,10 @@ export class ProfileImageController {
     description: 'Profile image deleted successfully',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  deleteProfileImage(@Param('id') id: string) {
-    return this.profileImageService.deleteProfileImage(id);
+  async deleteProfileImage(
+    @Param('id') id: string,
+    @Query('imageName') imageName?: string,
+  ) {
+    return this.profileImageService.deleteProfileImage(id, imageName);
   }
 }

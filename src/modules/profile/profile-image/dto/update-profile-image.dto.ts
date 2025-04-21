@@ -1,12 +1,16 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateProfileImageDto } from './create-profile-image.dto';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class UpdateProfileImageDto extends PartialType(CreateProfileImageDto) {
   @ApiProperty({
-    description: 'Profile image name',
-    example: 'new-profile.jpg',
+    description: '삭제(교체)할 프로필 이미지 이름',
+    example: 'old-profile.jpg',
     required: false,
   })
-  profileImageName?: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  oldImageNames?: string[];
 }

@@ -1,12 +1,20 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreateProfileImageDto {
-  @IsNotEmpty()
-  @IsString()
-  @IsUUID('4')
-  profileId: string;
+  @ApiProperty({
+    description: '프로필 이미지들',
+    example: [
+      'profile-image-1.jpg',
+      'profile-image-2.jpg',
+      'profile-image-3.jpg',
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  profileImageName?: string[];
 
-  @IsNotEmpty()
   @IsString()
-  profileImageName: string;
+  profileId: string;
 }
