@@ -8,7 +8,7 @@ import {
   Res,
   BadRequestException,
 } from '@nestjs/common';
-import { AuthService, LoginResponse } from './auth.service';
+import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { EmailLoginDto } from './dto/email-login.dto';
 import { Public } from '../../common/decorator/public.decorator';
@@ -18,6 +18,7 @@ import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { LoginResponse } from './types/auth.types';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -32,6 +33,16 @@ export class AuthController {
   @ApiResponse({ status: 201, description: '회원 가입 성공' })
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+
+  // 이메일 중복 확인
+  @SkipProfileComplete()
+  @Public()
+  @Post('check-email')
+  @ApiOperation({ summary: '이메일 중복 확인' })
+  @ApiResponse({ status: 200, description: '이메일 중복 확인 성공' })
+  async checkEmail(@Body() email: string) {
+    return this.authService.checkEmail(email);
   }
 
   // 이메일 인증 코드 전송

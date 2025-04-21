@@ -1,26 +1,25 @@
-import { Injectable } from '@nestjs/common';
-import { CreateLocationDto } from './dto/create-location.dto';
-import { UpdateLocationDto } from './dto/update-location.dto';
-
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { Region } from './entities/region.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { REGION_LIST } from './constants/region.constants';
 @Injectable()
 export class LocationService {
-  create(createLocationDto: CreateLocationDto) {
-    return 'This action adds a new location';
+  private readonly regionList = REGION_LIST;
+  constructor(
+    @InjectRepository(Region)
+    private readonly regionRepository: Repository<Region>,
+  ) {}
+
+  getRegionList() {
+    return Object.values(REGION_LIST);
   }
 
-  findAll() {
-    return `This action returns all location`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} location`;
-  }
-
-  update(id: number, updateLocationDto: UpdateLocationDto) {
-    return `This action updates a #${id} location`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} location`;
+  getRegionByRegionKey(regionKey: string) {
+    const region = this.regionList[regionKey];
+    if (!region) {
+      throw new NotFoundException('지역을 찾을 수 없습니다.');
+    }
+    return region;
   }
 }
