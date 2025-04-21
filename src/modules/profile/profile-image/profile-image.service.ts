@@ -3,7 +3,6 @@ import {
   InternalServerErrorException,
   BadRequestException,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { ProfileImage } from './entities/profile-image.entity';
@@ -14,7 +13,6 @@ import { MulterFile } from './types/multer.types';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
-import { Profile } from '../entities/profile.entity';
 
 @Injectable()
 export class ProfileImageService {
@@ -24,8 +22,6 @@ export class ProfileImageService {
   constructor(
     @InjectRepository(ProfileImage)
     private profileImageRepository: Repository<ProfileImage>,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>,
     private configService: ConfigService<AllConfig>,
   ) {
     this.logger.log('Initializing S3 client');
@@ -43,26 +39,17 @@ export class ProfileImageService {
     this.logger.log('S3 client initialized successfully');
   }
 
-  async uploadProfileImages(userId: string, file: MulterFile) {
-    this.logger.log(`Uploading profile image for user ID: ${userId}`);
+  async uploadProfileImages(profileId: string, file: MulterFile) {
+    this.logger.log(`Uploading profile image for profile ID: ${profileId}`);
     if (!file) {
       this.logger.warn('No file provided');
       throw new BadRequestException('No file provided');
     }
 
     try {
-      // 유저의 프로필 찾기
-      const profile = await this.profileRepository.findOne({
-        where: { user: { id: userId } },
-      });
-
-      if (!profile) {
-        throw new NotFoundException('Profile not found');
-      }
-
       // 기존 프로필 이미지 개수 확인
       const existingImages = await this.profileImageRepository.count({
-        where: { profile: { id: profile.id } },
+        where: { profile: { id: profileId } },
       });
 
       const fileExtension = file.originalname.split('.').pop();
@@ -85,7 +72,7 @@ export class ProfileImageService {
 
       const profileImage = this.profileImageRepository.create({
         imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
-        profile: { id: profile.id },
+        profile: { id: profileId },
         isMain: existingImages === 0, // 첫 이미지는 메인으로 설정
       });
 
@@ -217,24 +204,16 @@ export class ProfileImageService {
     }
   }
 
-  async setMainImage(userId: string, imageId: string) {
-    const profile = await this.profileRepository.findOne({
-      where: { user: { id: userId } },
-    });
-
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
-
+  async setMainImage(profileId: string, imageId: string) {
     // 모든 이미지의 isMain을 false로 설정
     await this.profileImageRepository.update(
-      { profile: { id: profile.id } },
+      { profile: { id: profileId } },
       { isMain: false },
     );
 
     // 선택한 이미지를 메인으로 설정
     await this.profileImageRepository.update(
-      { id: imageId, profile: { id: profile.id } },
+      { id: imageId, profile: { id: profileId } },
       { isMain: true },
     );
 
