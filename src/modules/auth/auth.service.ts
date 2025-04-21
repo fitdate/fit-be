@@ -179,6 +179,13 @@ export class AuthService {
     return user;
   }
 
+  async checkNickname(nickname: string) {
+    const user = await this.userService.findUserByNickname(nickname);
+    if (user) {
+      throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
+    }
+  }
+
   //일단 임시로 이메일 중복확인
   async checkEmail(email: string) {
     const user = await this.userService.findUserByEmail(email);
