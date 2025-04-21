@@ -38,7 +38,7 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   birthday: string;
 
-  @Column()
+  @Column({ nullable: true })
   location: string;
 
   @Column({ nullable: true })
