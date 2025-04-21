@@ -20,28 +20,26 @@ import { ChatRoom } from '../../chat/entities/chat-room.entity';
 
 @Entity('users')
 export class User extends BaseTable {
-  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ApiProperty()
   @Column({ unique: true })
   email: string;
 
-  @ApiProperty()
   @Column()
   password: string;
 
-  @ApiProperty()
   @Column({ unique: true })
   nickname: string;
 
-  @ApiProperty()
   @Column()
   name: string;
 
   @Column({ nullable: true })
   birthday: string;
+
+  @Column()
+  location: string;
 
   @Column({ nullable: true })
   gender: 'male' | 'female';
@@ -50,7 +48,7 @@ export class User extends BaseTable {
   address?: string;
 
   @Column({ nullable: true })
-  phoneNumber?: string;
+  phone?: string;
 
   @OneToOne(() => Profile, (profile) => profile.user)
   @JoinColumn()

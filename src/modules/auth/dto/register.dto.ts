@@ -51,7 +51,7 @@ export class RegisterDto {
   name: string;
 
   @ApiProperty({
-    description: '닉네임',
+    description: '닉네임: 최소 2자, 최대 10자',
     example: 'iluvfitdate',
   })
   @IsNotEmpty()
@@ -84,11 +84,11 @@ export class RegisterDto {
   @Matches(/^010\d{8}$/, {
     message: '전화번호는 010으로 시작하는 11자리 숫자여야 합니다.',
   })
-  phoneNumber: string;
+  phone: string;
 
   @ApiProperty({
     description: '주소',
-    example: '서울특별시 강남구',
+    example: '서울특별시',
   })
   @IsString()
   @IsNotEmpty()
