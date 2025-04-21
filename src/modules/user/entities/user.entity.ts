@@ -14,7 +14,6 @@ import { Pass } from '../../pass/entities/pass.entity';
 import { AuthProvider } from '../../auth/types/oatuth.types';
 import { Payment } from '../../payment/entities/payment.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
-import { ApiProperty } from '@nestjs/swagger';
 import { ChatMessage } from '../../chat/entities/chat-message.entity';
 import { ChatRoom } from '../../chat/entities/chat-room.entity';
 
@@ -37,9 +36,6 @@ export class User extends BaseTable {
 
   @Column({ nullable: true })
   birthday: string;
-
-  @Column()
-  location: string;
 
   @Column({ nullable: true })
   location: string;
