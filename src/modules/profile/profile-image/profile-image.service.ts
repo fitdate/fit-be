@@ -14,6 +14,7 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
 import { Profile } from '../entities/profile.entity';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ProfileImageService {
@@ -26,6 +27,7 @@ export class ProfileImageService {
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     private configService: ConfigService<AllConfig>,
+    private dataSource: DataSource,
   ) {
     this.logger.log('Initializing S3 client');
     this.s3Client = new S3Client({
@@ -57,7 +59,9 @@ export class ProfileImageService {
       });
 
       if (!profile) {
-        throw new BadRequestException('Profile not found');
+        throw new BadRequestException(
+          `Profile not found for user ID: ${userId}. Please create a profile first.`,
+        );
       }
 
       // 기존 프로필 이미지 개수 확인
@@ -168,10 +172,14 @@ export class ProfileImageService {
     }
   }
 
-  async deleteProfileImage(id: string, imageName?: string) {
+  async deleteProfileImage(id: string) {
     this.logger.log(`Deleting profile image with ID: ${id}`);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      const profileImage = await this.profileImageRepository.findOne({
+      const profileImage = await queryRunner.manager.findOne(ProfileImage, {
         where: { id },
         relations: ['profile'],
       });
@@ -181,18 +189,7 @@ export class ProfileImageService {
         throw new BadRequestException('Profile image not found');
       }
 
-      if (imageName) {
-        const urlImageName = profileImage.imageUrl.split('/').pop();
-        if (urlImageName !== imageName) {
-          this.logger.warn(
-            `Image name mismatch: expected ${imageName}, got ${urlImageName}`,
-          );
-          throw new BadRequestException(
-            'Image name does not match the profile image',
-          );
-        }
-      }
-
+      // S3에서 삭제
       this.logger.log(`Deleting from S3: ${profileImage.imageUrl}`);
       const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
       await this.s3Client.send(
@@ -204,16 +201,22 @@ export class ProfileImageService {
         }),
       );
 
-      await this.profileImageRepository.remove(profileImage);
+      // DB에서 삭제
+      await queryRunner.manager.remove(profileImage);
+      await queryRunner.commitTransaction();
+
       this.logger.log(`Profile image deleted successfully: ${id}`);
       return { message: 'Profile image deleted successfully' };
     } catch (error: unknown) {
+      await queryRunner.rollbackTransaction();
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to delete profile image: ${id}`, errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 삭제에 실패했습니다.',
       );
+    } finally {
+      await queryRunner.release();
     }
   }
 

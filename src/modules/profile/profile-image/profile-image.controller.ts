@@ -7,7 +7,6 @@ import {
   Put,
   Param,
   Delete,
-  Query,
   BadRequestException,
   Patch,
 } from '@nestjs/common';
@@ -24,6 +23,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { UserId } from 'src/common/decorator/get-user.decorator';
+
 @ApiTags('Profile Image')
 @Controller('profile-image')
 export class ProfileImageController {
@@ -39,9 +39,6 @@ export class ProfileImageController {
         file: {
           type: 'string',
           format: 'binary',
-        },
-        profileId: {
-          type: 'string',
         },
       },
     },
@@ -110,11 +107,8 @@ export class ProfileImageController {
     description: 'Profile image deleted successfully',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async deleteProfileImage(
-    @Param('id') id: string,
-    @Query('imageName') imageName?: string,
-  ) {
-    return this.profileImageService.deleteProfileImage(id, imageName);
+  async deleteProfileImage(@Param('id') id: string) {
+    return this.profileImageService.deleteProfileImage(id);
   }
 
   @Patch('set-main-image')
