@@ -12,25 +12,6 @@ export interface MulterFile {
   path: string;
   buffer: Buffer;
 }
-
-// export interface key: (
-//   req: Request,
-//   file: Express.Multer.File,
-//   cb: (error: any, key: string) => void,
-// ) => {}
-
-// export interface metadata: (
-//   req: Request,
-//   file: Express.Multer.File,
-//   cb: (error: any, metadata: any) => void,
-// ) => {}
-
-// export interface fileFilter: (
-//   req: Request,
-//   file: Express.Multer.File,
-//   cb: (error: Error | null, acceptFile: boolean) => void,
-// ) => {}
-
 export interface MulterS3Config {
   s3: AWS.S3;
   bucket: string;
