@@ -39,7 +39,9 @@ import {
           s3,
           bucket: configService.getOrThrow('aws.bucketName', { infer: true }),
           acl: 'public-read',
-          contentType: multerS3.AUTO_CONTENT_TYPE,
+          contentType: (req, file, cb) => {
+            cb(null, file.mimetype);
+          },
           key: (
             req: Request,
             file: MulterFile,
@@ -67,7 +69,13 @@ import {
             file: MulterFile,
             cb: (error: Error | null, acceptFile: boolean) => void,
           ) => {
-            if (!file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+            const allowedMimeTypes = [
+              'image/jpeg',
+              'image/png',
+              'image/gif',
+              'image/webp',
+            ];
+            if (!allowedMimeTypes.includes(file.mimetype)) {
               return cb(new Error('Only image files are allowed!'), false);
             }
             cb(null, true);

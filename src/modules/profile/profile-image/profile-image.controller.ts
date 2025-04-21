@@ -8,6 +8,7 @@ import {
   Param,
   Delete,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { ProfileImageService } from './profile-image.service';
 import { CreateProfileImageDto } from './dto/create-profile-image.dto';
@@ -42,7 +43,7 @@ export class ProfileImageController {
             format: 'binary',
           },
         },
-        profileImageName: {
+        profileId: {
           type: 'string',
         },
       },
@@ -73,13 +74,20 @@ export class ProfileImageController {
     files: Array<MulterFile>,
     @Body() createProfileImageDto: CreateProfileImageDto,
   ) {
-    const uploadPromises = files.map((file) =>
-      this.profileImageService.uploadProfileImages(
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files were uploaded');
+    }
+
+    const uploadPromises = files.map((file) => {
+      if (!file.filename) {
+        throw new BadRequestException('File name is missing');
+      }
+      return this.profileImageService.uploadProfileImages(
         createProfileImageDto.profileId,
         file.filename,
         file,
-      ),
-    );
+      );
+    });
 
     return Promise.all(uploadPromises);
   }
