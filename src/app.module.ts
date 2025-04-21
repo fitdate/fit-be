@@ -25,8 +25,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { config, validationSchema } from './common/config/config';
 import { AllConfig } from './common/config/config.types';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { AuthGuard } from './modules/auth/guard/jwt.guard';
-import { BearerTokenMiddleware } from './modules/auth/middleware/bearer-token.middleware';
+import { AuthGuard } from './modules/auth/guard/auth.guard';
+import { AuthMiddleware } from './modules/auth/middleware/auth.middleware';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { LocationModule } from './modules/location/location.module';
 import { InterestCategoryModule } from './modules/profile/interest-category/common/interest-category.module';
@@ -34,7 +34,6 @@ import { LoggingInterceptor } from './common/interceptor/logging.interceptor';
 import { SeedManagerModule } from './modules/seed/seed-manager.module';
 import { S3Module } from './modules/s3/s3.module';
 import { MailerModule } from './modules/mailer/mailer.module';
-// import { ProfileCompleteGuard } from './modules/auth/guard/profile-complete.guard';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthController } from './modules/auth/auth.controller';
 import { UserController } from './modules/user/user.controller';
@@ -72,7 +71,7 @@ import { ChatController } from './modules/chat/chat.controller';
       validationOptions: {
         allowUnknown: true,
         abortEarly: false,
-        stripUnknown: true, // 모르는 키가 있으면 무시
+        stripUnknown: true,
       },
     }),
     TypeOrmModule.forRootAsync({
@@ -149,7 +148,7 @@ import { ChatController } from './modules/chat/chat.controller';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(BearerTokenMiddleware)
+      .apply(AuthMiddleware)
       .exclude(
         { path: 'auth/login', method: RequestMethod.POST },
         { path: 'auth/register', method: RequestMethod.POST },

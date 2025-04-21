@@ -93,7 +93,6 @@ export class AuthController {
   }
 
   // 로그아웃
-  @Public() // 나중에 확인해야할 코드
   @Post('logout')
   @ApiOperation({ summary: '로그아웃' })
   @ApiResponse({ status: 200, description: '로그아웃 성공' })
