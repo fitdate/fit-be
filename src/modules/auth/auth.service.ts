@@ -62,12 +62,11 @@ export class AuthService {
     rawToken: string,
     isRefreshToken: boolean,
   ): Promise<TokenPayload> {
-    const bearerToken = rawToken.split(' ')[1];
-    if (!bearerToken) {
+    const [bearer, token] = rawToken.split(' ');
+
+    if (!bearer || !token) {
       throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
     }
-
-    const [bearer, token] = bearerToken.split(' ');
 
     if (bearer.toLocaleLowerCase() !== 'bearer') {
       throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
