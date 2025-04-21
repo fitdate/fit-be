@@ -257,32 +257,9 @@ export class AuthService {
   }
 
   //로그아웃
-  async handleLogout(req: Request, res: Response) {
+  handleLogout(req: Request, res: Response) {
     try {
       console.log('🧪 [로그아웃] 요청 쿠키:', req.cookies);
-
-      const accessToken = (req.cookies as { accessToken?: string })[
-        'accessToken'
-      ];
-      const refreshToken = (req.cookies as { refreshToken?: string })[
-        'refreshToken'
-      ];
-
-      console.log('🧪 [로그아웃] 액세스 토큰:', accessToken);
-      console.log('🧪 [로그아웃] 리프레시 토큰:', refreshToken);
-
-      if (accessToken) {
-        try {
-          // Bearer 접두사가 이미 포함되어 있으므로 그대로 전달
-          await this.parseBearerToken(accessToken, false);
-          console.log('🧪 [로그아웃] 액세스 토큰 검증 성공', accessToken);
-        } catch (error) {
-          console.log(
-            '🧪 [로그아웃] 토큰 검증 실패 (로그아웃 계속 진행)',
-            error,
-          );
-        }
-      }
 
       const cookieOptions = this.logoutCookieOptions(req.headers.origin);
 
