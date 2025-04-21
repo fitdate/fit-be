@@ -84,7 +84,6 @@ export class ProfileImageController {
       }
       return this.profileImageService.uploadProfileImages(
         createProfileImageDto.profileId,
-        file.filename,
         file,
       );
     });

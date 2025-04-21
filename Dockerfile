@@ -25,6 +25,7 @@ RUN npm ci --only=production --no-audit --no-fund && \
 # 빌드된 파일만 복사
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/seeds ./seeds
+COPY --from=builder /usr/src/app/public ./public
 
 # 환경 변수 설정
 ENV NODE_ENV=production

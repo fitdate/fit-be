@@ -251,18 +251,34 @@ export class AuthService {
   }
 
   //로그아웃
-  handleLogout(req: Request, res: Response) {
-    const cookieOptions = this.logoutCookieOptions(req.headers.origin);
+  async handleLogout(req: Request, res: Response) {
+    try {
+      // 토큰 검증
+      const accessToken = (req.cookies as { accessToken?: string })[
+        'accessToken'
+      ];
+      if (accessToken) {
+        try {
+          await this.parseBearerToken(`Bearer ${accessToken}`, false);
+        } catch (error) {
+          // 토큰이 만료되었거나 유효하지 않은 경우에도 로그아웃은 진행
+          this.logger.warn('Invalid or expired token during logout', error);
+        }
+      }
 
-    // 쿠키 만료 설정
-    res.cookie('accessToken', '', cookieOptions.accessOptions);
-    res.cookie('refreshToken', '', cookieOptions.refreshOptions);
+      const cookieOptions = this.logoutCookieOptions(req.headers.origin);
 
-    // Redis에서 리프레시 토큰 삭제도 구현 가능 (보류)
+      // 쿠키 만료 설정
+      res.cookie('accessToken', '', cookieOptions.accessOptions);
+      res.cookie('refreshToken', '', cookieOptions.refreshOptions);
 
-    return {
-      message: '로그아웃 성공',
-    };
+      return {
+        message: '로그아웃 성공',
+      };
+    } catch (error) {
+      this.logger.error('Logout failed', error);
+      throw new UnauthorizedException('로그아웃에 실패했습니다.');
+    }
   }
 
   //구글 콜백 처리
