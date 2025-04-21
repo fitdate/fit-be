@@ -16,31 +16,9 @@ import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { CookieOptions, Response, Request } from 'express';
 import { User } from '../user/entities/user.entity';
-
-// JWT 응답 타입 정의
-interface JwtTokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  accessOptions: CookieOptions;
-  refreshOptions: CookieOptions;
-}
-
-// 소셜 로그인 사용자 정보 타입
-interface SocialUserInfo {
-  id?: string;
-  email: string;
-  name?: string;
-  role?: UserRole;
-  isProfileComplete?: boolean;
-  authProvider: AuthProvider;
-}
-
-// 로그인 응답 타입
-export interface LoginResponse {
-  message: string;
-  accessToken: string;
-  refreshToken: string;
-}
+import { LocationService } from 'src/modules/location/location.service';
+import { SocialUserInfo } from './types/oatuth.types';
+import { JwtTokenResponse, LoginResponse } from './types/auth.types';
 
 @Injectable()
 export class AuthService {
@@ -51,6 +29,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
     private readonly redisService: RedisService,
+    private readonly locationService: LocationService,
   ) {}
 
   parseBasicToken(rawToken: string) {
@@ -147,6 +126,8 @@ export class AuthService {
       throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
     }
 
+    const userAddress = this.locationService.getRegionByRegionKey(address);
+
     const hashedPassword = await this.hashService.hash(password);
     const user = await this.userService.createUser({
       email,
@@ -156,7 +137,7 @@ export class AuthService {
       birthday,
       gender,
       phoneNumber,
-      address,
+      address: userAddress,
       role,
       isProfileComplete: true,
       authProvider: AuthProvider.EMAIL,
@@ -167,6 +148,14 @@ export class AuthService {
     // await this.redisService.del(verifiedKey);
 
     return user;
+  }
+
+  //일단 임시로 이메일 중복확인
+  async checkEmail(email: string) {
+    const user = await this.userService.findUserByEmail(email);
+    if (user) {
+      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
+    }
   }
 
   async validate(email: string, password: string) {
@@ -364,6 +353,7 @@ export class AuthService {
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         domain = 'localhost';
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         domain = hostname;
       }
     }

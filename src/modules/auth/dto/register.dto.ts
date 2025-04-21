@@ -8,6 +8,7 @@ import {
   MaxLength,
   MinLength,
   IsEnum,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from 'src/common/enum/user-role.enum';
@@ -79,7 +80,10 @@ export class RegisterDto {
     example: '01012345678',
   })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
+  @Matches(/^010\d{8}$/, {
+    message: '전화번호는 010으로 시작하는 11자리 숫자여야 합니다.',
+  })
   phoneNumber: string;
 
   @ApiProperty({

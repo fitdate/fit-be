@@ -1,45 +1,32 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { LocationService } from './location.service';
-import { CreateLocationDto } from './dto/create-location.dto';
-import { UpdateLocationDto } from './dto/update-location.dto';
+import { ApiResponse, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { Region } from './entities/region.entity';
 
 @Controller('location')
 export class LocationController {
   constructor(private readonly locationService: LocationService) {}
 
-  @Post()
-  create(@Body() createLocationDto: CreateLocationDto) {
-    return this.locationService.create(createLocationDto);
-  }
-
+  @ApiOperation({ summary: '지역 목록 조회' })
+  @ApiResponse({
+    status: 200,
+    description: '지역 목록 조회 성공',
+    type: Region,
+  })
   @Get()
   findAll() {
-    return this.locationService.findAll();
+    return this.locationService.getRegionList();
   }
 
+  @ApiOperation({ summary: '지역 조회' })
+  @ApiParam({ name: 'id', description: '지역 ID' })
+  @ApiResponse({
+    status: 200,
+    description: '지역 조회 성공',
+    type: Region,
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.locationService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateLocationDto: UpdateLocationDto,
-  ) {
-    return this.locationService.update(+id, updateLocationDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.locationService.remove(+id);
+    return this.locationService.getRegionByRegionKey(id);
   }
 }
