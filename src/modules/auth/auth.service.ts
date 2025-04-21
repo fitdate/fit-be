@@ -241,11 +241,14 @@ export class AuthService {
     const user = await this.validate(email, password);
     const tokens = this.generateTokens(user.id, user.role, req.headers.origin);
 
-    console.log('🧪 [로그인] 액세스 토큰:', tokens.accessToken);
-    console.log('🧪 [로그인] 리프레시 토큰:', tokens.refreshToken);
+    console.log('🧪 [로그인] 쿠키 옵션:', tokens.accessOptions);
+    console.log('🧪 [로그인] 쿠키 옵션:', tokens.refreshOptions);
 
     res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
     res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
+
+    console.log('🧪 [로그인] 쿠키 설정 완료', tokens.accessToken);
+    console.log('🧪 [로그인] 쿠키 설정 완료', tokens.refreshToken);
 
     return {
       message: '로그인 성공',
@@ -257,9 +260,11 @@ export class AuthService {
   //로그아웃
   async handleLogout(req: Request, res: Response) {
     try {
-      this.logger.log('로그아웃 요청 시작');
-      this.logger.log(`요청 쿠키: ${JSON.stringify(req.cookies)}`);
-      this.logger.log(`요청 헤더: ${JSON.stringify(req.headers)}`);
+      console.log('🧪 [로그아웃] 요청 쿠키:', req.cookies);
+      console.log(
+        '🧪 [로그아웃] 쿠키 옵션:',
+        this.logoutCookieOptions(req.headers.origin),
+      );
 
       const accessToken = (req.cookies as { accessToken?: string })[
         'accessToken'
@@ -268,24 +273,19 @@ export class AuthService {
         'refreshToken'
       ];
 
-      console.log('🧪 [로그아웃] 만료될 액세스 토큰:', accessToken);
-      console.log('🧪 [로그아웃] 만료될 리프레시 토큰:', refreshToken);
+      console.log('🧪 [로그아웃] 액세스 토큰:', accessToken);
+      console.log('🧪 [로그아웃] 리프레시 토큰:', refreshToken);
 
       if (accessToken) {
         try {
           await this.parseBearerToken(`Bearer ${accessToken}`, false);
-          console.log('🧪 [로그아웃] 액세스 토큰 검증 성공');
+          console.log('🧪 [로그아웃] 액세스 토큰 검증 성공', accessToken);
         } catch (error) {
           console.log(
             '🧪 [로그아웃] 토큰 검증 실패 (로그아웃 계속 진행)',
             error,
           );
-          this.logger.warn('Invalid or expired token during logout', error);
         }
-      }
-
-      if (!accessToken) {
-        this.logger.warn('No access token found during logout');
       }
 
       const cookieOptions = this.logoutCookieOptions(req.headers.origin);
