@@ -20,8 +20,8 @@ export class UserStatisticsService {
   async getGenderStatistics(): Promise<GenderStatistics> {
     const users = await this.userRepository.find();
     const total = users.length;
-    const maleCount = users.filter((user) => user.gender === 'male').length;
-    const femaleCount = users.filter((user) => user.gender === 'female').length;
+    const maleCount = users.filter((user) => user.gender === '남자').length;
+    const femaleCount = users.filter((user) => user.gender === '여자').length;
 
     return {
       total,
@@ -81,8 +81,8 @@ export class UserStatisticsService {
     const locationMap = new Map<string, LocationStats>();
 
     users.forEach((user) => {
-      if (user.address) {
-        const [sido, sigungu] = user.address.split(' ');
+      if (user.region) {
+        const [sido, sigungu] = user.region.split(' ');
         const key = `${sido}-${sigungu}`;
         if (!locationMap.has(key)) {
           locationMap.set(key, {

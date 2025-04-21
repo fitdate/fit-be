@@ -110,7 +110,7 @@ export class AuthService {
       birthday,
       gender,
       phone,
-      address,
+      region,
       role,
     } = registerDto;
 
@@ -143,15 +143,15 @@ export class AuthService {
       throw new UnauthorizedException('성별을 입력해주세요.');
     }
 
-    if (!address) {
-      throw new UnauthorizedException('주소를 입력해주세요.');
+    if (!region) {
+      throw new UnauthorizedException('지역을 입력해주세요.');
     }
 
     if (!phone) {
       throw new UnauthorizedException('전화번호를 입력해주세요.');
     }
 
-    const userAddress = this.locationService.getRegionByRegionKey(address);
+    const userRegion = this.locationService.getRegionByRegionKey(region);
     const userAuthProvider = AuthProvider.EMAIL;
 
     const hashedPassword = await this.hashService.hash(password);
@@ -163,7 +163,7 @@ export class AuthService {
       birthday,
       gender,
       phone,
-      address: userAddress,
+      region: userRegion,
       role,
       isProfileComplete: true,
       authProvider: userAuthProvider,

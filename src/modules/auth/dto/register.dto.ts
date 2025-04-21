@@ -68,12 +68,12 @@ export class RegisterDto {
   birthday: string;
 
   @ApiProperty({
-    description: '성별 (male, female)',
-    example: 'male',
+    description: '성별 (남자, 여자)',
+    example: '남자',
   })
-  @IsIn(['male', 'female'])
+  @IsIn(['남자', '여자'])
   @IsNotEmpty()
-  gender: 'male' | 'female';
+  gender: '남자' | '여자';
 
   @ApiProperty({
     description: '전화번호',
@@ -87,12 +87,12 @@ export class RegisterDto {
   phone: string;
 
   @ApiProperty({
-    description: '주소',
+    description: '지역',
     example: '서울특별시',
   })
   @IsString()
   @IsNotEmpty()
-  address: string;
+  region: string;
 
   @ApiProperty({
     description: '사용자 역할',

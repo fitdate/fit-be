@@ -38,10 +38,10 @@ export class User extends BaseTable {
   location: string;
 
   @Column({ nullable: true })
-  gender: 'male' | 'female';
+  gender: '남자' | '여자';
 
   @Column({ nullable: true })
-  address?: string;
+  region?: string;
 
   @Column({ nullable: true })
   phone?: string;
