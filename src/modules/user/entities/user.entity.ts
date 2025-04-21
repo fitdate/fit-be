@@ -65,6 +65,9 @@ export class User extends BaseTable {
   @OneToMany(() => Like, (like) => like.user)
   likedBy: Like[];
 
+  @Column({ default: 30 })
+  likeCount: number;
+
   @OneToMany(() => Pass, (pass) => pass.passedUser)
   passedBy: Pass[];
 
@@ -76,9 +79,6 @@ export class User extends BaseTable {
 
   @Column({ type: 'varchar', default: UserRole.USER })
   role: UserRole;
-
-  @Column({ nullable: true })
-  likeCount: number;
 
   @Column({ default: false })
   isProfileComplete: boolean;
