@@ -10,8 +10,6 @@ export interface JwtTokenResponse {
 
 export interface LoginResponse {
   message: string;
-  accessToken: string;
-  refreshToken: string;
   user: {
     id: string;
     email: string;
