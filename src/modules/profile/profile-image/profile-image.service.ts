@@ -13,7 +13,11 @@ import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { createReadStream } from 'fs';
 import { MulterFile } from './types/multer.types';
-import * as AWS from 'aws-sdk';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 
 @Injectable()
 export class ProfileImageService {
@@ -24,14 +28,14 @@ export class ProfileImageService {
     'profile-images',
   );
   private readonly TEMP_FOLDER = join(process.cwd(), 'public', 'temp');
-  private readonly s3: AWS.S3;
+  private readonly s3: S3Client;
 
   constructor(
     @InjectRepository(ProfileImage)
     private profileImageRepository: Repository<ProfileImage>,
     private configService: ConfigService<AllConfig>,
   ) {
-    this.s3 = new AWS.S3({
+    this.s3 = new S3Client({
       region: this.configService.getOrThrow('aws.region', { infer: true }),
       credentials: {
         accessKeyId: this.configService.getOrThrow('aws.accessKeyId', {
@@ -45,27 +49,35 @@ export class ProfileImageService {
   }
 
   async createProfileImages(createProfileImageDto: CreateProfileImageDto) {
+    this.logger.log(
+      `Creating profile images for profile ID: ${createProfileImageDto.profileId}`,
+    );
     const imageNames = createProfileImageDto.profileImageName;
     if (!imageNames || !Array.isArray(imageNames)) {
+      this.logger.warn('Invalid profile image names provided');
       throw new BadRequestException('Profile image names are required');
     }
 
     try {
       const profileImages = await Promise.all(
         imageNames.map(async (imageName) => {
+          this.logger.log(`Processing image: ${imageName}`);
           const tempPath = join(this.TEMP_FOLDER, imageName);
           const s3Key = `profile-images/${imageName}`;
-          await this.s3
-            .putObject({
+
+          this.logger.log(`Uploading to S3: ${s3Key}`);
+          await this.s3.send(
+            new PutObjectCommand({
               Bucket: this.configService.getOrThrow('aws.bucketName', {
                 infer: true,
               }),
               Key: s3Key,
               Body: createReadStream(tempPath),
-              ContentType: 'image/jpeg',
+              ContentType:
+                'image/jpeg, image/png, image/gif, image/webp, image/jpg',
               ACL: 'public-read',
-            })
-            .promise();
+            }),
+          );
 
           const profileImage = this.profileImageRepository.create({
             imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
@@ -79,6 +91,9 @@ export class ProfileImageService {
         }),
       );
 
+      this.logger.log(
+        `Successfully created ${profileImages.length} profile images`,
+      );
       return profileImages;
     } catch (error: unknown) {
       const errorMessage =
@@ -90,23 +105,25 @@ export class ProfileImageService {
     }
   }
 
-  async uploadProfileImages(
-    profileId: string,
-    imageName: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _file: MulterFile,
-  ) {
+  async uploadProfileImages(profileId: string, file: MulterFile) {
+    this.logger.log(`Uploading profile image for profile ID: ${profileId}`);
     try {
+      if (!file.filename) {
+        this.logger.warn('File name is missing');
+        throw new BadRequestException('File name is missing');
+      }
+
       const createProfileImageDto = new CreateProfileImageDto();
       createProfileImageDto.profileId = profileId;
-      createProfileImageDto.profileImageName = [imageName];
+      createProfileImageDto.profileImageName = [file.filename];
 
+      this.logger.log(`Processing file: ${file.filename}`);
       return await this.createProfileImages(createProfileImageDto);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(
-        `Failed to upload profile image: ${imageName}`,
+        `Failed to upload profile image: ${file.filename}`,
         errorMessage,
       );
       throw new InternalServerErrorException(
@@ -120,29 +137,30 @@ export class ProfileImageService {
     newImageName: string,
     oldImageName: string | null,
   ) {
+    this.logger.log(`Updating profile image for profile ID: ${profileId}`);
     if (!newImageName) {
       this.logger.warn('Profile image name is missing');
       throw new BadRequestException('Profile image name is required');
     }
 
     try {
-      // Delete old image from S3 if exists
       if (oldImageName) {
-        await this.s3
-          .deleteObject({
+        this.logger.log(`Deleting old image: ${oldImageName}`);
+        await this.s3.send(
+          new DeleteObjectCommand({
             Bucket: this.configService.getOrThrow('aws.bucketName', {
               infer: true,
             }),
             Key: `profile-images/${oldImageName}`,
-          })
-          .promise();
+          }),
+        );
       }
 
-      // Upload new image to S3
+      this.logger.log(`Uploading new image: ${newImageName}`);
       const tempPath = join(this.TEMP_FOLDER, newImageName);
       const s3Key = `profile-images/${newImageName}`;
-      await this.s3
-        .putObject({
+      await this.s3.send(
+        new PutObjectCommand({
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
           }),
@@ -150,10 +168,9 @@ export class ProfileImageService {
           Body: createReadStream(tempPath),
           ContentType: 'image/jpeg',
           ACL: 'public-read',
-        })
-        .promise();
+        }),
+      );
 
-      // Update database record
       const profileImage = await this.profileImageRepository.findOne({
         where: { profile: { id: profileId } },
       });
@@ -161,9 +178,11 @@ export class ProfileImageService {
       if (profileImage) {
         profileImage.imageUrl = `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`;
         await this.profileImageRepository.save(profileImage);
+        this.logger.log(`Profile image updated successfully: ${newImageName}`);
+      } else {
+        this.logger.warn(`No profile image found for profile ID: ${profileId}`);
       }
 
-      this.logger.log(`Profile image updated successfully: ${newImageName}`);
       return profileImage;
     } catch (error: unknown) {
       const errorMessage =
@@ -176,42 +195,43 @@ export class ProfileImageService {
   }
 
   async deleteProfileImage(id: string, imageName?: string) {
+    this.logger.log(`Deleting profile image with ID: ${id}`);
     try {
-      // Find the profile image by id
       const profileImage = await this.profileImageRepository.findOne({
         where: { id },
         relations: ['profile'],
       });
 
       if (!profileImage) {
+        this.logger.warn(`Profile image not found: ${id}`);
         throw new BadRequestException('Profile image not found');
       }
 
-      // If imageName is provided, verify it matches the profile image
       if (imageName) {
         const urlImageName = profileImage.imageUrl.split('/').pop();
         if (urlImageName !== imageName) {
+          this.logger.warn(
+            `Image name mismatch: expected ${imageName}, got ${urlImageName}`,
+          );
           throw new BadRequestException(
             'Image name does not match the profile image',
           );
         }
       }
 
-      // Delete from S3
+      this.logger.log(`Deleting from S3: ${profileImage.imageUrl}`);
       const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
-      await this.s3
-        .deleteObject({
+      await this.s3.send(
+        new DeleteObjectCommand({
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
           }),
           Key: s3Key,
-        })
-        .promise();
+        }),
+      );
 
-      // Delete from database
       await this.profileImageRepository.remove(profileImage);
-
-      this.logger.log(`Profile image deleted successfully: ${profileImage.id}`);
+      this.logger.log(`Profile image deleted successfully: ${id}`);
       return { message: 'Profile image deleted successfully' };
     } catch (error: unknown) {
       const errorMessage =
