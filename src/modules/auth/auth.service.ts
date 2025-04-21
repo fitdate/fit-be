@@ -19,6 +19,7 @@ import { User } from '../user/entities/user.entity';
 import { LocationService } from 'src/modules/location/location.service';
 import { SocialUserInfo } from './types/oatuth.types';
 import { JwtTokenResponse, LoginResponse } from './types/auth.types';
+import { ProfileService } from '../profile/profile.service';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +33,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly redisService: RedisService,
     private readonly locationService: LocationService,
+    private readonly profileService: ProfileService,
   ) {}
 
   parseBasicToken(rawToken: string) {
@@ -166,6 +168,29 @@ export class AuthService {
       role,
       isProfileComplete: true,
       authProvider: userAuthProvider,
+    });
+
+    // 프로필 자동 생성
+    await this.profileService.createFullProfile(user.id, {
+      createProfileDto: {
+        intro: '',
+        job: '',
+      },
+      createUserMbtiDto: {
+        mbti: '',
+      },
+      createUserFeedbackDto: {
+        feedbackIds: [],
+        profileId: '',
+      },
+      createUserIntroductionDto: {
+        introductionIds: [],
+        profileId: '',
+      },
+      createUserInterestCategoryDto: {
+        interestCategoryIds: [],
+        profileId: '',
+      },
     });
 
     // 인증 완료 후 Redis에서 인증 상태 삭제

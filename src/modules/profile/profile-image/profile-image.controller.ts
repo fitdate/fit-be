@@ -3,16 +3,17 @@ import {
   Post,
   Body,
   UseInterceptors,
-  UploadedFile,
+  UploadedFiles,
   Put,
   Param,
   Delete,
   BadRequestException,
   Patch,
+  Get,
 } from '@nestjs/common';
 import { ProfileImageService } from './profile-image.service';
 import { CreateProfileImageDto } from './dto/create-profile-image.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from './types/multer.types';
 import { UpdateProfileImageDto } from './dto/update-profile-image.dto';
 import {
@@ -30,85 +31,113 @@ export class ProfileImageController {
   constructor(private readonly profileImageService: ProfileImageService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Upload profile image' })
+  @ApiOperation({ summary: 'Upload multiple profile images' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
         },
       },
     },
   })
   @ApiResponse({
     status: 201,
-    description: 'Profile image uploaded successfully',
+    description: 'Profile images uploaded successfully',
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadProfileImage(
-    @UploadedFile() file: MulterFile,
+  @UseInterceptors(FilesInterceptor('files', 6)) // 최대 6개의 파일 업로드 가능
+  async uploadProfileImages(
+    @UploadedFiles() files: MulterFile[],
     @Body() createProfileImageDto: CreateProfileImageDto,
     @UserId() userId: string,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file was uploaded');
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files were uploaded');
     }
 
-    return this.profileImageService.uploadProfileImages(userId, file);
+    return this.profileImageService.uploadProfileImages(userId, files);
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: 'Update profile image' })
+  @Put(':profileId')
+  @ApiOperation({ summary: 'Update multiple profile images' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
         },
-        oldImageName: {
-          type: 'string',
+        oldImageIds: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
         },
       },
     },
   })
   @ApiResponse({
     status: 200,
-    description: 'Profile image updated successfully',
+    description: 'Profile images updated successfully',
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  @UseInterceptors(FileInterceptor('file'))
-  async updateProfileImage(
-    @Param('id') id: string,
+  @UseInterceptors(FilesInterceptor('files', 6))
+  async updateProfileImages(
+    @Param('profileId') profileId: string,
     @Body() updateProfileImageDto: UpdateProfileImageDto,
-    @UploadedFile() file: MulterFile,
+    @UploadedFiles() files: MulterFile[],
   ) {
-    if (!file) {
-      throw new BadRequestException('No file was uploaded');
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files were uploaded');
     }
 
-    const oldImageName = updateProfileImageDto.oldImageNames?.[0] || null;
-
-    return this.profileImageService.updateProfileImage(id, file, oldImageName);
+    return this.profileImageService.updateProfileImages(
+      profileId,
+      files,
+      updateProfileImageDto.oldImageIds || [],
+    );
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete profile image' })
+  @Delete('batch')
+  @ApiOperation({ summary: 'Delete multiple profile images' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        ids: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
-    description: 'Profile image deleted successfully',
+    description: 'Profile images deleted successfully',
   })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async deleteProfileImage(@Param('id') id: string) {
-    return this.profileImageService.deleteProfileImage(id);
+  async deleteProfileImages(@Body('ids') ids: string[]) {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('No image IDs provided');
+    }
+
+    return this.profileImageService.deleteProfileImages(ids);
   }
 
   @Patch('set-main-image')
@@ -118,5 +147,17 @@ export class ProfileImageController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async setMainImage(@UserId() userId: string, @Param('id') imageId: string) {
     return this.profileImageService.setMainImage(userId, imageId);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get profile images' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile images retrieved successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async getProfileImages(@UserId() userId: string) {
+    return this.profileImageService.getProfileImages(userId);
   }
 }
