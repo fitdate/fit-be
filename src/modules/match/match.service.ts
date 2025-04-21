@@ -6,6 +6,7 @@ import { Profile } from '../profile/entities/profile.entity';
 import { Match } from './entities/match.entity';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class MatchService {
@@ -13,6 +14,7 @@ export class MatchService {
     @InjectRepository(Match)
     private matchRepository: Repository<Match>,
     private readonly profileService: ProfileService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private calculateSimilarity(profile1: Profile, profile2: Profile): number {
@@ -162,7 +164,24 @@ export class MatchService {
       user2: { id: createMatchDto.user2Id },
     });
 
-    return this.matchRepository.save(match);
+    const savedMatch = await this.matchRepository.save(match);
+
+    // 매칭 알림 생성
+    await this.notificationService.create({
+      title: '새로운 매칭이 생성되었습니다!',
+      content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+      type: 'MATCH',
+      receiverId: createMatchDto.user1Id,
+    });
+
+    await this.notificationService.create({
+      title: '새로운 매칭이 생성되었습니다!',
+      content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+      type: 'MATCH',
+      receiverId: createMatchDto.user2Id,
+    });
+
+    return savedMatch;
   }
 
   async findAll(): Promise<Match[]> {
