@@ -13,6 +13,7 @@ import { MulterFile } from './types/multer.types';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { v4 as uuidv4 } from 'uuid';
+import { Profile } from '../entities/profile.entity';
 
 @Injectable()
 export class ProfileImageService {
@@ -22,6 +23,8 @@ export class ProfileImageService {
   constructor(
     @InjectRepository(ProfileImage)
     private profileImageRepository: Repository<ProfileImage>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
     private configService: ConfigService<AllConfig>,
   ) {
     this.logger.log('Initializing S3 client');
@@ -39,17 +42,27 @@ export class ProfileImageService {
     this.logger.log('S3 client initialized successfully');
   }
 
-  async uploadProfileImages(profileId: string, file: MulterFile) {
-    this.logger.log(`Uploading profile image for profile ID: ${profileId}`);
+  async uploadProfileImages(userId: string, file: MulterFile) {
+    this.logger.log(`Uploading profile image for user ID: ${userId}`);
     if (!file) {
       this.logger.warn('No file provided');
       throw new BadRequestException('No file provided');
     }
 
     try {
+      // 프로필 찾기
+      const profile = await this.profileRepository.findOne({
+        where: { user: { id: userId } },
+        relations: ['user'],
+      });
+
+      if (!profile) {
+        throw new BadRequestException('Profile not found');
+      }
+
       // 기존 프로필 이미지 개수 확인
       const existingImages = await this.profileImageRepository.count({
-        where: { profile: { id: profileId } },
+        where: { profile: { id: profile.id } },
       });
 
       const fileExtension = file.originalname.split('.').pop();
@@ -72,7 +85,7 @@ export class ProfileImageService {
 
       const profileImage = this.profileImageRepository.create({
         imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
-        profile: { id: profileId },
+        profile: { id: profile.id },
         isMain: existingImages === 0, // 첫 이미지는 메인으로 설정
       });
 
