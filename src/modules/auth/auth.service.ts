@@ -261,14 +261,11 @@ export class AuthService {
   //로그아웃
   handleLogout(req: Request, res: Response) {
     try {
-      console.log('🧪 [로그아웃] 요청 쿠키:', req.cookies);
-
       const cookieOptions = this.logoutCookieOptions(req.headers.origin);
 
       // 쿠키 만료 설정
       res.cookie('accessToken', '', cookieOptions.accessOptions);
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
-      console.log('🧪 [로그아웃] 쿠키 만료 설정 완료');
 
       return {
         message: '로그아웃 성공',
