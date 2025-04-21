@@ -33,7 +33,7 @@ export class UserService {
       'gender',
       'birthday',
       'phone',
-      'address',
+      'region',
     ];
 
     return requiredFields.every((field) => {
