@@ -240,6 +240,10 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
     const tokens = this.generateTokens(user.id, user.role, req.headers.origin);
+
+    console.log('🧪 [로그인] 액세스 토큰:', tokens.accessToken);
+    console.log('🧪 [로그인] 리프레시 토큰:', tokens.refreshToken);
+
     res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
     res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
 
@@ -256,29 +260,40 @@ export class AuthService {
       this.logger.log('로그아웃 요청 시작');
       this.logger.log(`요청 쿠키: ${JSON.stringify(req.cookies)}`);
       this.logger.log(`요청 헤더: ${JSON.stringify(req.headers)}`);
-      // 토큰 검증
+
       const accessToken = (req.cookies as { accessToken?: string })[
         'accessToken'
       ];
+      const refreshToken = (req.cookies as { refreshToken?: string })[
+        'refreshToken'
+      ];
+
+      console.log('🧪 [로그아웃] 만료될 액세스 토큰:', accessToken);
+      console.log('🧪 [로그아웃] 만료될 리프레시 토큰:', refreshToken);
+
       if (accessToken) {
         try {
           await this.parseBearerToken(`Bearer ${accessToken}`, false);
+          console.log('🧪 [로그아웃] 액세스 토큰 검증 성공');
         } catch (error) {
-          // 토큰이 만료되었거나 유효하지 않은 경우에도 로그아웃은 진행
+          console.log(
+            '🧪 [로그아웃] 토큰 검증 실패 (로그아웃 계속 진행)',
+            error,
+          );
           this.logger.warn('Invalid or expired token during logout', error);
         }
       }
+
       if (!accessToken) {
         this.logger.warn('No access token found during logout');
       }
-
-      this.logger.log(accessToken);
 
       const cookieOptions = this.logoutCookieOptions(req.headers.origin);
 
       // 쿠키 만료 설정
       res.cookie('accessToken', '', cookieOptions.accessOptions);
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
+      console.log('🧪 [로그아웃] 쿠키 만료 설정 완료');
 
       return {
         message: '로그아웃 성공',
@@ -287,18 +302,6 @@ export class AuthService {
       this.logger.error('Logout failed', error);
       throw new UnauthorizedException('로그아웃에 실패했습니다.');
     }
-
-    const cookieOptions = this.logoutCookieOptions(req.headers.origin);
-    this.logger.log(`쿠키 옵션: ${JSON.stringify(cookieOptions)}`);
-
-    // 쿠키 만료 설정
-    res.cookie('accessToken', '', cookieOptions.accessOptions);
-    res.cookie('refreshToken', '', cookieOptions.refreshOptions);
-    this.logger.log('쿠키 만료 설정 완료');
-
-    return {
-      message: '로그아웃 성공',
-    };
   }
 
   //구글 콜백 처리
