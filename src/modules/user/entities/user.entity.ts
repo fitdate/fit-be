@@ -47,6 +47,9 @@ export class User extends BaseTable {
   region?: string;
 
   @Column({ nullable: true })
+  height: string;
+
+  @Column({ nullable: true })
   phone?: string;
 
   @OneToOne(() => Profile, (profile) => profile.user)

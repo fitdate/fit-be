@@ -29,6 +29,11 @@ export class UserController {
     return this.userService.completeUserProfile(userId, updateUserDto);
   }
 
+  @Get('profile')
+  getUserProfile(@UserId() userId: string) {
+    return this.userService.getUserProfile(userId);
+  }
+
   @Get('me')
   getMyProfile(@UserId() userId: string) {
     return this.userService.findOne(userId);

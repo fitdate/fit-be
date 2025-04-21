@@ -9,6 +9,7 @@ import {
   Delete,
   Query,
   BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import { ProfileImageService } from './profile-image.service';
 import { CreateProfileImageDto } from './dto/create-profile-image.dto';
@@ -22,7 +23,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-
+import { UserId } from 'src/common/decorator/get-user.decorator';
 @ApiTags('Profile Image')
 @Controller('profile-image')
 export class ProfileImageController {
@@ -55,15 +56,13 @@ export class ProfileImageController {
   async uploadProfileImage(
     @UploadedFile() file: MulterFile,
     @Body() createProfileImageDto: CreateProfileImageDto,
+    @UserId() userId: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file was uploaded');
     }
 
-    return this.profileImageService.uploadProfileImages(
-      createProfileImageDto.profileId,
-      file,
-    );
+    return this.profileImageService.uploadProfileImages(userId, file);
   }
 
   @Put(':id')
@@ -116,5 +115,14 @@ export class ProfileImageController {
     @Query('imageName') imageName?: string,
   ) {
     return this.profileImageService.deleteProfileImage(id, imageName);
+  }
+
+  @Patch('set-main-image')
+  @ApiOperation({ summary: 'Set main image' })
+  @ApiResponse({ status: 200, description: 'Main image set successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async setMainImage(@UserId() userId: string, @Param('id') imageId: string) {
+    return this.profileImageService.setMainImage(userId, imageId);
   }
 }

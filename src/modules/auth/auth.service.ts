@@ -252,8 +252,6 @@ export class AuthService {
 
     return {
       message: '로그인 성공',
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
       user: userDataWithoutPassword,
     };
   }

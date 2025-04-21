@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
@@ -40,6 +40,19 @@ export class UserService {
       const value = data[field as keyof UpdateUserDto];
       return value !== undefined && value !== null && value !== '';
     });
+  }
+
+  async getUserProfile(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile'], // 필요한 관계 로드
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 
   async createSocialUser(
