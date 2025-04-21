@@ -9,11 +9,15 @@ import { Repository } from 'typeorm';
 import { ProfileImage } from './entities/profile-image.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { join } from 'path';
-import * as AWS from 'aws-sdk';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { createReadStream } from 'fs';
 import { MulterFile } from './types/multer.types';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 
 @Injectable()
 export class ProfileImageService {
@@ -24,14 +28,14 @@ export class ProfileImageService {
     'profile-images',
   );
   private readonly TEMP_FOLDER = join(process.cwd(), 'public', 'temp');
-  private readonly s3: AWS.S3;
+  private readonly s3: S3Client;
 
   constructor(
     @InjectRepository(ProfileImage)
     private profileImageRepository: Repository<ProfileImage>,
     private configService: ConfigService<AllConfig>,
   ) {
-    this.s3 = new AWS.S3({
+    this.s3 = new S3Client({
       region: this.configService.getOrThrow('aws.region', { infer: true }),
       credentials: {
         accessKeyId: this.configService.getOrThrow('aws.accessKeyId', {
@@ -54,20 +58,21 @@ export class ProfileImageService {
       const profileImages = await Promise.all(
         imageNames.map(async (imageName) => {
           const tempPath = join(this.TEMP_FOLDER, imageName);
-          const s3Upload = await this.s3
-            .upload({
+          const s3Key = `profile-images/${imageName}`;
+          await this.s3.send(
+            new PutObjectCommand({
               Bucket: this.configService.getOrThrow('aws.bucketName', {
                 infer: true,
               }),
-              Key: `profile-images/${imageName}`,
+              Key: s3Key,
               Body: createReadStream(tempPath),
               ContentType: 'image/jpeg',
               ACL: 'public-read',
-            })
-            .promise();
+            }),
+          );
 
           const profileImage = this.profileImageRepository.create({
-            imageUrl: s3Upload.Location,
+            imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
             profile: { id: createProfileImageDto.profileId },
           });
 
@@ -127,29 +132,30 @@ export class ProfileImageService {
     try {
       // Delete old image from S3 if exists
       if (oldImageName) {
-        await this.s3
-          .deleteObject({
+        await this.s3.send(
+          new DeleteObjectCommand({
             Bucket: this.configService.getOrThrow('aws.bucketName', {
               infer: true,
             }),
             Key: `profile-images/${oldImageName}`,
-          })
-          .promise();
+          }),
+        );
       }
 
       // Upload new image to S3
       const tempPath = join(this.TEMP_FOLDER, newImageName);
-      const s3Upload = await this.s3
-        .upload({
+      const s3Key = `profile-images/${newImageName}`;
+      await this.s3.send(
+        new PutObjectCommand({
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
           }),
-          Key: `profile-images/${newImageName}`,
+          Key: s3Key,
           Body: createReadStream(tempPath),
           ContentType: 'image/jpeg',
           ACL: 'public-read',
-        })
-        .promise();
+        }),
+      );
 
       // Update database record
       const profileImage = await this.profileImageRepository.findOne({
@@ -157,7 +163,7 @@ export class ProfileImageService {
       });
 
       if (profileImage) {
-        profileImage.imageUrl = s3Upload.Location;
+        profileImage.imageUrl = `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`;
         await this.profileImageRepository.save(profileImage);
       }
 
@@ -197,14 +203,14 @@ export class ProfileImageService {
 
       // Delete from S3
       const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
-      await this.s3
-        .deleteObject({
+      await this.s3.send(
+        new DeleteObjectCommand({
           Bucket: this.configService.getOrThrow('aws.bucketName', {
             infer: true,
           }),
           Key: s3Key,
-        })
-        .promise();
+        }),
+      );
 
       // Delete from database
       await this.profileImageRepository.remove(profileImage);

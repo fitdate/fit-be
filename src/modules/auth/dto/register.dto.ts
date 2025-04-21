@@ -88,7 +88,7 @@ export class RegisterDto {
 
   @ApiProperty({
     description: '지역',
-    example: '서울특별시',
+    example: '서울',
   })
   @IsString()
   @IsNotEmpty()

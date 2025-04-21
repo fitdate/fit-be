@@ -45,6 +45,16 @@ export class AuthController {
     return this.authService.checkEmail(email);
   }
 
+  // 닉네임 중복 확인
+  @SkipProfileComplete()
+  @Public()
+  @Post('check-nickname')
+  @ApiOperation({ summary: '닉네임 중복 확인' })
+  @ApiResponse({ status: 200, description: '닉네임 중복 확인 성공' })
+  async checkNickname(@Body() nickname: string) {
+    return this.authService.checkNickname(nickname);
+  }
+
   // 이메일 인증 코드 전송
   @SkipProfileComplete()
   @Public()
