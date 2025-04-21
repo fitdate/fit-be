@@ -38,6 +38,9 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   birthday: string;
 
+  @Column()
+  location: string;
+
   @Column({ nullable: true })
   location: string;
 
