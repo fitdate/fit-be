@@ -253,6 +253,7 @@ export class AuthService {
   //로그아웃
   async handleLogout(req: Request, res: Response) {
     try {
+      this.logger.log(req.cookies);
       // 토큰 검증
       const accessToken = (req.cookies as { accessToken?: string })[
         'accessToken'
@@ -265,6 +266,11 @@ export class AuthService {
           this.logger.warn('Invalid or expired token during logout', error);
         }
       }
+      if (!accessToken) {
+        this.logger.warn('No access token found during logout');
+      }
+
+      this.logger.log(accessToken);
 
       const cookieOptions = this.logoutCookieOptions(req.headers.origin);
 
