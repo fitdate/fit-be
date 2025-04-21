@@ -6,10 +6,7 @@ import { ProfileImage } from './entities/profile-image.entity';
 import { Profile } from '../entities/profile.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ProfileImage, Profile]),
-    TypeOrmModule.forRoot(),
-  ],
+  imports: [TypeOrmModule.forFeature([ProfileImage, Profile])],
   controllers: [ProfileImageController],
   providers: [ProfileImageService],
   exports: [ProfileImageService],
