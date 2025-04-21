@@ -261,10 +261,6 @@ export class AuthService {
   async handleLogout(req: Request, res: Response) {
     try {
       console.log('🧪 [로그아웃] 요청 쿠키:', req.cookies);
-      console.log(
-        '🧪 [로그아웃] 쿠키 옵션:',
-        this.logoutCookieOptions(req.headers.origin),
-      );
 
       const accessToken = (req.cookies as { accessToken?: string })[
         'accessToken'
@@ -278,7 +274,8 @@ export class AuthService {
 
       if (accessToken) {
         try {
-          await this.parseBearerToken(`Bearer ${accessToken}`, false);
+          // Bearer 접두사가 이미 포함되어 있으므로 그대로 전달
+          await this.parseBearerToken(accessToken, false);
           console.log('🧪 [로그아웃] 액세스 토큰 검증 성공', accessToken);
         } catch (error) {
           console.log(
