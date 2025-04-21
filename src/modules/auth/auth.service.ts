@@ -240,19 +240,21 @@ export class AuthService {
     const user = await this.validate(email, password);
     const tokens = this.generateTokens(user.id, user.role, req.headers.origin);
 
-    console.log('🧪 [로그인] 쿠키 옵션:', tokens.accessOptions);
-    console.log('🧪 [로그인] 쿠키 옵션:', tokens.refreshOptions);
-
     res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
     res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
 
-    console.log('🧪 [로그인] 쿠키 설정 완료', tokens.accessToken);
-    console.log('🧪 [로그인] 쿠키 설정 완료', tokens.refreshToken);
+    const userData = await this.userService.findOne(user.id);
+    if (!userData) {
+      throw new UnauthorizedException('User not found');
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: userPassword, ...userDataWithoutPassword } = userData;
 
     return {
       message: '로그인 성공',
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
+      user: userDataWithoutPassword,
     };
   }
 
