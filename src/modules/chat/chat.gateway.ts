@@ -2,6 +2,8 @@ import {
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
@@ -9,7 +11,7 @@ import { UserService } from '../user/user.service';
 
 @WebSocketGateway({
   cors: {
-    origin: 'https://fit-date.co.kr',
+    origin: '*',
   },
 })
 export class ChatGateway {
@@ -42,24 +44,58 @@ export class ChatGateway {
     }
   }
 
-  // 메시지 전송 처리
-  @SubscribeMessage('sendMessage')
-  async handleMessage(
-    client: Socket,
-    data: { message: string; chatRoomId?: string },
+  @SubscribeMessage('join')
+  async handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { chatRoomId: string; userId: string },
   ) {
     try {
-      const user = await this.userService.checkUser(client.id);
-      const newMessage = await this.chatService.saveMessage(
-        data.message,
-        user,
+      // 채팅방 접근 권한 확인
+      const hasAccess = await this.chatService.validateChatRoomAccess(
+        data.userId,
         data.chatRoomId,
       );
-      this.server.emit('message', newMessage);
-      return { ok: true };
+
+      if (!hasAccess) {
+        throw new Error('채팅방 접근 권한이 없습니다.');
+      }
+
+      // 소켓 룸 참여
+      await client.join(data.chatRoomId);
+
+      return { success: true };
     } catch (error: unknown) {
       return {
-        ok: false,
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : '알 수 없는 오류가 발생했습니다.',
+      };
+    }
+  }
+
+  @SubscribeMessage('message')
+  async handleMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: { content: string; userId: string; chatRoomId: string },
+  ) {
+    try {
+      // 메시지 전송
+      const message = await this.chatService.sendMessage(
+        data.content,
+        data.userId,
+        data.chatRoomId,
+      );
+
+      // 채팅방의 모든 클라이언트에게 메시지 전송
+      this.server.to(data.chatRoomId).emit('message', message);
+
+      return { success: true };
+    } catch (error: unknown) {
+      return {
+        success: false,
         error:
           error instanceof Error
             ? error.message

@@ -91,12 +91,6 @@ export class User extends BaseTable {
   @Column({ type: 'varchar' })
   authProvider: AuthProvider;
 
-  @Column({ nullable: true })
-  chatToken: string;
-
-  @Column({ default: false })
-  chatOnline: boolean;
-
   @OneToMany(() => ChatMessage, (message) => message.user)
   messages: ChatMessage[];
 
