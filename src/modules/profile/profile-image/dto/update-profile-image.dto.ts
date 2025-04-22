@@ -23,5 +23,5 @@ export class UpdateProfileImageDto extends PartialType(CreateProfileImageDto) {
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  oldImageIds?: string[];
+  oldImageIds: string[] = [];
 }
