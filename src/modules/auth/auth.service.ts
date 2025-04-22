@@ -610,11 +610,11 @@ export class AuthService {
   ): Promise<{ verified: boolean; email: string }> {
     this.logger.log(`Verifying email with code: ${verifyEmailDto.code}`);
     const { code } = verifyEmailDto;
-    let email: string | null = null;
+
     try {
       // Redis에서 코드로 이메일 찾기
       const codeKey = `verification-code:${code}`;
-      email = await this.redisService.get(codeKey);
+      const email = await this.redisService.get(codeKey);
 
       if (!email) {
         throw new UnauthorizedException(
@@ -640,12 +640,6 @@ export class AuthService {
         email,
       };
     } catch (error) {
-      // 에러 발생 시 인증 상태 삭제
-      if (email) {
-        const verifiedKey = `email-verified:${email}`;
-        await this.redisService.del(verifiedKey);
-      }
-
       this.logger.error(
         `Failed to verify email with code: ${verifyEmailDto.code}`,
         error instanceof Error ? error.stack : undefined,
