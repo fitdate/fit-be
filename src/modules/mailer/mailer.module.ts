@@ -14,12 +14,12 @@ import { AllConfig, MailerConfig } from '../../common/config/config.types';
         const mailerConfig = configService.getOrThrow<MailerConfig>('mailer');
         return {
           transport: {
-            host: mailerConfig.MAILER_HOST,
-            port: mailerConfig.MAILER_PORT,
+            host: mailerConfig.host,
+            port: mailerConfig.port,
             secure: true,
             auth: {
-              user: mailerConfig.MAILER_USER,
-              pass: mailerConfig.MAILER_PASSWORD,
+              user: mailerConfig.user,
+              pass: mailerConfig.password,
             },
           },
         };
