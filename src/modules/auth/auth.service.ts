@@ -198,7 +198,7 @@ export class AuthService {
         tempUser.role = UserRole.USER;
         tempUser.isProfileComplete = false;
         tempUser.authProvider = AuthProvider.EMAIL;
-        tempUser.profile.job = registerDto.job;
+        tempUser.job = registerDto.job;
 
         const user = await userQr.manager.save(User, tempUser);
         log(`User profile updated successfully: ${user.id}`);
@@ -276,7 +276,7 @@ export class AuthService {
       try {
         await mbtiQr.manager.save(Mbti, {
           profile: { id: tempUser.profile.id },
-          mbti: registerDto.mbti?.mbti,
+          mbti: registerDto.mbti?.[0] as string,
         });
         log(`MBTI saved successfully for user: ${tempUser.id}`);
         await mbtiQr.commitTransaction();
@@ -297,7 +297,7 @@ export class AuthService {
       try {
         await feedbackQr.manager.save(UserFeedback, {
           profile: { id: tempUser.profile.id },
-          feedbackIds: registerDto.selfintro?.feedbackIds,
+          feedbackIds: registerDto.selfintro, // 배열 그대로 사용
         });
         log(`User feedback saved successfully for user: ${tempUser.id}`);
         await feedbackQr.commitTransaction();
@@ -318,7 +318,7 @@ export class AuthService {
       try {
         await introQr.manager.save(UserIntroduction, {
           profile: { id: tempUser.profile.id },
-          introductionIds: registerDto.listening?.introductionIds,
+          introductionIds: registerDto.listening, // 배열 그대로 사용
         });
         log(`User introduction saved successfully for user: ${tempUser.id}`);
         await introQr.commitTransaction();
@@ -341,7 +341,7 @@ export class AuthService {
       try {
         await interestQr.manager.save(UserInterestCategory, {
           profile: { id: tempUser.profile.id },
-          interestCategoryIds: registerDto.interests?.interestCategoryIds,
+          interestCategoryIds: registerDto.interests, // 배열 그대로 사용
         });
         log(`User interests saved successfully for user: ${tempUser.id}`);
         await interestQr.commitTransaction();

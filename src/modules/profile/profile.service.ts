@@ -38,8 +38,6 @@ export class ProfileService {
     }
 
     const profile = this.profileRepository.create({
-      intro: dto.createProfileDto.intro,
-      job: dto.createProfileDto.job,
       user: { id: dto.createProfileDto.userId },
     });
 
