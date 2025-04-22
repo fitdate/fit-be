@@ -150,6 +150,12 @@ export class AuthService {
       registerDto.email,
     );
 
+    const tempUser = await this.userService.findUserByEmail(registerDto.email);
+
+    if (!tempUser) {
+      throw new UnauthorizedException('인증이 완료되지 않은 이메일입니다.');
+    }
+
     if (!isEmailVerified) {
       throw new UnauthorizedException(
         '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
@@ -162,54 +168,52 @@ export class AuthService {
 
     try {
       const hashedPassword = await this.hashService.hash(registerDto.password);
-      const user = await qr.manager.save(User, {
-        email: registerDto.email,
-        password: hashedPassword,
-        nickname: registerDto.nickname,
-        name: registerDto.name,
-        birthday: registerDto.birthday,
-        gender: registerDto.gender,
-        phone: registerDto.phone,
-        region: registerDto.region,
-        role: UserRole.USER,
-        isProfileComplete: false,
-        authProvider: AuthProvider.EMAIL,
-      });
+      tempUser.password = hashedPassword;
+      tempUser.nickname = registerDto.nickname;
+      tempUser.name = registerDto.name;
+      tempUser.birthday = registerDto.birthday;
+      tempUser.gender = registerDto.gender;
+      tempUser.phone = registerDto.phone;
+      tempUser.region = registerDto.region;
+      tempUser.role = UserRole.USER;
+      tempUser.isProfileComplete = false;
+      tempUser.authProvider = AuthProvider.EMAIL;
 
-      const profile = await qr.manager.save(Profile, {
-        user: { id: user.id },
-        intro: registerDto.intro,
-        job: registerDto.job,
-      });
+      const user = await qr.manager.save(User, tempUser);
+
+      tempUser.profile.intro = registerDto.intro ?? '';
+      tempUser.profile.job = registerDto.job ?? '';
+
+      await qr.manager.save(Profile, tempUser.profile);
 
       await qr.manager.save(Mbti, {
-        profile: { id: profile.id },
+        profile: { id: tempUser.profile.id },
         mbti: registerDto.mbti?.mbti,
       });
 
       await qr.manager.save(UserFeedback, {
-        profile: { id: profile.id },
+        profile: { id: tempUser.profile.id },
         feedbackIds: registerDto.feedback?.feedbackIds,
       });
 
       await qr.manager.save(UserIntroduction, {
-        profile: { id: profile.id },
+        profile: { id: tempUser.profile.id },
         introductionIds: registerDto.introduction?.introductionIds,
       });
 
       await qr.manager.save(UserInterestCategory, {
-        profile: { id: profile.id },
+        profile: { id: tempUser.profile.id },
         interestCategoryIds: registerDto.interestCategory?.interestCategoryIds,
       });
 
       await qr.manager.save(ProfileImage, {
-        profile: { id: profile.id },
+        profile: { id: tempUser.profile.id },
         imageIds: registerDto.profileImageUrls,
       });
 
       await qr.commitTransaction();
 
-      return { user, profile };
+      return { user, profile: tempUser.profile };
     } catch (error) {
       await qr.rollbackTransaction();
       throw new InternalServerErrorException(
@@ -622,6 +626,9 @@ export class AuthService {
       await this.redisService.del(codeKey);
 
       this.logger.log(`Successfully verified email: ${email}`);
+
+      await this.emailTempRegister(email);
+
       return {
         verified: true,
         email,
