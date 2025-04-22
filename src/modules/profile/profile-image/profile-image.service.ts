@@ -147,15 +147,24 @@ export class ProfileImageService {
 
   //임시 폴더에 이미지 업로드
   async uploadTempImage(file: MulterFile) {
+    this.logger.log('임시 이미지 업로드 시작');
     const folderName = 'temp';
     const bucketName = this.configService.getOrThrow('aws.bucketName', {
       infer: true,
     });
     const region = this.configService.getOrThrow('aws.region', { infer: true });
-    const key = await this.s3Service.uploadFile(folderName, file, bucketName);
-    return {
-      url: `https://${bucketName}.s3.${region}.amazonaws.com/${key}`,
-    };
+    try {
+      const key = await this.s3Service.uploadFile(folderName, file, bucketName);
+      this.logger.log(`임시 이미지 업로드 완료: ${key}`);
+      return {
+        url: `https://${bucketName}.s3.${region}.amazonaws.com/${key}`,
+      };
+    } catch (error) {
+      this.logger.error('임시 이미지 업로드 실패', error);
+      throw new InternalServerErrorException(
+        '임시 이미지 업로드에 실패했습니다.',
+      );
+    }
   }
 
   //임시 폴더에 이미지 삭제
@@ -167,27 +176,38 @@ export class ProfileImageService {
   }
 
   async moveTempToProfileImage(userId: string, fileKey: string) {
+    this.logger.log(`임시 이미지를 프로필 이미지로 이동 시작: ${fileKey}`);
     const bucketName = this.configService.getOrThrow('aws.bucketName', {
       infer: true,
     });
     const region = this.configService.getOrThrow('aws.region', { infer: true });
 
-    const fileName = fileKey.split('/').pop();
-    const newKey = `profile-images/${userId}/${fileName}`;
+    try {
+      const fileName = fileKey.split('/').pop();
+      const newKey = `profile-images/${userId}/${fileName}`;
 
-    const copy = new CopyObjectCommand({
-      Bucket: bucketName,
-      CopySource: `${bucketName}/${fileKey}`,
-      Key: newKey,
-    });
+      this.logger.log(`이미지 복사 시작: ${fileKey} -> ${newKey}`);
+      const copy = new CopyObjectCommand({
+        Bucket: bucketName,
+        CopySource: `${bucketName}/${fileKey}`,
+        Key: newKey,
+      });
 
-    await this.s3Client.send(copy);
+      await this.s3Client.send(copy);
+      this.logger.log('이미지 복사 완료');
 
-    await this.s3Service.deleteFile(fileKey, bucketName);
+      this.logger.log(`임시 이미지 삭제 시작: ${fileKey}`);
+      await this.s3Service.deleteFile(fileKey, bucketName);
+      this.logger.log('임시 이미지 삭제 완료');
 
-    return {
-      key: newKey,
-      url: `https://${bucketName}.s3.${region}.amazonaws.com/${newKey}`,
-    };
+      this.logger.log('이미지 이동 완료');
+      return {
+        key: newKey,
+        url: `https://${bucketName}.s3.${region}.amazonaws.com/${newKey}`,
+      };
+    } catch (error) {
+      this.logger.error('이미지 이동 실패', error);
+      throw new InternalServerErrorException('이미지 이동에 실패했습니다.');
+    }
   }
 }

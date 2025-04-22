@@ -6,6 +6,8 @@ import {
   Patch,
   Get,
   UploadedFile,
+  BadRequestException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ProfileImageService } from './profile-image.service';
 import {
@@ -18,6 +20,8 @@ import {
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { Public } from 'src/common/decorator/public.decorator';
 import { MulterFile } from 'src/modules/s3/types/multer.types';
+import { FileInterceptor } from '@nestjs/platform-express';
+
 @ApiTags('Profile Image')
 @Controller('profile-image')
 export class ProfileImageController {
@@ -31,11 +35,20 @@ export class ProfileImageController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '업로드할 이미지 파일',
+        },
       },
+      required: ['file'],
     },
   })
-  uploadProfileImage(@UploadedFile() file: MulterFile) {
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfileImage(@UploadedFile() file: MulterFile) {
+    if (!file) {
+      throw new BadRequestException('업로드할 파일이 없습니다');
+    }
     return this.profileImageService.uploadTempImage(file);
   }
 
