@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
@@ -181,10 +176,14 @@ export class AuthService {
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
+    this.logger.log(
+      `Transaction started for user registration: ${tempUser.id}`,
+    );
 
     try {
       // const hashedPassword = await this.hashService.hash(registerDto.password);
       // tempUser.password = hashedPassword;
+      this.logger.log(`Updating user profile for: ${tempUser.id}`);
       tempUser.password = registerDto.password;
       tempUser.nickname = registerDto.nickname;
       tempUser.name = registerDto.name;
@@ -197,6 +196,7 @@ export class AuthService {
       tempUser.authProvider = AuthProvider.EMAIL;
 
       const user = await qr.manager.save(User, tempUser);
+      this.logger.log(`User profile updated successfully: ${user.id}`);
 
       tempUser.profile.intro = registerDto.intro ?? '';
       tempUser.profile.job = registerDto.job ?? '';
@@ -220,48 +220,66 @@ export class AuthService {
           profile: { id: user.profile.id },
           url: moved.url,
           key: moved.key,
-          isMain: index === 0, // 첫 번째 이미지만 메인으로 설정
+          isMain: index === 0,
         });
       }
 
-      // ProfileImage 여러 개 저장
       if (profileImages.length > 0) {
         await qr.manager.save(ProfileImage, profileImages);
+        this.logger.log(
+          `Profile images saved successfully for user: ${user.id}`,
+        );
       }
 
       await qr.manager.save(Profile, tempUser.profile);
+      this.logger.log(`Profile saved successfully for user: ${user.id}`);
 
       await qr.manager.save(Mbti, {
         profile: { id: tempUser.profile.id },
         mbti: registerDto.mbti?.mbti,
       });
+      this.logger.log(`MBTI saved successfully for user: ${user.id}`);
 
       await qr.manager.save(UserFeedback, {
         profile: { id: tempUser.profile.id },
         feedbackIds: registerDto.selfintro?.feedbackIds,
       });
+      this.logger.log(`User feedback saved successfully for user: ${user.id}`);
 
       await qr.manager.save(UserIntroduction, {
         profile: { id: tempUser.profile.id },
         introductionIds: registerDto.listening?.introductionIds,
       });
+      this.logger.log(
+        `User introduction saved successfully for user: ${user.id}`,
+      );
 
       await qr.manager.save(UserInterestCategory, {
         profile: { id: tempUser.profile.id },
         interestCategoryIds: registerDto.interests?.interestCategoryIds,
       });
+      this.logger.log(`User interests saved successfully for user: ${user.id}`);
 
       await qr.commitTransaction();
+      this.logger.log(
+        `Transaction committed successfully for user: ${user.id}`,
+      );
 
       return { user, profile: tempUser.profile };
     } catch (error) {
+      this.logger.error(
+        `Transaction failed for user: ${tempUser.id}`,
+        error instanceof Error ? error.stack : undefined,
+      );
       await qr.rollbackTransaction();
+      this.logger.log(`Transaction rolled back for user: ${tempUser.id}`);
       throw new InternalServerErrorException(
         '회원가입 중 오류가 발생했습니다.',
         { cause: error },
       );
     } finally {
       await qr.release();
+      this.logger.log(`QueryRunner released for user: ${tempUser.id}`);
     }
   }
 
