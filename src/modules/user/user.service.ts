@@ -101,7 +101,7 @@ export class UserService {
     return this.userRepository.findOne({ where: { nickname } });
   }
 
-  findOne(id: string) {
+  async findOne(id: string) {
     return this.userRepository.findOne({
       where: { id },
       relations: ['profile'],

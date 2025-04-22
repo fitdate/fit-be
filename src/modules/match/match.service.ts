@@ -122,8 +122,8 @@ export class MatchService {
     // 현재 사용자의 성별 가져오기
     const currentUser = await this.userService.findOne(userId);
 
-    if (!currentUser) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    if (!currentUser || !currentUser.gender) {
+      throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
     }
 
     // 유사도 계산을 위해 현재 사용자의 프로필 정보 가져오기
