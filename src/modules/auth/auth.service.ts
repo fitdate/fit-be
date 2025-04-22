@@ -30,6 +30,7 @@ import { UserInterestCategory } from '../profile/interest-category/entities/user
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 import { S3Service } from '../s3/s3.service';
+import pLimit from 'p-limit';
 
 @Injectable()
 export class AuthService {
@@ -112,52 +113,52 @@ export class AuthService {
     }
   }
 
-  async emailTempRegister(email: string) {
-    this.logger.log(`Starting emailTempRegister for: ${email}`);
-    const verifiedKey = `email-verified:${email}`;
-    await this.redisService.del(verifiedKey);
+  // async emailTempRegister(email: string) {
+  //   this.logger.log(`Starting emailTempRegister for: ${email}`);
+  //   const verifiedKey = `email-verified:${email}`;
+  //   await this.redisService.del(verifiedKey);
 
-    const qr = this.dataSource.createQueryRunner();
-    await qr.connect();
-    await qr.startTransaction();
-    this.logger.log(`Transaction started for email: ${email}`);
+  //   const qr = this.dataSource.createQueryRunner();
+  //   await qr.connect();
+  //   await qr.startTransaction();
+  //   this.logger.log(`Transaction started for email: ${email}`);
 
-    try {
-      this.logger.log(`Attempting to save temp user for email: ${email}`);
-      const user = await qr.manager.save(User, {
-        email,
-        role: UserRole.TEMP_USER,
-        authProvider: AuthProvider.EMAIL,
-      });
-      this.logger.log(
-        `Temp user saved successfully - ID: ${user.id}, Email: ${user.email}, AuthProvider: ${user.authProvider}`,
-      );
+  //   try {
+  //     this.logger.log(`Attempting to save temp user for email: ${email}`);
+  //     const user = await qr.manager.save(User, {
+  //       email,
+  //       role: UserRole.TEMP_USER,
+  //       authProvider: AuthProvider.EMAIL,
+  //     });
+  //     this.logger.log(
+  //       `Temp user saved successfully - ID: ${user.id}, Email: ${user.email}, AuthProvider: ${user.authProvider}`,
+  //     );
 
-      this.logger.log(`Attempting to save profile for user: ${user.id}`);
-      const profile = await qr.manager.save(Profile, {
-        user: { id: user.id },
-      });
-      this.logger.log(`Profile saved successfully for user: ${user.id}`);
+  //     this.logger.log(`Attempting to save profile for user: ${user.id}`);
+  //     const profile = await qr.manager.save(Profile, {
+  //       user: { id: user.id },
+  //     });
+  //     this.logger.log(`Profile saved successfully for user: ${user.id}`);
 
-      await qr.commitTransaction();
-      this.logger.log(`Transaction committed successfully for email: ${email}`);
-      return { user, profile };
-    } catch (error) {
-      this.logger.error(
-        `Transaction failed for email: ${email}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      await qr.rollbackTransaction();
-      this.logger.log(`Transaction rolled back for email: ${email}`);
-      throw new InternalServerErrorException(
-        '기본 유저 생성 중 오류가 발생했습니다.',
-        { cause: error },
-      );
-    } finally {
-      await qr.release();
-      this.logger.log(`QueryRunner released for email: ${email}`);
-    }
-  }
+  //     await qr.commitTransaction();
+  //     this.logger.log(`Transaction committed successfully for email: ${email}`);
+  //     return { user, profile };
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `Transaction failed for email: ${email}`,
+  //       error instanceof Error ? error.stack : undefined,
+  //     );
+  //     await qr.rollbackTransaction();
+  //     this.logger.log(`Transaction rolled back for email: ${email}`);
+  //     throw new InternalServerErrorException(
+  //       '기본 유저 생성 중 오류가 발생했습니다.',
+  //       { cause: error },
+  //     );
+  //   } finally {
+  //     await qr.release();
+  //     this.logger.log(`QueryRunner released for email: ${email}`);
+  //   }
+  // }
 
   async register(registerDto: RegisterDto) {
     const logBuffer: string[] = [];
@@ -167,261 +168,270 @@ export class AuthService {
       this.logger.log(message);
     };
 
-    log(`Attempting to register user with email: ${registerDto.email}`);
+    log(`Attempting to register new user with email: ${registerDto.email}`);
 
-    const tempUser = await this.userService.findUserByEmail(registerDto.email);
-    log(
-      `Found temp user: ${tempUser ? `ID: ${tempUser.id}, AuthProvider: ${tempUser.authProvider}` : 'Not found'}`,
+    // 기존 유저 확인
+    const existingUser = await this.userService.findUserByEmail(
+      registerDto.email,
     );
+    if (existingUser) {
+      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
+    }
 
-    if (!tempUser) {
-      throw new UnauthorizedException('인증이 완료되지 않은 이메일입니다.');
+    // 비밀번호 확인
+    if (registerDto.password !== registerDto.confirmPassword) {
+      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
 
     // 각 단계별로 별도의 트랜잭션 실행
     try {
-      // 1. 유저 정보 업데이트
-      const userQr = this.dataSource.createQueryRunner();
-      await userQr.connect();
-      await userQr.startTransaction();
-      log(`Starting user update transaction for: ${tempUser.id}`);
-
-      try {
-        log(`Updating user profile for: ${tempUser.id}`);
-        tempUser.password = registerDto.password;
-        tempUser.nickname = registerDto.nickname;
-        tempUser.name = registerDto.name;
-        tempUser.birthday = registerDto.birthday;
-        tempUser.gender = registerDto.gender;
-        tempUser.phone = registerDto.phone;
-        tempUser.region = registerDto.region;
-        tempUser.role = UserRole.USER;
-        tempUser.isProfileComplete = false;
-        tempUser.authProvider = AuthProvider.EMAIL;
-        tempUser.job = registerDto.job;
-
-        const user = await userQr.manager.save(User, tempUser);
-        log(`User profile updated successfully: ${user.id}`);
-        await userQr.commitTransaction();
-      } catch (error) {
-        await userQr.rollbackTransaction();
-        errorBuffer.push(
-          new Error(
-            `${error instanceof Error ? error.message : '유저 정보 업데이트 중 오류가 발생했습니다.'}`,
-          ),
-        );
-        log(
-          `${error instanceof Error ? error.message : '유저 정보 업데이트 중 오류가 발생했습니다.'}`,
-        );
-      } finally {
-        await userQr.release();
-      }
-
-      // 2. 프로필 저장
+      // 1. 프로필 생성
       const profileQr = this.dataSource.createQueryRunner();
       await profileQr.connect();
       await profileQr.startTransaction();
-      log(`Starting profile save transaction for: ${tempUser.id}`);
+      log('Starting profile creation transaction');
 
       try {
-        await profileQr.manager.save(Profile, tempUser.profile);
-        log(`Profile saved successfully for user: ${tempUser.id}`);
+        const profile = await profileQr.manager.save<Profile>(new Profile());
+        log(`Profile created successfully with ID: ${profile.id}`);
         await profileQr.commitTransaction();
+
+        // 2. 유저 생성
+        const userQr = this.dataSource.createQueryRunner();
+        await userQr.connect();
+        await userQr.startTransaction();
+        log('Starting user creation transaction');
+
+        try {
+          const user = await userQr.manager.save(User, {
+            email: registerDto.email,
+            password: registerDto.password,
+            nickname: registerDto.nickname,
+            name: registerDto.name,
+            birthday: registerDto.birthday,
+            gender: registerDto.gender,
+            region: registerDto.region,
+            phone: registerDto.phone,
+            role: UserRole.USER,
+            isProfileComplete: false,
+            authProvider: AuthProvider.EMAIL,
+            job: registerDto.job,
+            profile: { id: profile.id }, // 1:1 관계 설정
+          });
+          log(`User created successfully with ID: ${user.id}`);
+          await userQr.commitTransaction();
+
+          // 3. 프로필 이미지 저장
+          if (!registerDto.images?.length) {
+            log('No images to process');
+          } else {
+            const imageQr = this.dataSource.createQueryRunner();
+            await imageQr.connect();
+            await imageQr.startTransaction();
+            log(`Starting profile image save transaction for: ${user.id}`);
+
+            try {
+              const limit = pLimit(3); // 동시에 3개까지만 실행
+              const imageTasks = registerDto.images.map((url, index) =>
+                limit(async () => {
+                  try {
+                    log(`Processing image ${index + 1}: ${url}`);
+                    if (!url) {
+                      log(`Skipping null/undefined URL at index ${index}`);
+                      return null;
+                    }
+
+                    const key = this.s3Service.extractKeyFromUrl(url);
+                    const moved =
+                      await this.profileImageService.moveTempToProfileImage(
+                        profile.id,
+                        key,
+                      );
+
+                    return {
+                      profile: { id: profile.id },
+                      url: moved.url,
+                      key: moved.key,
+                      isMain: index === 0,
+                    };
+                  } catch (err) {
+                    log(
+                      `Failed to process image ${index + 1}: ${
+                        err instanceof Error ? err.message : err
+                      }`,
+                    );
+                    return null;
+                  }
+                }),
+              );
+
+              const profileImages = (await Promise.all(imageTasks)).filter(
+                (img): img is NonNullable<typeof img> => img !== null,
+              );
+              if (profileImages.length > 0) {
+                await imageQr.manager.save(ProfileImage, profileImages);
+                log(`Profile images saved successfully for user: ${user.id}`);
+              }
+              await imageQr.commitTransaction();
+            } catch (error) {
+              await imageQr.rollbackTransaction();
+              errorBuffer.push(
+                new Error(
+                  `Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+                ),
+              );
+              log(
+                `Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+              );
+            } finally {
+              await imageQr.release();
+            }
+          }
+
+          // 4. MBTI 저장
+          if (registerDto.mbti?.[0]) {
+            const mbtiQr = this.dataSource.createQueryRunner();
+            await mbtiQr.connect();
+            await mbtiQr.startTransaction();
+            log(`Starting MBTI save transaction for: ${user.id}`);
+
+            try {
+              await mbtiQr.manager.save(Mbti, {
+                mbti: registerDto.mbti[0],
+                profile: { id: profile.id },
+              });
+              log(`MBTI saved successfully for user: ${user.id}`);
+              await mbtiQr.commitTransaction();
+            } catch (error) {
+              await mbtiQr.rollbackTransaction();
+              errorBuffer.push(
+                new Error(
+                  `MBTI save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+                ),
+              );
+              log(
+                `MBTI save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+              );
+            } finally {
+              await mbtiQr.release();
+            }
+          }
+
+          // 5. 피드백 저장
+          if (registerDto.selfintro?.length) {
+            const feedbackQr = this.dataSource.createQueryRunner();
+            await feedbackQr.connect();
+            await feedbackQr.startTransaction();
+            log(`Starting feedback save transaction for: ${user.id}`);
+
+            try {
+              const feedbacks = registerDto.selfintro.map((feedback) => ({
+                profile: { id: profile.id },
+                feedbackId: feedback,
+              }));
+              await feedbackQr.manager.save(UserFeedback, feedbacks);
+              log(`User feedback saved successfully for user: ${user.id}`);
+              await feedbackQr.commitTransaction();
+            } catch (error) {
+              await feedbackQr.rollbackTransaction();
+              errorBuffer.push(
+                new Error(
+                  `Feedback save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+                ),
+              );
+              log(
+                `Feedback save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+              );
+            } finally {
+              await feedbackQr.release();
+            }
+          }
+
+          // 6. 자기소개 저장
+          if (registerDto.listening?.length) {
+            const introQr = this.dataSource.createQueryRunner();
+            await introQr.connect();
+            await introQr.startTransaction();
+            log(`Starting introduction save transaction for: ${user.id}`);
+
+            try {
+              const introductions = registerDto.listening.map((intro) => ({
+                profile: { id: profile.id },
+                introductionId: intro,
+              }));
+              await introQr.manager.save(UserIntroduction, introductions);
+              log(`User introduction saved successfully for user: ${user.id}`);
+              await introQr.commitTransaction();
+            } catch (error) {
+              await introQr.rollbackTransaction();
+              errorBuffer.push(
+                new Error(
+                  `Introduction save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+                ),
+              );
+              log(
+                `Introduction save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+              );
+            } finally {
+              await introQr.release();
+            }
+          }
+
+          // 7. 관심사 저장
+          if (registerDto.interests?.length) {
+            const interestQr = this.dataSource.createQueryRunner();
+            await interestQr.connect();
+            await interestQr.startTransaction();
+            log(`Starting interests save transaction for: ${user.id}`);
+
+            try {
+              const interests = registerDto.interests.map((interest) => ({
+                profile: { id: profile.id },
+                interestCategoryId: interest,
+              }));
+              await interestQr.manager.save(UserInterestCategory, interests);
+              log(`User interests saved successfully for user: ${user.id}`);
+              await interestQr.commitTransaction();
+            } catch (error) {
+              await interestQr.rollbackTransaction();
+              errorBuffer.push(
+                new Error(
+                  `Interests save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+                ),
+              );
+              log(
+                `Interests save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+              );
+            } finally {
+              await interestQr.release();
+            }
+          }
+
+          // 모든 에러 수집 및 로깅
+          if (errorBuffer.length > 0) {
+            log('Summary of errors:');
+            errorBuffer.forEach((error, index) => {
+              log(`[${index + 1}] ${error.message}`);
+            });
+            throw new InternalServerErrorException(
+              '회원가입 중 일부 오류가 발생했습니다.',
+              { cause: errorBuffer },
+            );
+          }
+
+          return { user, profile };
+        } catch (error) {
+          await userQr.rollbackTransaction();
+          throw error;
+        } finally {
+          await userQr.release();
+        }
       } catch (error) {
         await profileQr.rollbackTransaction();
-        errorBuffer.push(
-          new Error(
-            `${error instanceof Error ? error.message : '프로필 저장 중 오류가 발생했습니다.'}`,
-          ),
-        );
-        log(
-          `${error instanceof Error ? error.message : '프로필 저장 중 오류가 발생했습니다.'}`,
-        );
+        throw error;
       } finally {
         await profileQr.release();
       }
-
-      // 3. 프로필 이미지 저장
-      if (registerDto.images && registerDto.images.length > 0) {
-        log(`Received image URLs: ${JSON.stringify(registerDto.images)}`);
-        const imageQr = this.dataSource.createQueryRunner();
-        await imageQr.connect();
-        await imageQr.startTransaction();
-        log(`Starting profile image save transaction for: ${tempUser.id}`);
-
-        try {
-          const profileImages = await Promise.all(
-            registerDto.images.map(async (url, index) => {
-              log(`Processing image ${index + 1}: ${url}`);
-              if (!url) {
-                log(`Skipping null/undefined URL at index ${index}`);
-                return null;
-              }
-              const key = this.s3Service.extractKeyFromUrl(url);
-              const moved =
-                await this.profileImageService.moveTempToProfileImage(
-                  tempUser.profile.id,
-                  key,
-                );
-              return {
-                profile: { id: tempUser.profile.id },
-                url: moved.url,
-                key: moved.key,
-                isMain: index === 0,
-              };
-            }),
-          );
-
-          // null 값 필터링
-          const validProfileImages = profileImages.filter(
-            (image) => image !== null,
-          );
-          if (validProfileImages.length === 0) {
-            log('No valid images to save, skipping image save');
-            return;
-          }
-
-          await imageQr.manager.save(ProfileImage, validProfileImages);
-          log(`Profile images saved successfully for user: ${tempUser.id}`);
-          await imageQr.commitTransaction();
-        } catch (error) {
-          await imageQr.rollbackTransaction();
-          errorBuffer.push(
-            new Error(
-              `Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
-            ),
-          );
-          log(
-            `Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
-          );
-        } finally {
-          await imageQr.release();
-        }
-      } else {
-        log('No profile images provided, skipping image save');
-      }
-
-      // 4. MBTI 저장
-      const mbtiQr = this.dataSource.createQueryRunner();
-      await mbtiQr.connect();
-      await mbtiQr.startTransaction();
-      log(`Starting MBTI save transaction for: ${tempUser.id}`);
-
-      try {
-        await mbtiQr.manager.save(Mbti, {
-          profile: { id: tempUser.profile.id },
-          mbti: registerDto.mbti?.[0] as string,
-        });
-        log(`MBTI saved successfully for user: ${tempUser.id}`);
-        await mbtiQr.commitTransaction();
-      } catch (error) {
-        await mbtiQr.rollbackTransaction();
-        errorBuffer.push(
-          new Error(
-            `${error instanceof Error ? error.message : 'MBTI 저장 중 오류가 발생했습니다.'}`,
-          ),
-        );
-        log(
-          `${error instanceof Error ? error.message : 'MBTI 저장 중 오류가 발생했습니다.'}`,
-        );
-      } finally {
-        await mbtiQr.release();
-      }
-
-      // 5. 피드백 저장
-      const feedbackQr = this.dataSource.createQueryRunner();
-      await feedbackQr.connect();
-      await feedbackQr.startTransaction();
-      log(`Starting feedback save transaction for: ${tempUser.id}`);
-
-      try {
-        await feedbackQr.manager.save(UserFeedback, {
-          profile: { id: tempUser.profile.id },
-          feedbackIds: registerDto.selfintro, // 배열 그대로 사용
-        });
-        log(`User feedback saved successfully for user: ${tempUser.id}`);
-        await feedbackQr.commitTransaction();
-      } catch (error) {
-        await feedbackQr.rollbackTransaction();
-        errorBuffer.push(
-          new Error(
-            `${error instanceof Error ? error.message : '피드백 저장 중 오류가 발생했습니다.'}`,
-          ),
-        );
-        log(
-          `${error instanceof Error ? error.message : '피드백 저장 중 오류가 발생했습니다.'}`,
-        );
-      } finally {
-        await feedbackQr.release();
-      }
-
-      // 6. 자기소개 저장
-      const introQr = this.dataSource.createQueryRunner();
-      await introQr.connect();
-      await introQr.startTransaction();
-      log(`Starting introduction save transaction for: ${tempUser.id}`);
-
-      try {
-        await introQr.manager.save(UserIntroduction, {
-          profile: { id: tempUser.profile.id },
-          introductionIds: registerDto.listening, // 배열 그대로 사용
-        });
-        log(`User introduction saved successfully for user: ${tempUser.id}`);
-        await introQr.commitTransaction();
-      } catch (error) {
-        await introQr.rollbackTransaction();
-        errorBuffer.push(
-          new Error(
-            `${error instanceof Error ? error.message : '자기소개 저장 중 오류가 발생했습니다.'}`,
-          ),
-        );
-        log(
-          `${error instanceof Error ? error.message : '자기소개 저장 중 오류가 발생했습니다.'}`,
-        );
-      } finally {
-        await introQr.release();
-      }
-
-      // 7. 관심사 저장
-      const interestQr = this.dataSource.createQueryRunner();
-      await interestQr.connect();
-      await interestQr.startTransaction();
-      log(`Starting interests save transaction for: ${tempUser.id}`);
-
-      try {
-        await interestQr.manager.save(UserInterestCategory, {
-          profile: { id: tempUser.profile.id },
-          interestCategoryIds: registerDto.interests, // 배열 그대로 사용
-        });
-        log(`User interests saved successfully for user: ${tempUser.id}`);
-        await interestQr.commitTransaction();
-      } catch (error) {
-        await interestQr.rollbackTransaction();
-        errorBuffer.push(
-          new Error(
-            `${error instanceof Error ? error.message : '관심사 저장 중 오류가 발생했습니다.'}`,
-          ),
-        );
-        log(
-          `${error instanceof Error ? error.message : '관심사 저장 중 오류가 발생했습니다.'}`,
-        );
-      } finally {
-        await interestQr.release();
-      }
-
-      // 모든 에러 수집 및 로깅
-      if (errorBuffer.length > 0) {
-        log('Summary of errors:');
-        errorBuffer.forEach((error, index) => {
-          log(`[${index + 1}] ${error.message}`);
-        });
-        throw new InternalServerErrorException(
-          '회원가입 중 일부 오류가 발생했습니다.',
-          { cause: errorBuffer },
-        );
-      }
-
-      return { user: tempUser, profile: tempUser.profile };
     } catch (error) {
       log('Final error summary:');
       logBuffer.forEach((logMessage, index) => {
@@ -815,27 +825,22 @@ export class AuthService {
   async verifyEmail(
     verifyEmailDto: VerifyEmailDto,
   ): Promise<{ verified: boolean; email: string }> {
-    this.logger.log(`Verifying email with code: ${verifyEmailDto.code}`);
-    const { code } = verifyEmailDto;
+    const logBuffer: string[] = [];
+    const log = (message: string) => {
+      logBuffer.push(message);
+      this.logger.log(message);
+    };
+
+    log(`Starting email verification for code: ${verifyEmailDto.code}`);
 
     try {
-      // Redis 연결 테스트
-      const testKey = 'test-connection';
-      await this.redisService.set(testKey, 'test', 60);
-      const testValue = await this.redisService.get(testKey);
-      this.logger.log(
-        `Redis connection test: ${testValue === 'test' ? 'success' : 'failed'}`,
-      );
-      await this.redisService.del(testKey);
-
       // Redis에서 코드로 이메일 찾기
-      const codeKey = `verification-code:${code}`;
+      const codeKey = `verification-code:${verifyEmailDto.code}`;
       const email = await this.redisService.get(codeKey);
-      this.logger.log(
-        `Looking up email with code key: ${codeKey}, found email: ${email}`,
-      );
+      log(`Looking up email with code key: ${codeKey}`);
 
       if (!email) {
+        log('Verification code not found or expired');
         throw new UnauthorizedException(
           '유효하지 않거나 만료된 인증 코드입니다.',
         );
@@ -845,29 +850,19 @@ export class AuthService {
       const verifiedKey = `email-verified:${email}`;
       const verifiedTtlSeconds = 60 * 60; // 1시간
       await this.redisService.set(verifiedKey, 'verified', verifiedTtlSeconds);
+      log(`Email verification status saved for: ${email}`);
 
-      // 저장 확인
-      const savedValue = await this.redisService.get(verifiedKey);
-      this.logger.log(
-        `Saved verification status - Key: ${verifiedKey}, Value: ${savedValue}, TTL: ${verifiedTtlSeconds} seconds`,
-      );
-
-      // 임시 유저 생성
-      await this.emailTempRegister(email);
-
-      this.logger.log(`Successfully verified email: ${email}`);
       // 인증 코드 삭제
       await this.redisService.del(codeKey);
-      this.logger.log(`Deleted verification code key: ${codeKey}`);
+      log(`Verification code deleted for: ${email}`);
 
       return {
         verified: true,
         email,
       };
     } catch (error) {
-      this.logger.error(
-        `Failed to verify email with code: ${verifyEmailDto.code}`,
-        error instanceof Error ? error.stack : undefined,
+      log(
+        `Email verification failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
       );
       throw new UnauthorizedException(
         '인증에 실패했습니다. 유효하지 않거나 만료된 인증 코드입니다.',
