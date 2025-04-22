@@ -610,10 +610,11 @@ export class AuthService {
   ): Promise<{ verified: boolean; email: string }> {
     this.logger.log(`Verifying email with code: ${verifyEmailDto.code}`);
     const { code } = verifyEmailDto;
+    let email: string | null = null;
     try {
       // Redis에서 코드로 이메일 찾기
       const codeKey = `verification-code:${code}`;
-      const email = await this.redisService.get(codeKey);
+      email = await this.redisService.get(codeKey);
 
       if (!email) {
         throw new UnauthorizedException(
@@ -629,25 +630,29 @@ export class AuthService {
       // 인증 코드 삭제
       await this.redisService.del(codeKey);
 
-      this.logger.log(`Successfully verified email: ${email}`);
-
+      // 임시 유저 생성
       await this.emailTempRegister(email);
+
+      this.logger.log(`Successfully verified email: ${email}`);
 
       return {
         verified: true,
         email,
       };
     } catch (error) {
+      // 에러 발생 시 인증 상태 삭제
+      if (email) {
+        const verifiedKey = `email-verified:${email}`;
+        await this.redisService.del(verifiedKey);
+      }
+
       this.logger.error(
         `Failed to verify email with code: ${verifyEmailDto.code}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
+        error instanceof Error ? error.stack : undefined,
       );
       throw new UnauthorizedException(
         '인증에 실패했습니다. 유효하지 않거나 만료된 인증 코드입니다.',
-        {
-          cause: error,
-        },
+        { cause: error },
       );
     }
   }
