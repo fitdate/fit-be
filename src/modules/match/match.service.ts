@@ -76,10 +76,6 @@ export class MatchService {
     // 현재 사용자의 프로필 가져오기
     const currentProfile = await this.profileService.getProfileByUserId(userId);
 
-    if (!currentProfile) {
-      throw new NotFoundException('프로필을 찾을 수 없습니다.');
-    }
-
     // 모든 프로필 가져오기 (현재 사용자 제외)
     const allProfiles = await this.profileService.findAll();
     const otherProfiles = allProfiles.filter(
@@ -88,31 +84,76 @@ export class MatchService {
         profile.user.gender !== currentProfile.user.gender, // 성별 다른 사람만 가져오기
     );
 
-    // 랜덤으로 4명 선택
+    // 유사도 계산 및 정렬
+    const profilesWithSimilarity = otherProfiles
+      .map((profile) => ({
+        profile,
+        similarity: this.calculateSimilarity(currentProfile, profile),
+      }))
+      .sort((a, b) => b.similarity - a.similarity);
+
+    // 유사도 기반 가중치 적용하여 4명 선택
     const selectedProfiles: Profile[] = [];
-    while (selectedProfiles.length < 4 && otherProfiles.length > 0) {
-      const randomIndex = Math.floor(Math.random() * otherProfiles.length);
-      selectedProfiles.push(otherProfiles[randomIndex]);
-      otherProfiles.splice(randomIndex, 1);
+    const totalSimilarity = profilesWithSimilarity.reduce(
+      (sum, item) => sum + item.similarity,
+      0,
+    );
+
+    while (selectedProfiles.length < 4 && profilesWithSimilarity.length > 0) {
+      const random = Math.random() * totalSimilarity;
+      let currentSum = 0;
+      let selectedIndex = 0;
+
+      for (let i = 0; i < profilesWithSimilarity.length; i++) {
+        currentSum += profilesWithSimilarity[i].similarity;
+        if (currentSum >= random) {
+          selectedIndex = i;
+          break;
+        }
+      }
+
+      selectedProfiles.push(profilesWithSimilarity[selectedIndex].profile);
+      profilesWithSimilarity.splice(selectedIndex, 1);
     }
 
-    // 매칭 생성
+    // 최적의 매칭 쌍 찾기
     const matches: { matchId: string; user1: Profile; user2: Profile }[] = [];
+    const usedIndices = new Set<number>();
 
-    // 2명씩 매칭
-    for (let i = 0; i < selectedProfiles.length; i += 2) {
-      if (i + 1 < selectedProfiles.length) {
+    for (let i = 0; i < selectedProfiles.length; i++) {
+      if (usedIndices.has(i)) continue;
+
+      let bestMatchIndex = -1;
+      let bestMatchScore = -1;
+
+      for (let j = i + 1; j < selectedProfiles.length; j++) {
+        if (usedIndices.has(j)) continue;
+
+        const matchScore = this.calculateSimilarity(
+          selectedProfiles[i],
+          selectedProfiles[j],
+        );
+
+        if (matchScore > bestMatchScore) {
+          bestMatchScore = matchScore;
+          bestMatchIndex = j;
+        }
+      }
+
+      if (bestMatchIndex !== -1) {
         const matchId = uuidv4();
         await this.create({
           matchId,
           user1Id: selectedProfiles[i].user.id,
-          user2Id: selectedProfiles[i + 1].user.id,
+          user2Id: selectedProfiles[bestMatchIndex].user.id,
         });
         matches.push({
           matchId,
           user1: selectedProfiles[i],
-          user2: selectedProfiles[i + 1],
+          user2: selectedProfiles[bestMatchIndex],
         });
+        usedIndices.add(i);
+        usedIndices.add(bestMatchIndex);
       }
     }
 

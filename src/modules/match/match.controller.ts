@@ -31,8 +31,8 @@ export class MatchController {
   @Public()
   @UseGuards(JwtAuthGuard)
   @Get('random')
-  async findRandomMatches() {
-    return this.matchService.findRandomMatches();
+  async findRandomMatches(@CurrentUser() user: User) {
+    return this.matchService.findRandomMatches(user.id);
   }
 
   @ApiOperation({
