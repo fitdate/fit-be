@@ -160,14 +160,6 @@ export class RegisterDto {
     example: '개발자',
   })
   @IsString()
-  @IsOptional()
-  job?: string;
-
-  @ApiProperty({
-    description: '소개',
-    example: '안녕하세요!',
-  })
-  @IsString()
-  @IsOptional()
-  intro?: string;
+  @IsNotEmpty()
+  job: string;
 }
