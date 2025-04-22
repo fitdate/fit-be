@@ -47,10 +47,17 @@ export class UserService {
     });
   }
 
-  async getUserProfile(userId: string) {
+  async getUserInfo(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['profile'], // 필요한 관계 로드
+      relations: [
+        'profile',
+        'profile.mbti',
+        'profile.userIntroductions',
+        'profile.userFeedbacks',
+        'profile.interestCategory',
+        'profile.profileImages',
+      ],
     });
 
     if (!user) {

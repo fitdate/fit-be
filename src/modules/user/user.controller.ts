@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Patch, Get } from '@nestjs/common';
+import { Controller, Post, Body, Patch, Get, Param } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -63,9 +63,9 @@ export class UserController {
     status: 200,
     description: '사용자 프로필 정보를 성공적으로 조회했습니다.',
   })
-  @Get('profile')
-  async getUserProfile(@UserId() userId: string): Promise<any> {
-    return this.userService.getUserProfile(userId);
+  @Get('user-info/:userId')
+  getUserInfo(@Param('userId') userId: string): Promise<any> {
+    return this.userService.getUserInfo(userId);
   }
 
   @ApiOperation({
