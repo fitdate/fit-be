@@ -9,13 +9,15 @@ import { ProfileImage } from './entities/profile-image.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
-import { MulterFile } from './types/multer.types';
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
-import { v4 as uuidv4 } from 'uuid';
+import { MulterFile } from '../../s3/types/multer.types';
+import {
+  S3Client,
+  DeleteObjectCommand,
+  CopyObjectCommand,
+} from '@aws-sdk/client-s3';
 import { Profile } from '../entities/profile.entity';
 import { DataSource } from 'typeorm';
-
+import { S3Service } from '../../s3/s3.service';
 @Injectable()
 export class ProfileImageService {
   private readonly logger = new Logger(ProfileImageService.name);
@@ -28,6 +30,7 @@ export class ProfileImageService {
     private profileRepository: Repository<Profile>,
     private configService: ConfigService<AllConfig>,
     private dataSource: DataSource,
+    private s3Service: S3Service,
   ) {
     this.logger.log('S3 클라이언트 초기화 중...');
     this.s3Client = new S3Client({
@@ -42,190 +45,6 @@ export class ProfileImageService {
       },
     });
     this.logger.log('S3 클라이언트 초기화 완료');
-  }
-
-  async uploadProfileImages(userId: string, files: MulterFile[]) {
-    this.logger.log(`사용자 ID ${userId}의 프로필 이미지 업로드 시작`);
-    if (!files || files.length === 0) {
-      this.logger.warn('업로드할 파일이 없습니다');
-      throw new BadRequestException('업로드할 파일이 없습니다');
-    }
-
-    try {
-      // 프로필 찾기
-      const profile = await this.profileRepository.findOne({
-        where: { user: { id: userId } },
-        relations: ['user'],
-      });
-
-      if (!profile) {
-        throw new BadRequestException(
-          `사용자 ID ${userId}에 대한 프로필을 찾을 수 없습니다. 먼저 프로필을 생성해주세요.`,
-        );
-      }
-
-      // 기존 프로필 이미지 개수 확인
-      const existingImages = await this.profileImageRepository.count({
-        where: { profile: { id: profile.id } },
-      });
-
-      const uploadedImages: ProfileImage[] = [];
-      for (const file of files) {
-        const fileExtension = file.originalname.split('.').pop();
-        const uniqueFileName = `${uuidv4()}.${fileExtension}`;
-        const s3Key = `profile-images/${uniqueFileName}`;
-
-        const upload = new Upload({
-          client: this.s3Client,
-          params: {
-            Bucket: this.configService.getOrThrow('aws.bucketName', {
-              infer: true,
-            }),
-            Key: s3Key,
-            Body: file.buffer,
-            ContentType: file.mimetype,
-          },
-        });
-
-        await upload.done();
-
-        const profileImage = this.profileImageRepository.create({
-          imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
-          profile: { id: profile.id },
-          isMain: existingImages + uploadedImages.length === 0, // 첫 이미지는 메인으로 설정
-        });
-
-        await this.profileImageRepository.save(profileImage);
-        uploadedImages.push(profileImage);
-        this.logger.log(`프로필 이미지 업로드 성공: ${uniqueFileName}`);
-      }
-
-      return uploadedImages;
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : '알 수 없는 오류';
-      this.logger.error('프로필 이미지 업로드 실패', errorMessage);
-      throw new InternalServerErrorException(
-        '프로필 이미지 업로드에 실패했습니다.',
-      );
-    }
-  }
-
-  async updateProfileImages(
-    profileId: string,
-    files: MulterFile[],
-    oldImageIds: string[],
-  ) {
-    this.logger.log(`프로필 ID ${profileId}의 이미지 업데이트 시작`);
-    if (!files || files.length === 0) {
-      this.logger.warn('업로드할 파일이 없습니다');
-      throw new BadRequestException('업로드할 파일이 없습니다');
-    }
-
-    try {
-      // 기존 이미지 삭제
-      if (oldImageIds && oldImageIds.length > 0) {
-        for (const imageId of oldImageIds) {
-          await this.deleteProfileImage(imageId);
-        }
-      }
-
-      // 새 이미지 업로드
-      const uploadedImages: ProfileImage[] = [];
-      for (const file of files) {
-        const fileExtension = file.originalname.split('.').pop();
-        const uniqueFileName = `${uuidv4()}.${fileExtension}`;
-        const s3Key = `profile-images/${uniqueFileName}`;
-
-        const upload = new Upload({
-          client: this.s3Client,
-          params: {
-            Bucket: this.configService.getOrThrow('aws.bucketName', {
-              infer: true,
-            }),
-            Key: s3Key,
-            Body: file.buffer,
-            ContentType: file.mimetype,
-          },
-        });
-
-        await upload.done();
-
-        const profileImage = this.profileImageRepository.create({
-          imageUrl: `https://${this.configService.getOrThrow('aws.bucketName', { infer: true })}.s3.${this.configService.getOrThrow('aws.region', { infer: true })}.amazonaws.com/${s3Key}`,
-          profile: { id: profileId },
-          isMain: uploadedImages.length === 0, // 첫 이미지는 메인으로 설정
-        });
-
-        await this.profileImageRepository.save(profileImage);
-        uploadedImages.push(profileImage);
-        this.logger.log(`프로필 이미지 업로드 성공: ${uniqueFileName}`);
-      }
-
-      return uploadedImages;
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : '알 수 없는 오류';
-      this.logger.error('프로필 이미지 업데이트 실패', errorMessage);
-      throw new InternalServerErrorException(
-        '프로필 이미지 업데이트에 실패했습니다.',
-      );
-    }
-  }
-
-  async deleteProfileImages(ids: string[]) {
-    this.logger.log(`프로필 이미지 삭제 시작: ${ids.join(', ')}`);
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const deletedImages: ProfileImage[] = [];
-      for (const id of ids) {
-        const profileImage = await queryRunner.manager.findOne(ProfileImage, {
-          where: { id },
-          relations: ['profile'],
-        });
-
-        if (!profileImage) {
-          this.logger.warn(`프로필 이미지를 찾을 수 없습니다: ${id}`);
-          continue;
-        }
-
-        // S3에서 삭제
-        this.logger.log(`S3에서 삭제 중: ${profileImage.imageUrl}`);
-        const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
-        await this.s3Client.send(
-          new DeleteObjectCommand({
-            Bucket: this.configService.getOrThrow('aws.bucketName', {
-              infer: true,
-            }),
-            Key: s3Key,
-          }),
-        );
-
-        // DB에서 삭제
-        await queryRunner.manager.remove(profileImage);
-        deletedImages.push(profileImage);
-      }
-
-      await queryRunner.commitTransaction();
-      this.logger.log(`프로필 이미지 삭제 완료: ${ids.join(', ')}`);
-      return { message: '프로필 이미지가 성공적으로 삭제되었습니다.' };
-    } catch (error: unknown) {
-      await queryRunner.rollbackTransaction();
-      const errorMessage =
-        error instanceof Error ? error.message : '알 수 없는 오류';
-      this.logger.error(
-        `프로필 이미지 삭제 실패: ${ids.join(', ')}`,
-        errorMessage,
-      );
-      throw new InternalServerErrorException(
-        '프로필 이미지 삭제에 실패했습니다.',
-      );
-    } finally {
-      await queryRunner.release();
-    }
   }
 
   async deleteProfileImage(id: string) {
@@ -324,5 +143,51 @@ export class ProfileImageService {
         '프로필 이미지 조회에 실패했습니다.',
       );
     }
+  }
+
+  //임시 폴더에 이미지 업로드
+  async uploadTempImage(file: MulterFile) {
+    const folderName = 'temp';
+    const bucketName = this.configService.getOrThrow('aws.bucketName', {
+      infer: true,
+    });
+    const region = this.configService.getOrThrow('aws.region', { infer: true });
+    const key = await this.s3Service.uploadFile(folderName, file, bucketName);
+    return {
+      url: `https://${bucketName}.s3.${region}.amazonaws.com/${key}`,
+    };
+  }
+
+  //임시 폴더에 이미지 삭제
+  async deleteTempImage(url: string) {
+    const bucketName = this.configService.getOrThrow('aws.bucketName', {
+      infer: true,
+    });
+    await this.s3Service.deleteFile(url, bucketName);
+  }
+
+  async moveTempToProfileImage(userId: string, fileKey: string) {
+    const bucketName = this.configService.getOrThrow('aws.bucketName', {
+      infer: true,
+    });
+    const region = this.configService.getOrThrow('aws.region', { infer: true });
+
+    const fileName = fileKey.split('/').pop();
+    const newKey = `profile-images/${userId}/${fileName}`;
+
+    const copy = new CopyObjectCommand({
+      Bucket: bucketName,
+      CopySource: `${bucketName}/${fileKey}`,
+      Key: newKey,
+    });
+
+    await this.s3Client.send(copy);
+
+    await this.s3Service.deleteFile(fileKey, bucketName);
+
+    return {
+      key: newKey,
+      url: `https://${bucketName}.s3.${region}.amazonaws.com/${newKey}`,
+    };
   }
 }
