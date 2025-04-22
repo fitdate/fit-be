@@ -647,9 +647,21 @@ export class AuthService {
     const { code } = verifyEmailDto;
 
     try {
+      // Redis 연결 테스트
+      const testKey = 'test-connection';
+      await this.redisService.set(testKey, 'test', 60);
+      const testValue = await this.redisService.get(testKey);
+      this.logger.log(
+        `Redis connection test: ${testValue === 'test' ? 'success' : 'failed'}`,
+      );
+      await this.redisService.del(testKey);
+
       // Redis에서 코드로 이메일 찾기
       const codeKey = `verification-code:${code}`;
       const email = await this.redisService.get(codeKey);
+      this.logger.log(
+        `Looking up email with code key: ${codeKey}, found email: ${email}`,
+      );
 
       if (!email) {
         throw new UnauthorizedException(
@@ -662,8 +674,15 @@ export class AuthService {
       const verifiedTtlSeconds = 60 * 60; // 1시간
       await this.redisService.set(verifiedKey, 'verified', verifiedTtlSeconds);
 
+      // 저장 확인
+      const savedValue = await this.redisService.get(verifiedKey);
+      this.logger.log(
+        `Saved verification status - Key: ${verifiedKey}, Value: ${savedValue}, TTL: ${verifiedTtlSeconds} seconds`,
+      );
+
       // 인증 코드 삭제
       await this.redisService.del(codeKey);
+      this.logger.log(`Deleted verification code key: ${codeKey}`);
 
       // 임시 유저 생성
       await this.emailTempRegister(email);
@@ -687,8 +706,12 @@ export class AuthService {
   }
 
   async checkEmailVerification(email: string): Promise<boolean> {
+    this.logger.log(`Checking email verification status for: ${email}`);
     const verifiedKey = `email-verified:${email}`;
     const verifiedValue = await this.redisService.get(verifiedKey);
+    this.logger.log(
+      `Checking verification - Key: ${verifiedKey}, Value: ${verifiedValue}`,
+    );
     return verifiedValue === 'verified';
   }
 
