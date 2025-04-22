@@ -1,4 +1,11 @@
-import { Controller, Get, UseGuards, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  Post,
+  Body,
+  BadRequestException,
+} from '@nestjs/common';
 import { MatchService } from './match.service';
 import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { CurrentUser } from '../../common/decorator/current-user.decorator';
@@ -28,7 +35,6 @@ export class MatchController {
   })
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
-  @Public()
   @UseGuards(JwtAuthGuard)
   @Get('random')
   async findRandomMatches(@CurrentUser() user: User) {
@@ -43,12 +49,14 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  @Public()
   @Post('select')
   async selectMatch(
     @CurrentUser() user: User,
     @Body() body: { matchId: string; selectedUserId: string },
   ) {
+    if (!body || !body.matchId || !body.selectedUserId) {
+      throw new BadRequestException('matchId와 selectedUserId는 필수입니다.');
+    }
     return this.matchService.sendSelectionNotification(
       body.matchId,
       body.selectedUserId,
@@ -64,12 +72,14 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  @Public()
   @Post('select-all')
   async selectAllMatch(
     @CurrentUser() user: User,
     @Body() body: { matchId: string },
   ) {
+    if (!body || !body.matchId) {
+      throw new BadRequestException('matchId는 필수입니다.');
+    }
     return this.matchService.sendAllSelectionNotification(
       body.matchId,
       user.id,
@@ -84,12 +94,14 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  @Public()
   @Post('enter-chat')
   async enterChat(
     @CurrentUser() user: User,
     @Body() body: { matchId: string },
   ) {
+    if (!body || !body.matchId) {
+      throw new BadRequestException('matchId는 필수입니다.');
+    }
     return this.matchService.sendChatRoomEntryNotification(
       body.matchId,
       user.id,
