@@ -130,18 +130,18 @@ import { Reflector } from '@nestjs/core';
   ],
   controllers: [AppController],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthGuard,
+    // },
     // {
     //   provide: APP_GUARD,
     //   useClass: ProfileCompleteGuard,
     // },
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: RBACGuard,
-    // },
+    {
+      provide: APP_GUARD,
+      useClass: RBACGuard,
+    },
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
