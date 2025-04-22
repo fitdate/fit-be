@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { SseService } from './sse.service';
-import { NotificationDto } from './types/notification.types';
+import { Notification } from './types/notification.types';
 
 @Controller('sse')
 export class SseController {
@@ -29,7 +29,7 @@ export class SseController {
   @Post('send/:userId')
   sendNotification(
     @Param('userId') userId: string,
-    @Body() notification: NotificationDto,
+    @Body() notification: Notification,
   ) {
     this.sseService.sendNotification(userId, notification);
     return { message: 'Notification sent' };
