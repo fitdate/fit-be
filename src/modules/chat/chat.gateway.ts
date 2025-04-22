@@ -27,7 +27,8 @@ export class ChatGateway {
   @SubscribeMessage('login')
   async handleLogin(client: Socket, userName: string) {
     try {
-      const user = await this.userService.saveUser(userName, client.id);
+      const user: { id: string; name: string } =
+        await this.userService.saveUser(userName, client.id);
       const welcomeMessage = await this.chatService.saveSystemMessage(
         `${user.name}님이 채팅방에 입장하셨습니다.`,
       );

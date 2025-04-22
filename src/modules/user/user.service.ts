@@ -104,4 +104,12 @@ export class UserService {
   findOne(id: string) {
     return this.userRepository.findOne({ where: { id } });
   }
+
+  async saveUser(userName: string, socketId: string) {
+    const user = this.userRepository.create({
+      nickname: userName,
+      socketId,
+    });
+    return this.userRepository.save(user);
+  }
 }

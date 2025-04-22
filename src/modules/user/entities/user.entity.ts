@@ -91,6 +91,9 @@ export class User extends BaseTable {
   @Column({ type: 'varchar' })
   authProvider: AuthProvider;
 
+  @Column({ type: 'varchar', nullable: true })
+  socketId: string;
+
   @OneToMany(() => ChatMessage, (message) => message.user)
   messages: ChatMessage[];
 
