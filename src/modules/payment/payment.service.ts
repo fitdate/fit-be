@@ -36,8 +36,18 @@ export class PaymentService {
     orderId: string,
     amount: number,
     req: Request,
+    userId: string,
   ): Promise<TossPaymentResponse> {
     try {
+      const payment = await this.paymentRepository.findOne({
+        where: { orderId },
+        relations: ['user'],
+      });
+
+      if (!payment || payment.user.id !== userId) {
+        throw new Error('Unauthorized payment access');
+      }
+
       const encryptedSecretKey = Buffer.from(
         `${this.configService.getOrThrow('toss.secretKey', { infer: true })}:`,
       ).toString('base64');
@@ -72,8 +82,20 @@ export class PaymentService {
   }
 
   // 주문 ID로 결제 정보 조회
-  async getPaymentByOrderId(orderId: string): Promise<Payment | null> {
-    return this.paymentRepository.findOne({ where: { orderId } });
+  async getPaymentByOrderId(
+    orderId: string,
+    userId: string,
+  ): Promise<Payment | null> {
+    const payment = await this.paymentRepository.findOne({
+      where: { orderId },
+      relations: ['user'],
+    });
+
+    if (!payment || payment.user.id !== userId) {
+      throw new Error('Unauthorized payment access');
+    }
+
+    return payment;
   }
 
   // 테스트용 모의 결제 데이터 생성

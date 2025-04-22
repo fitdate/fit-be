@@ -160,6 +160,62 @@ export class MatchService {
     return { matches };
   }
 
+  async findRandomPublicMatches(): Promise<{
+    matches: { matchId: string; user1: Profile; user2: Profile }[];
+  }> {
+    // 모든 프로필 가져오기
+    const allProfiles = await this.profileService.findAll();
+
+    // 성별별로 프로필 분리
+    const maleProfiles = allProfiles.filter(
+      (profile) => profile.user.gender === '남자',
+    );
+    const femaleProfiles = allProfiles.filter(
+      (profile) => profile.user.gender === '여자',
+    );
+
+    // 각 성별에서 랜덤으로 2명씩 선택
+    const selectedMaleProfiles: Profile[] = [];
+    const selectedFemaleProfiles: Profile[] = [];
+
+    while (selectedMaleProfiles.length < 2 && maleProfiles.length > 0) {
+      const randomIndex = Math.floor(Math.random() * maleProfiles.length);
+      selectedMaleProfiles.push(maleProfiles[randomIndex]);
+      maleProfiles.splice(randomIndex, 1);
+    }
+
+    while (selectedFemaleProfiles.length < 2 && femaleProfiles.length > 0) {
+      const randomIndex = Math.floor(Math.random() * femaleProfiles.length);
+      selectedFemaleProfiles.push(femaleProfiles[randomIndex]);
+      femaleProfiles.splice(randomIndex, 1);
+    }
+
+    // 매칭 생성
+    const matches: { matchId: string; user1: Profile; user2: Profile }[] = [];
+
+    // 남자-남자 매칭
+    if (selectedMaleProfiles.length === 2) {
+      const matchId = uuidv4();
+      matches.push({
+        matchId,
+        user1: selectedMaleProfiles[0],
+        user2: selectedMaleProfiles[1],
+      });
+    }
+
+    // 여자-여자 매칭
+    if (selectedFemaleProfiles.length === 2) {
+      const matchId = uuidv4();
+      matches.push({
+        matchId,
+        user1: selectedFemaleProfiles[0],
+        user2: selectedFemaleProfiles[1],
+      });
+    }
+
+    return { matches };
+  }
+
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
     const match = this.matchRepository.create({
       id: createMatchDto.matchId,
@@ -296,7 +352,7 @@ export class MatchService {
 
     // 상대방에게 채팅방 입장 알림 전송
     await this.notificationService.create({
-      type: NotificationType.COFFEE_CHAT,
+      type: NotificationType.COFFEE_CHAT as NotificationType,
       receiverId: Number(opponentId),
       data: {
         matchId,

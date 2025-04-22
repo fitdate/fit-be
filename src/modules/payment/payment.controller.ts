@@ -1,13 +1,31 @@
-import { Controller, Get, Post, Param, Query, Req } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import { TossPaymentResponse } from './types/toss-payment.types';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { Payment } from './entities/payment.entity';
 import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
+import { CurrentUser } from '../../common/decorator/current-user.decorator';
+import { User } from '../user/entities/user.entity';
 
 @ApiTags('Payment')
+@ApiBearerAuth()
 @Controller('payment')
+@UseGuards(JwtAuthGuard)
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -21,18 +39,21 @@ export class PaymentController {
     type: TossPaymentResponse,
   })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 500, description: '서버 에러' })
   @Post('confirm')
   // 토스페이먼츠 결제 확인 처리
   async confirmPayment(
     @Query() confirmPaymentDto: ConfirmPaymentDto,
     @Req() req: Request,
+    @CurrentUser() user: User,
   ): Promise<TossPaymentResponse> {
     return this.paymentService.confirmPayment(
       confirmPaymentDto.paymentKey,
       confirmPaymentDto.orderId,
       confirmPaymentDto.amount,
       req,
+      user.id,
     );
   }
 
@@ -45,10 +66,14 @@ export class PaymentController {
     description: '결제 정보 조회 성공',
     type: Payment,
   })
+  @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '결제 정보를 찾을 수 없음' })
   @Get(':orderId')
   // 주문 ID로 결제 정보 조회
-  async getPayment(@Param('orderId') orderId: string) {
-    return this.paymentService.getPaymentByOrderId(orderId);
+  async getPayment(
+    @Param('orderId') orderId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.paymentService.getPaymentByOrderId(orderId, user.id);
   }
 }
