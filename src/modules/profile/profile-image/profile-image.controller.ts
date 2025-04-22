@@ -7,12 +7,10 @@ import {
   Put,
   Param,
   Delete,
-  BadRequestException,
   Patch,
   Get,
 } from '@nestjs/common';
 import { ProfileImageService } from './profile-image.service';
-import { CreateProfileImageDto } from './dto/create-profile-image.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from './types/multer.types';
 import { UpdateProfileImageDto } from './dto/update-profile-image.dto';
@@ -25,12 +23,13 @@ import {
 } from '@nestjs/swagger';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { DeleteProfileImageDto } from './dto/delete-profile-image.dto';
-
+import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('Profile Image')
 @Controller('profile-image')
 export class ProfileImageController {
   constructor(private readonly profileImageService: ProfileImageService) {}
 
+  @Public()
   @Post()
   @ApiOperation({ summary: '프로필 이미지 업로드' })
   @ApiConsumes('multipart/form-data')
@@ -55,15 +54,10 @@ export class ProfileImageController {
   @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
   @ApiResponse({ status: 500, description: '서버 오류' })
   @UseInterceptors(FilesInterceptor('files', 6)) // 최대 6개의 파일 업로드 가능
-  async uploadProfileImages(
+  uploadProfileImages(
     @UploadedFiles() files: MulterFile[],
-    @Body() createProfileImageDto: CreateProfileImageDto,
     @UserId() userId: string,
   ) {
-    if (!files || files.length === 0) {
-      throw new BadRequestException('업로드된 파일이 없습니다.');
-    }
-
     return this.profileImageService.uploadProfileImages(userId, files);
   }
 
@@ -97,15 +91,11 @@ export class ProfileImageController {
   @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
   @ApiResponse({ status: 500, description: '서버 오류' })
   @UseInterceptors(FilesInterceptor('files', 6))
-  async updateProfileImages(
+  updateProfileImages(
     @Param('profileId') profileId: string,
     @Body() updateProfileImageDto: UpdateProfileImageDto,
     @UploadedFiles() files: MulterFile[],
   ) {
-    if (!files || files.length === 0) {
-      throw new BadRequestException('업로드된 파일이 없습니다.');
-    }
-
     return this.profileImageService.updateProfileImages(
       profileId,
       files,
@@ -133,13 +123,7 @@ export class ProfileImageController {
     description: '프로필 이미지 삭제 성공',
   })
   @ApiResponse({ status: 500, description: '서버 오류' })
-  async deleteProfileImages(
-    @Body() deleteProfileImageDto: DeleteProfileImageDto,
-  ) {
-    if (!deleteProfileImageDto.ids || deleteProfileImageDto.ids.length === 0) {
-      throw new BadRequestException('이미지 ID가 제공되지 않았습니다.');
-    }
-
+  deleteProfileImages(@Body() deleteProfileImageDto: DeleteProfileImageDto) {
     return this.profileImageService.deleteProfileImages(
       deleteProfileImageDto.ids,
     );
@@ -150,7 +134,7 @@ export class ProfileImageController {
   @ApiResponse({ status: 200, description: '메인 이미지가 설정되었습니다.' })
   @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
   @ApiResponse({ status: 500, description: '서버 오류' })
-  async setMainImage(@UserId() userId: string, @Param('id') imageId: string) {
+  setMainImage(@UserId() userId: string, @Param('id') imageId: string) {
     return this.profileImageService.setMainImage(userId, imageId);
   }
 
@@ -162,7 +146,7 @@ export class ProfileImageController {
   })
   @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
   @ApiResponse({ status: 500, description: '서버 오류' })
-  async getProfileImages(@UserId() userId: string) {
+  getProfileImages(@UserId() userId: string) {
     return this.profileImageService.getProfileImages(userId);
   }
 }

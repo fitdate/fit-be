@@ -16,7 +16,7 @@ import { Payment } from '../../payment/entities/payment.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ChatMessage } from '../../chat/entities/chat-message.entity';
 import { ChatRoom } from '../../chat/entities/chat-room.entity';
-
+import { UserList } from '../../user-list/entities/user-list.entity';
 @Entity('users')
 export class User extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
@@ -100,4 +100,8 @@ export class User extends BaseTable {
 
   @ManyToMany(() => ChatRoom, (room) => room.users)
   chatRooms: ChatRoom[];
+
+  @OneToOne(() => UserList, (userList) => userList.user)
+  @JoinColumn()
+  userList: UserList;
 }

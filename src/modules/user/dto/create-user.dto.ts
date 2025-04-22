@@ -1,5 +1,4 @@
 import { Exclude, Expose } from 'class-transformer';
-import { Entity } from 'typeorm';
 import { BaseTable } from 'src/common/entity/base-table.entity';
 import {
   IsEmail,
@@ -17,7 +16,6 @@ import {
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { AuthProvider } from 'src/modules/auth/types/oatuth.types';
 import { ApiProperty } from '@nestjs/swagger';
-@Entity()
 export class CreateUserDto extends BaseTable {
   @ApiProperty({
     description: '이메일',

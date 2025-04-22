@@ -55,6 +55,7 @@ import { MailerController } from './modules/mailer/mailer.controller';
 import { AdminController } from './modules/admin/admin.controller';
 import { ChatModule } from './modules/chat/chat.module';
 import { ChatController } from './modules/chat/chat.controller';
+import { UserListModule } from './modules/user-list/user-list.module';
 
 @Module({
   imports: [
@@ -124,6 +125,7 @@ import { ChatController } from './modules/chat/chat.controller';
     MailerModule,
     AdminModule,
     ChatModule,
+    UserListModule,
   ],
   controllers: [AppController],
   providers: [
