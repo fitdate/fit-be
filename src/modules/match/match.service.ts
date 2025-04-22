@@ -18,6 +18,7 @@ export class MatchService {
     private readonly notificationService: NotificationService,
   ) {}
 
+  // 유사도 계산
   private calculateSimilarity(profile1: Profile, profile2: Profile): number {
     let similarity = 0;
 
@@ -70,6 +71,49 @@ export class MatchService {
     return similarity;
   }
 
+  // 성별 필터링
+  private filterProfilesByGender(
+    profiles: Profile[],
+    gender: string,
+  ): Profile[] {
+    return profiles.filter(
+      (profile) => profile.user && profile.user.gender === gender,
+    );
+  }
+
+  // 랜덤 프로필 선택
+  private selectRandomProfiles(profiles: Profile[], count: number): Profile[] {
+    const selected: Profile[] = [];
+    while (selected.length < count && profiles.length > 0) {
+      const randomIndex = Math.floor(Math.random() * profiles.length);
+      selected.push(profiles[randomIndex]);
+      profiles.splice(randomIndex, 1);
+    }
+    return selected;
+  }
+
+  // 매칭 생성
+  private async createMatch(
+    profile1: Profile,
+    profile2: Profile,
+  ): Promise<{
+    matchId: string;
+    user1: Profile;
+    user2: Profile;
+  }> {
+    const matchId = uuidv4();
+    await this.create({
+      matchId,
+      user1Id: profile1.user.id,
+      user2Id: profile2.user.id,
+    });
+    return {
+      matchId,
+      user1: profile1,
+      user2: profile2,
+    };
+  }
+
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: Profile; user2: Profile }[];
   }> {
@@ -80,6 +124,7 @@ export class MatchService {
     const allProfiles = await this.profileService.findAll();
     const otherProfiles = allProfiles.filter(
       (profile) =>
+        profile.user &&
         profile.user.id !== userId &&
         profile.user.gender !== currentProfile.user.gender, // 성별 다른 사람만 가져오기
     );
@@ -118,42 +163,15 @@ export class MatchService {
 
     // 최적의 매칭 쌍 찾기
     const matches: { matchId: string; user1: Profile; user2: Profile }[] = [];
-    const usedIndices = new Set<number>();
 
-    for (let i = 0; i < selectedProfiles.length; i++) {
-      if (usedIndices.has(i)) continue;
-
-      let bestMatchIndex = -1;
-      let bestMatchScore = -1;
-
-      for (let j = i + 1; j < selectedProfiles.length; j++) {
-        if (usedIndices.has(j)) continue;
-
-        const matchScore = this.calculateSimilarity(
+    // 2명씩 매칭
+    for (let i = 0; i < selectedProfiles.length; i += 2) {
+      if (i + 1 < selectedProfiles.length) {
+        const match = await this.createMatch(
           selectedProfiles[i],
-          selectedProfiles[j],
+          selectedProfiles[i + 1],
         );
-
-        if (matchScore > bestMatchScore) {
-          bestMatchScore = matchScore;
-          bestMatchIndex = j;
-        }
-      }
-
-      if (bestMatchIndex !== -1) {
-        const matchId = uuidv4();
-        await this.create({
-          matchId,
-          user1Id: selectedProfiles[i].user.id,
-          user2Id: selectedProfiles[bestMatchIndex].user.id,
-        });
-        matches.push({
-          matchId,
-          user1: selectedProfiles[i],
-          user2: selectedProfiles[bestMatchIndex],
-        });
-        usedIndices.add(i);
-        usedIndices.add(bestMatchIndex);
+        matches.push(match);
       }
     }
 
@@ -167,60 +185,32 @@ export class MatchService {
     const allProfiles = await this.profileService.findAll();
 
     // 성별별로 프로필 분리
-    const maleProfiles = allProfiles.filter(
-      (profile) => profile.user && profile.user.gender === '남자',
-    );
-    const femaleProfiles = allProfiles.filter(
-      (profile) => profile.user && profile.user.gender === '여자',
-    );
+    const maleProfiles = this.filterProfilesByGender(allProfiles, '남자');
+    const femaleProfiles = this.filterProfilesByGender(allProfiles, '여자');
 
     // 각 성별에서 랜덤으로 2명씩 선택
-    const selectedMaleProfiles: Profile[] = [];
-    const selectedFemaleProfiles: Profile[] = [];
-
-    while (selectedMaleProfiles.length < 2 && maleProfiles.length > 0) {
-      const randomIndex = Math.floor(Math.random() * maleProfiles.length);
-      selectedMaleProfiles.push(maleProfiles[randomIndex]);
-      maleProfiles.splice(randomIndex, 1);
-    }
-
-    while (selectedFemaleProfiles.length < 2 && femaleProfiles.length > 0) {
-      const randomIndex = Math.floor(Math.random() * femaleProfiles.length);
-      selectedFemaleProfiles.push(femaleProfiles[randomIndex]);
-      femaleProfiles.splice(randomIndex, 1);
-    }
+    const selectedMaleProfiles = this.selectRandomProfiles(maleProfiles, 2);
+    const selectedFemaleProfiles = this.selectRandomProfiles(femaleProfiles, 2);
 
     // 매칭 생성
     const matches: { matchId: string; user1: Profile; user2: Profile }[] = [];
 
     // 남자-남자 매칭
     if (selectedMaleProfiles.length === 2) {
-      const matchId = uuidv4();
-      await this.create({
-        matchId,
-        user1Id: selectedMaleProfiles[0].user.id,
-        user2Id: selectedMaleProfiles[1].user.id,
-      });
-      matches.push({
-        matchId,
-        user1: selectedMaleProfiles[0],
-        user2: selectedMaleProfiles[1],
-      });
+      const match = await this.createMatch(
+        selectedMaleProfiles[0],
+        selectedMaleProfiles[1],
+      );
+      matches.push(match);
     }
 
     // 여자-여자 매칭
     if (selectedFemaleProfiles.length === 2) {
-      const matchId = uuidv4();
-      await this.create({
-        matchId,
-        user1Id: selectedFemaleProfiles[0].user.id,
-        user2Id: selectedFemaleProfiles[1].user.id,
-      });
-      matches.push({
-        matchId,
-        user1: selectedFemaleProfiles[0],
-        user2: selectedFemaleProfiles[1],
-      });
+      const match = await this.createMatch(
+        selectedFemaleProfiles[0],
+        selectedFemaleProfiles[1],
+      );
+      matches.push(match);
     }
 
     return { matches };
