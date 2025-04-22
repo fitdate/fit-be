@@ -8,7 +8,7 @@ import { v4 } from 'uuid';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import * as sharp from 'sharp';
-import { MulterFile } from '../types/multer.types';
+import { MulterFile } from '../../../s3/types/multer.types';
 
 @Injectable()
 export class ProfileImageFilePipe
