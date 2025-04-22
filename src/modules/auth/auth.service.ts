@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
@@ -28,6 +33,8 @@ import { UserIntroduction } from '../profile/introduction/entities/user-introduc
 import { UserFeedback } from '../profile/feedback/entities/user-feedback.entity';
 import { UserInterestCategory } from '../profile/interest-category/entities/user-interest-category.entity';
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
+import { ProfileImageService } from '../profile/profile-image/profile-image.service';
+import { S3Service } from '../s3/s3.service';
 
 @Injectable()
 export class AuthService {
@@ -43,6 +50,8 @@ export class AuthService {
     private readonly locationService: LocationService,
     private readonly profileService: ProfileService,
     private readonly dataSource: DataSource,
+    private readonly s3Service: S3Service,
+    private readonly profileImageService: ProfileImageService,
   ) {}
 
   parseBasicToken(rawToken: string) {
@@ -189,6 +198,34 @@ export class AuthService {
       tempUser.profile.intro = registerDto.intro ?? '';
       tempUser.profile.job = registerDto.job ?? '';
 
+      // 이미지 이동 및 저장
+      const profileImages: {
+        profile: { id: string };
+        url: string;
+        key: string;
+        isMain: boolean;
+      }[] = [];
+
+      for (const [index, url] of (registerDto.images ?? []).entries()) {
+        const key = this.s3Service.extractKeyFromUrl(url);
+        const moved = await this.profileImageService.moveTempToProfileImage(
+          user.profile.id,
+          key,
+        );
+
+        profileImages.push({
+          profile: { id: user.profile.id },
+          url: moved.url,
+          key: moved.key,
+          isMain: index === 0, // 첫 번째 이미지만 메인으로 설정
+        });
+      }
+
+      // ProfileImage 여러 개 저장
+      if (profileImages.length > 0) {
+        await qr.manager.save(ProfileImage, profileImages);
+      }
+
       await qr.manager.save(Profile, tempUser.profile);
 
       await qr.manager.save(Mbti, {
@@ -198,22 +235,17 @@ export class AuthService {
 
       await qr.manager.save(UserFeedback, {
         profile: { id: tempUser.profile.id },
-        feedbackIds: registerDto.feedback?.feedbackIds,
+        feedbackIds: registerDto.selfintro?.feedbackIds,
       });
 
       await qr.manager.save(UserIntroduction, {
         profile: { id: tempUser.profile.id },
-        introductionIds: registerDto.introduction?.introductionIds,
+        introductionIds: registerDto.listening?.introductionIds,
       });
 
       await qr.manager.save(UserInterestCategory, {
         profile: { id: tempUser.profile.id },
-        interestCategoryIds: registerDto.interestCategory?.interestCategoryIds,
-      });
-
-      await qr.manager.save(ProfileImage, {
-        profile: { id: tempUser.profile.id },
-        imageIds: registerDto.profileImageUrls,
+        interestCategoryIds: registerDto.interests?.interestCategoryIds,
       });
 
       await qr.commitTransaction();
