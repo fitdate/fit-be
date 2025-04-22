@@ -20,6 +20,14 @@ import { LocationService } from 'src/modules/location/location.service';
 import { SocialUserInfo } from './types/oatuth.types';
 import { JwtTokenResponse, LoginResponse } from './types/auth.types';
 import { ProfileService } from '../profile/profile.service';
+import { Profile } from '../profile/entities/profile.entity';
+import { DataSource } from 'typeorm';
+import { InternalServerErrorException } from '@nestjs/common';
+import { Mbti } from '../profile/mbti/entities/mbti.entity';
+import { UserIntroduction } from '../profile/introduction/entities/user-introduction.entity';
+import { UserFeedback } from '../profile/feedback/entities/user-feedback.entity';
+import { UserInterestCategory } from '../profile/interest-category/entities/user-interest-category.entity';
+import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +42,7 @@ export class AuthService {
     private readonly redisService: RedisService,
     private readonly locationService: LocationService,
     private readonly profileService: ProfileService,
+    private readonly dataSource: DataSource,
   ) {}
 
   parseBasicToken(rawToken: string) {
@@ -99,94 +108,117 @@ export class AuthService {
     }
   }
 
+  async emailTempRegister(email: string) {
+    // 인증 완료 후 Redis에서 인증 상태 삭제
+    const verifiedKey = `email-verified:${email}`;
+    await this.redisService.del(verifiedKey);
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+
+    try {
+      const user = await qr.manager.save(User, {
+        role: UserRole.TEMP_USER,
+        authProvider: AuthProvider.EMAIL,
+      });
+
+      const profile = await qr.manager.save(Profile, {
+        user: { id: user.id },
+      });
+
+      await qr.commitTransaction();
+
+      return { user, profile };
+    } catch (error) {
+      await qr.rollbackTransaction();
+      throw new InternalServerErrorException(
+        '기본 유저 생성 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    } finally {
+      await qr.release();
+    }
+  }
+
   async register(registerDto: RegisterDto) {
     this.logger.log(
       `Attempting to register user with email: ${registerDto.email}`,
     );
-    const {
-      email,
-      password,
-      nickname,
-      name,
-      birthday,
-      gender,
-      phone,
-      region,
-      role,
-      profile,
-      mbti,
-      feedback,
-      introduction,
-      interestCategory,
-    } = registerDto;
 
-    const userEmail = await this.userService.findUserByEmail(email);
-    if (userEmail) {
-      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
-    }
-
-    const userNickname = await this.userService.findUserByNickname(nickname);
-    if (userNickname) {
-      throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
-    }
-
-    if (!nickname) {
-      throw new UnauthorizedException('닉네임을 입력해주세요.');
-    }
-
-    if (!birthday) {
-      throw new UnauthorizedException('생년월일을 입력해주세요.');
-    }
-
-    if (!gender) {
-      throw new UnauthorizedException('성별을 입력해주세요.');
-    }
-
-    if (!region) {
-      throw new UnauthorizedException('지역을 입력해주세요.');
-    }
-
-    if (!phone) {
-      throw new UnauthorizedException('전화번호를 입력해주세요.');
-    }
-
-    const userRegion = this.locationService.getRegionByRegionKey(region);
-    const userAuthProvider = AuthProvider.EMAIL;
-
-    const hashedPassword = await this.hashService.hash(password);
-    const user = await this.userService.createUser({
-      email,
-      password: hashedPassword,
-      nickname,
-      name,
-      birthday,
-      gender,
-      phone,
-      region: userRegion,
-      role,
-      isProfileComplete: false,
-      authProvider: userAuthProvider,
-    });
-
-    // 프로필 자동 생성
-    await this.profileService.createFullProfile(user.id, {
-      createProfileDto: profile || { intro: '', job: '' },
-      createUserMbtiDto: mbti || { mbti: '' },
-      createUserFeedbackDto: feedback || { feedbackIds: [], profileId: '' },
-      createUserIntroductionDto: introduction || {
-        introductionIds: [],
-        profileId: '',
-      },
-      createUserInterestCategoryDto: interestCategory || {
-        interestCategoryIds: [],
-        profileId: '',
-      },
-    });
-
-    this.logger.log(
-      `Successfully registered user with email: ${registerDto.email}`,
+    const isEmailVerified = await this.checkEmailVerification(
+      registerDto.email,
     );
-    return user;
+
+    if (!isEmailVerified) {
+      throw new UnauthorizedException(
+        '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
+      );
+    }
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+
+    try {
+      const hashedPassword = await this.hashService.hash(registerDto.password);
+      const user = await qr.manager.save(User, {
+        email: registerDto.email,
+        password: hashedPassword,
+        nickname: registerDto.nickname,
+        name: registerDto.name,
+        birthday: registerDto.birthday,
+        gender: registerDto.gender,
+        phone: registerDto.phone,
+        region: registerDto.region,
+        role: UserRole.USER,
+        isProfileComplete: false,
+        authProvider: AuthProvider.EMAIL,
+      });
+
+      const profile = await qr.manager.save(Profile, {
+        user: { id: user.id },
+        intro: registerDto.intro,
+        job: registerDto.job,
+      });
+
+      await qr.manager.save(Mbti, {
+        profile: { id: profile.id },
+        mbti: registerDto.mbti?.mbti,
+      });
+
+      await qr.manager.save(UserFeedback, {
+        profile: { id: profile.id },
+        feedbackIds: registerDto.feedback?.feedbackIds,
+      });
+
+      await qr.manager.save(UserIntroduction, {
+        profile: { id: profile.id },
+        introductionIds: registerDto.introduction?.introductionIds,
+      });
+
+      await qr.manager.save(UserInterestCategory, {
+        profile: { id: profile.id },
+        interestCategoryIds: registerDto.interestCategory?.interestCategoryIds,
+      });
+
+      await qr.manager.save(ProfileImage, {
+        profile: { id: profile.id },
+        imageIds: registerDto.profileImageUrls,
+      });
+
+      await qr.commitTransaction();
+
+      return { user, profile };
+    } catch (error) {
+      await qr.rollbackTransaction();
+      throw new InternalServerErrorException(
+        '회원가입 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    } finally {
+      await qr.release();
+    }
   }
 
   async checkNickname(nickname: string) {
@@ -196,7 +228,6 @@ export class AuthService {
     }
   }
 
-  //일단 임시로 이메일 중복확인
   async checkEmail(email: string) {
     const user = await this.userService.findUserByEmail(email);
     if (user) {
