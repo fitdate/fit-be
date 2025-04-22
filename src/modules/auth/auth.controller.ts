@@ -20,7 +20,7 @@ import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
-import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
+import { UserId } from 'src/common/decorator/get-user.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -217,8 +217,7 @@ export class AuthController {
   }
 
   @Delete('account')
-  @UseGuards(JwtAuthGuard)
-  async deleteAccount(@Req() req: Request) {
-    return this.authService.deleteAccount(req.user.id);
+  async deleteAccount(@UserId() userId: string) {
+    return this.authService.deleteAccount(userId);
   }
 }
