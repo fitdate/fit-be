@@ -169,22 +169,13 @@ export class AuthService {
       `Attempting to register user with email: ${registerDto.email}`,
     );
 
-    const isEmailVerified = await this.checkEmailVerification(
-      registerDto.email,
-    );
-    this.logger.log(`Email verification status: ${isEmailVerified}`);
-
     const tempUser = await this.userService.findUserByEmail(registerDto.email);
-    this.logger.log(`Found temp user: ${tempUser ? `ID: ${tempUser.id}, AuthProvider: ${tempUser.authProvider}` : 'Not found'}`);
+    this.logger.log(
+      `Found temp user: ${tempUser ? `ID: ${tempUser.id}, AuthProvider: ${tempUser.authProvider}` : 'Not found'}`,
+    );
 
     if (!tempUser) {
       throw new UnauthorizedException('인증이 완료되지 않은 이메일입니다.');
-    }
-
-    if (!isEmailVerified) {
-      throw new UnauthorizedException(
-        '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
-      );
     }
 
     const qr = this.dataSource.createQueryRunner();
