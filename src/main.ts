@@ -43,14 +43,12 @@ async function bootstrap() {
     .setDescription('FIT API 문서')
     .setVersion('1.0')
     .addServer('https://api.fit-date.co.kr')
-    .addBearerAuth(
+    .addApiKey(
       {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
+        type: 'apiKey',
+        name: 'accessToken',
+        in: 'cookie',
+        description: 'Enter JWT token in cookie',
       },
       'access-token',
     )
