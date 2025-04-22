@@ -79,7 +79,9 @@ export class MatchService {
     // 모든 프로필 가져오기 (현재 사용자 제외)
     const allProfiles = await this.profileService.findAll();
     const otherProfiles = allProfiles.filter(
-      (profile) => profile.user.id !== userId,
+      (profile) =>
+        profile.user.id !== userId &&
+        profile.user.gender !== currentProfile.user.gender, // 성별 다른 사람만 가져오기
     );
 
     // 유사도 계산 및 정렬
