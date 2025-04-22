@@ -28,6 +28,7 @@ export class MatchController {
   })
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
+  @Public()
   @UseGuards(JwtAuthGuard)
   @Get('random')
   async findRandomMatches(@CurrentUser() user: User) {
@@ -42,6 +43,7 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
+  @Public()
   @Post('select')
   async selectMatch(
     @CurrentUser() user: User,
@@ -62,6 +64,7 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
+  @Public()
   @Post('select-all')
   async selectAllMatch(
     @CurrentUser() user: User,
@@ -81,6 +84,7 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
+  @Public()
   @Post('enter-chat')
   async enterChat(
     @CurrentUser() user: User,
