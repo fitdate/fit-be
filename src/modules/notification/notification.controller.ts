@@ -24,9 +24,9 @@ import {
 } from '@nestjs/swagger';
 import { Notification } from './entities/notification.entity';
 
-@ApiTags('알림')
+@ApiTags('Notification')
 @ApiBearerAuth()
-@Controller('Notifications')
+@Controller('notification')
 @UseGuards(JwtAuthGuard)
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
