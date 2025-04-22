@@ -6,9 +6,14 @@ import { ChatController } from './chat.controller';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { UserModule } from '../user/user.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ChatMessage, ChatRoom]), UserModule],
+  imports: [
+    TypeOrmModule.forFeature([ChatMessage, ChatRoom]),
+    UserModule,
+    NotificationModule,
+  ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],
   exports: [ChatService],
