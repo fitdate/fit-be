@@ -177,6 +177,14 @@ export class AuthService {
     if (!tempUser) {
       throw new UnauthorizedException('인증이 완료되지 않은 이메일입니다.');
     }
+    // 프로필 로드
+    const profile = await this.profileService.getProfileById(
+      tempUser.profile.id,
+    );
+    if (!profile) {
+      throw new InternalServerErrorException('프로필을 찾을 수 없습니다.');
+    }
+    tempUser.profile = profile;
 
     // 각 단계별로 별도의 트랜잭션 실행
     try {
