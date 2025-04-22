@@ -166,12 +166,12 @@ export class MatchService {
     // 모든 프로필 가져오기
     const allProfiles = await this.profileService.findAll();
 
-    // 성별별로 프로필 분리
+    // 성별별로 프로필 분리 (null 체크 추가)
     const maleProfiles = allProfiles.filter(
-      (profile) => profile.user.gender === '남자',
+      (profile) => profile.user && profile.user.gender === '남자',
     );
     const femaleProfiles = allProfiles.filter(
-      (profile) => profile.user.gender === '여자',
+      (profile) => profile.user && profile.user.gender === '여자',
     );
 
     // 각 성별에서 랜덤으로 2명씩 선택
