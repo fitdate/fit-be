@@ -214,4 +214,94 @@ export class MatchService {
   async remove(id: string): Promise<void> {
     await this.matchRepository.delete(id);
   }
+
+  /**
+   * 월드컵 페이지에서 선택하기 버튼을 누를 때 알림을 보냅니다.
+   * @param matchId 매칭 ID
+   * @param selectedUserId 선택된 사용자 ID
+   * @param currentUserId 현재 사용자 ID
+   */
+  async sendSelectionNotification(
+    matchId: string,
+    selectedUserId: string,
+    currentUserId: string,
+  ): Promise<void> {
+    const match = await this.findOne(matchId);
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    // 선택된 사용자에게 알림 전송
+    await this.notificationService.create({
+      type: NotificationType.MATCH,
+      receiverId: Number(selectedUserId),
+      data: {
+        matchId,
+        senderId: currentUserId,
+      },
+    });
+  }
+
+  /**
+   * 월드컵 페이지에서 모두 선택하기 버튼을 누를 때 두 명의 사용자에게 알림을 보냅니다.
+   * @param matchId 매칭 ID
+   * @param currentUserId 현재 사용자 ID
+   */
+  async sendAllSelectionNotification(
+    matchId: string,
+    currentUserId: string,
+  ): Promise<void> {
+    const match = await this.findOne(matchId);
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    // 두 명의 사용자에게 알림 전송
+    await this.notificationService.create({
+      type: NotificationType.MATCH,
+      receiverId: Number(match.user1.id),
+      data: {
+        matchId,
+        senderId: currentUserId,
+      },
+    });
+
+    await this.notificationService.create({
+      type: NotificationType.MATCH,
+      receiverId: Number(match.user2.id),
+      data: {
+        matchId,
+        senderId: currentUserId,
+      },
+    });
+  }
+
+  /**
+   * 매칭 결과 페이지에서 대화하러 가기 버튼을 누를 때 상대방에게 채팅방 입장 알림을 보냅니다.
+   * @param matchId 매칭 ID
+   * @param currentUserId 현재 사용자 ID
+   */
+  async sendChatRoomEntryNotification(
+    matchId: string,
+    currentUserId: string,
+  ): Promise<void> {
+    const match = await this.findOne(matchId);
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    // 상대방 ID 찾기
+    const opponentId =
+      match.user1.id === currentUserId ? match.user2.id : match.user1.id;
+
+    // 상대방에게 채팅방 입장 알림 전송
+    await this.notificationService.create({
+      type: NotificationType.COFFEE_CHAT,
+      receiverId: Number(opponentId),
+      data: {
+        matchId,
+        senderId: currentUserId,
+      },
+    });
+  }
 }

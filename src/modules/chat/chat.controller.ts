@@ -6,12 +6,17 @@ import {
   Query,
   Param,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
+import { CurrentUser } from '../../common/decorator/current-user.decorator';
+import { User } from '../user/entities/user.entity';
 
 @ApiTags('Chat')
 @Controller('chat')
+@UseGuards(JwtAuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
@@ -58,5 +63,24 @@ export class ChatController {
     @Body('userId') userId: string,
   ) {
     return this.chatService.exitRoom(chatRoomId, userId);
+  }
+
+  @ApiOperation({
+    summary: '채팅방 입장 알림 전송',
+    description: '채팅방에 입장할 때 상대방에게 알림을 보냅니다.',
+  })
+  @ApiResponse({ status: 200, description: '알림 전송 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @Post('chatRooms/:chatRoomId/enter')
+  async enterChatRoom(
+    @CurrentUser() user: User,
+    @Param('chatRoomId') chatRoomId: string,
+    @Body() body: { opponentId: string },
+  ) {
+    return this.chatService.sendChatRoomEntryNotification(
+      chatRoomId,
+      user.id,
+      body.opponentId,
+    );
   }
 }

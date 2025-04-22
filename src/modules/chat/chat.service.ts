@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { User } from '../user/entities/user.entity';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/dto/create-notification.dto';
 
 @Injectable()
 export class ChatService {
@@ -14,6 +16,7 @@ export class ChatService {
     private readonly chatRoomRepository: Repository<ChatRoom>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -129,5 +132,27 @@ export class ChatService {
       isSystem: true,
     });
     return await this.messageRepository.save(message);
+  }
+
+  /**
+   * 채팅방에 입장할 때 상대방에게 알림을 보냅니다.
+   * @param chatRoomId 채팅방 ID
+   * @param currentUserId 현재 사용자 ID
+   * @param opponentId 상대방 ID
+   */
+  async sendChatRoomEntryNotification(
+    chatRoomId: string,
+    currentUserId: string,
+    opponentId: string,
+  ): Promise<void> {
+    // 상대방에게 채팅방 입장 알림 전송
+    await this.notificationService.create({
+      type: NotificationType.CHAT,
+      receiverId: Number(opponentId),
+      data: {
+        chatRoomId,
+        senderId: currentUserId,
+      },
+    });
   }
 }

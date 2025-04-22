@@ -57,10 +57,11 @@ export class LikeService {
 
           // 알림 생성
           await this.notificationService.create({
-            title: '새로운 좋아요가 도착했습니다!',
-            content: `${user.nickname}님이 좋아요를 눌렀습니다.`,
             type: NotificationType.LIKE,
             receiverId: Number(likedUserId),
+            data: {
+              senderId: userId,
+            },
           });
 
           // 알림 전송 완료 표시
