@@ -9,15 +9,14 @@ import {
   MinLength,
   IsEnum,
   IsOptional,
+  IsArray,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { CreateProfileDto } from 'src/modules/profile/dto/create-profile.dto';
 import { CreateUserMbtiDto } from 'src/modules/profile/mbti/dto/create-mbti.dto';
 import { CreateUserFeedbackDto } from 'src/modules/profile/feedback/dto/create-user-feedback.dto';
 import { CreateUserIntroductionDto } from 'src/modules/profile/introduction/dto/create-user-introduction.dto';
 import { CreateUserInterestCategoryDto } from 'src/modules/profile/interest-category/dto/create-user-interest-category.dto';
-import { CreateProfileImageDto } from 'src/modules/profile/profile-image/dto/create-profile-image.dto';
 export class RegisterDto {
   @ApiProperty({
     description: '이메일',
@@ -108,12 +107,12 @@ export class RegisterDto {
   @IsEnum(UserRole)
   role: UserRole = UserRole.USER;
 
-  @ApiProperty({
-    description: '프로필 정보',
-    type: CreateProfileDto,
-  })
-  @IsOptional()
-  profile?: CreateProfileDto;
+  // @ApiProperty({
+  //   description: '프로필 정보',
+  //   type: CreateProfileDto,
+  // })
+  // @IsOptional()
+  // profile?: CreateProfileDto;
 
   @ApiProperty({
     description: 'MBTI 정보',
@@ -127,28 +126,34 @@ export class RegisterDto {
     type: CreateUserFeedbackDto,
   })
   @IsOptional()
-  feedback?: CreateUserFeedbackDto;
+  selfintro?: CreateUserFeedbackDto;
 
   @ApiProperty({
     description: '소개 정보',
     type: CreateUserIntroductionDto,
   })
   @IsOptional()
-  introduction?: CreateUserIntroductionDto;
+  listening?: CreateUserIntroductionDto;
 
   @ApiProperty({
     description: '관심 카테고리 정보',
     type: CreateUserInterestCategoryDto,
   })
   @IsOptional()
-  interestCategory?: CreateUserInterestCategoryDto;
+  interests?: CreateUserInterestCategoryDto;
 
   @ApiProperty({
-    description: '프로필 이미지 정보',
-    type: CreateProfileImageDto,
+    description: '프로필 이미지 URL 목록',
+    example: [
+      'https://example.com/image1.jpg',
+      'https://example.com/image2.jpg',
+    ],
+    type: [String],
   })
   @IsOptional()
-  profileImageUrls?: CreateProfileImageDto[];
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
 
   @ApiProperty({
     description: '직업',

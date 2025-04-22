@@ -183,7 +183,12 @@ export class ProfileImageService {
     const region = this.configService.getOrThrow('aws.region', { infer: true });
 
     try {
+      // fileKey가 이미 'temp/uuid.jpg' 형식이므로 그대로 사용
       const fileName = fileKey.split('/').pop();
+      if (!fileName) {
+        throw new BadRequestException('잘못된 파일 경로입니다.');
+      }
+
       const newKey = `profile-images/${userId}/${fileName}`;
 
       this.logger.log(`이미지 복사 시작: ${fileKey} -> ${newKey}`);
@@ -207,6 +212,9 @@ export class ProfileImageService {
       };
     } catch (error) {
       this.logger.error('이미지 이동 실패', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new InternalServerErrorException('이미지 이동에 실패했습니다.');
     }
   }

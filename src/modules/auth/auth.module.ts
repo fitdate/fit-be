@@ -11,6 +11,9 @@ import { MailerModule } from '../mailer/mailer.module';
 import { RedisModule } from '../redis/redis.module';
 import { LocationModule } from '../location/location.module';
 import { ProfileModule } from '../profile/profile.module';
+import { S3Module } from '../s3/s3.module';
+import { ProfileImageModule } from '../profile/profile-image/profile-image.module';
+
 @Module({
   imports: [
     UserModule,
@@ -19,6 +22,8 @@ import { ProfileModule } from '../profile/profile.module';
     RedisModule,
     LocationModule,
     ProfileModule,
+    S3Module,
+    ProfileImageModule,
   ],
   controllers: [AuthController],
   providers: [

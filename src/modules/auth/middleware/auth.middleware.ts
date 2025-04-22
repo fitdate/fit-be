@@ -43,19 +43,11 @@ export class AuthMiddleware implements NestMiddleware {
   }
 
   private extractToken(req: Request): string | null {
-    // 1. 쿠키 확인
     const cookies = req.cookies as { accessToken?: string } | undefined;
-    if (cookies?.accessToken) {
-      return cookies.accessToken;
+    if (!cookies?.accessToken) {
+      throw new UnauthorizedException('액세스 토큰이 없습니다');
     }
-
-    // 2. 헤더 확인
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
-
-    return null;
+    return cookies.accessToken;
   }
 
   private async validateToken(token: string): Promise<TokenPayload> {
