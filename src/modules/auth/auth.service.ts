@@ -232,8 +232,14 @@ export class AuthService {
     }
   }
 
-  async checkEmail(email: string) {
-    const user = await this.userService.findUserByEmail(email);
+  async checkEmail(sendVerificationEmailDto: SendVerificationEmailDto) {
+    console.log(sendVerificationEmailDto);
+    this.logger.log(
+      `Attempting to check email: ${sendVerificationEmailDto.email}`,
+    );
+    const user = await this.userService.findUserByEmail(
+      sendVerificationEmailDto.email,
+    );
     if (user) {
       throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
@@ -567,6 +573,7 @@ export class AuthService {
   async sendVerificationEmail(
     sendVerificationEmailDto: SendVerificationEmailDto,
   ): Promise<{ success: boolean }> {
+    console.log(sendVerificationEmailDto);
     this.logger.log(
       `Sending verification email to: ${sendVerificationEmailDto.email}`,
     );

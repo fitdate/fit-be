@@ -41,8 +41,8 @@ export class AuthController {
   @Post('check-email')
   @ApiOperation({ summary: '이메일 중복 확인' })
   @ApiResponse({ status: 200, description: '이메일 중복 확인 성공' })
-  async checkEmail(@Body() email: string) {
-    return this.authService.checkEmail(email);
+  async checkEmail(@Body() sendVerificationEmailDto: SendVerificationEmailDto) {
+    return this.authService.checkEmail(sendVerificationEmailDto);
   }
 
   // 닉네임 중복 확인
