@@ -582,10 +582,6 @@ export class AuthService {
       `Sending verification email to: ${sendVerificationEmailDto.email}`,
     );
     const { email } = sendVerificationEmailDto;
-    const user = await this.userService.findUserByEmail(email);
-    if (user) {
-      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
-    }
     // 6자리 인증 코드 생성
     const verificationCode = this.mailerService.generateEmailVerificationCode();
 
