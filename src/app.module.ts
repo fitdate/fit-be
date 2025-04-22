@@ -56,6 +56,7 @@ import { AdminController } from './modules/admin/admin.controller';
 import { ChatModule } from './modules/chat/chat.module';
 import { ChatController } from './modules/chat/chat.controller';
 import { UserListModule } from './modules/user-list/user-list.module';
+import { Reflector } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { UserListModule } from './modules/user-list/user-list.module';
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
+    Reflector,
   ],
 })
 export class AppModule implements NestModule {
@@ -164,6 +166,9 @@ export class AppModule implements NestModule {
         { path: 'auth/naver/login/callback', method: RequestMethod.GET },
         { path: 'health', method: RequestMethod.GET },
         { path: 'docs', method: RequestMethod.GET },
+        { path: 'auth/check-email', method: RequestMethod.POST },
+        { path: 'auth/check-nickname', method: RequestMethod.POST },
+        { path: 'auth/email-login', method: RequestMethod.POST },
       )
       .forRoutes(
         AuthController,
