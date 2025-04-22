@@ -6,17 +6,17 @@
 export function parseTimeToSeconds(timeStr: string): number {
   const unit = timeStr.slice(-1);
   const value = parseInt(timeStr.slice(0, -1));
-  
+
   switch (unit) {
-    case 's': 
+    case 's':
       return value; // 초
-    case 'm': 
+    case 'm':
       return value * 60; // 분
-    case 'h': 
+    case 'h':
       return value * 60 * 60; // 시간
-    case 'd': 
+    case 'd':
       return value * 60 * 60 * 24; // 일
-    default: 
+    default:
       return 60 * 15; // 기본값 15분
   }
-} 
+}

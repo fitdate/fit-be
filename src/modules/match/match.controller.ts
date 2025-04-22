@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { CurrentUser } from '../../common/decorator/current-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Public } from '../../common/decorator/public.decorator';
 
 @ApiTags('Matching')
 @Controller('match')
@@ -15,6 +16,7 @@ export class MatchController {
     description: '남자-남자, 여자-여자 매칭을 각각 1쌍씩 랜덤으로 조회합니다.',
   })
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
+  @Public()
   @Get('random/public')
   async findRandomPublicMatches() {
     return this.matchService.findRandomPublicMatches();
