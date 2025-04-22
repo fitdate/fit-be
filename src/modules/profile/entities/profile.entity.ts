@@ -1,12 +1,11 @@
 import {
-  Column,
   Entity,
   JoinColumn,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { InterestLocation } from '../interest-location/entities/interest-location.entity';
+// import { InterestLocation } from '../interest-location/entities/interest-location.entity';
 import { ProfileImage } from '../profile-image/entities/profile-image.entity';
 import { User } from '../../user/entities/user.entity';
 import { Mbti } from '../mbti/entities/mbti.entity';
@@ -18,9 +17,6 @@ import { UserIntroduction } from '../introduction/entities/user-introduction.ent
 export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column({ nullable: true })
-  intro: string;
 
   @OneToMany(
     () => UserIntroduction,
@@ -44,11 +40,11 @@ export class Profile {
   )
   interestCategory: UserInterestCategory[];
 
-  @OneToMany(
-    () => InterestLocation,
-    (interestLocation) => interestLocation.profile,
-  )
-  interestLocation: InterestLocation[];
+  // @OneToMany(
+  //   () => InterestLocation,
+  //   (interestLocation) => interestLocation.profile,
+  // )
+  // interestLocation: InterestLocation[];
 
   @OneToOne(() => User, (user) => user.profile)
   user: User;
