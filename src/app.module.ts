@@ -138,10 +138,10 @@ import { Reflector } from '@nestjs/core';
     //   provide: APP_GUARD,
     //   useClass: ProfileCompleteGuard,
     // },
-    {
-      provide: APP_GUARD,
-      useClass: RBACGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: RBACGuard,
+    // },
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
