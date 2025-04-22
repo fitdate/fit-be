@@ -205,8 +205,14 @@ export class AuthService {
         await userQr.commitTransaction();
       } catch (error) {
         await userQr.rollbackTransaction();
-        errorBuffer.push(new Error(`User update failed: ${error.message}`));
-        log(`User update failed: ${error.message}`);
+        errorBuffer.push(
+          new Error(
+            `${error instanceof Error ? error.message : '유저 정보 업데이트 중 오류가 발생했습니다.'}`,
+          ),
+        );
+        log(
+          `${error instanceof Error ? error.message : '유저 정보 업데이트 중 오류가 발생했습니다.'}`,
+        );
       } finally {
         await userQr.release();
       }
@@ -223,8 +229,14 @@ export class AuthService {
         await profileQr.commitTransaction();
       } catch (error) {
         await profileQr.rollbackTransaction();
-        errorBuffer.push(new Error(`Profile save failed: ${error.message}`));
-        log(`Profile save failed: ${error.message}`);
+        errorBuffer.push(
+          new Error(
+            `${error instanceof Error ? error.message : '프로필 저장 중 오류가 발생했습니다.'}`,
+          ),
+        );
+        log(
+          `${error instanceof Error ? error.message : '프로필 저장 중 오류가 발생했습니다.'}`,
+        );
       } finally {
         await profileQr.release();
       }
@@ -246,10 +258,11 @@ export class AuthService {
                 return null;
               }
               const key = this.s3Service.extractKeyFromUrl(url);
-              const moved = await this.profileImageService.moveTempToProfileImage(
-                tempUser.profile.id,
-                key,
-              );
+              const moved =
+                await this.profileImageService.moveTempToProfileImage(
+                  tempUser.profile.id,
+                  key,
+                );
               return {
                 profile: { id: tempUser.profile.id },
                 url: moved.url,
@@ -274,9 +287,13 @@ export class AuthService {
         } catch (error) {
           await imageQr.rollbackTransaction();
           errorBuffer.push(
-            new Error(`Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`),
+            new Error(
+              `Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+            ),
           );
-          log(`Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`);
+          log(
+            `Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
+          );
         } finally {
           await imageQr.release();
         }
@@ -299,8 +316,14 @@ export class AuthService {
         await mbtiQr.commitTransaction();
       } catch (error) {
         await mbtiQr.rollbackTransaction();
-        errorBuffer.push(new Error(`MBTI save failed: ${error.message}`));
-        log(`MBTI save failed: ${error.message}`);
+        errorBuffer.push(
+          new Error(
+            `${error instanceof Error ? error.message : 'MBTI 저장 중 오류가 발생했습니다.'}`,
+          ),
+        );
+        log(
+          `${error instanceof Error ? error.message : 'MBTI 저장 중 오류가 발생했습니다.'}`,
+        );
       } finally {
         await mbtiQr.release();
       }
@@ -320,8 +343,14 @@ export class AuthService {
         await feedbackQr.commitTransaction();
       } catch (error) {
         await feedbackQr.rollbackTransaction();
-        errorBuffer.push(new Error(`Feedback save failed: ${error.message}`));
-        log(`Feedback save failed: ${error.message}`);
+        errorBuffer.push(
+          new Error(
+            `${error instanceof Error ? error.message : '피드백 저장 중 오류가 발생했습니다.'}`,
+          ),
+        );
+        log(
+          `${error instanceof Error ? error.message : '피드백 저장 중 오류가 발생했습니다.'}`,
+        );
       } finally {
         await feedbackQr.release();
       }
@@ -342,9 +371,13 @@ export class AuthService {
       } catch (error) {
         await introQr.rollbackTransaction();
         errorBuffer.push(
-          new Error(`Introduction save failed: ${error.message}`),
+          new Error(
+            `${error instanceof Error ? error.message : '자기소개 저장 중 오류가 발생했습니다.'}`,
+          ),
         );
-        log(`Introduction save failed: ${error.message}`);
+        log(
+          `${error instanceof Error ? error.message : '자기소개 저장 중 오류가 발생했습니다.'}`,
+        );
       } finally {
         await introQr.release();
       }
@@ -364,8 +397,14 @@ export class AuthService {
         await interestQr.commitTransaction();
       } catch (error) {
         await interestQr.rollbackTransaction();
-        errorBuffer.push(new Error(`Interests save failed: ${error.message}`));
-        log(`Interests save failed: ${error.message}`);
+        errorBuffer.push(
+          new Error(
+            `${error instanceof Error ? error.message : '관심사 저장 중 오류가 발생했습니다.'}`,
+          ),
+        );
+        log(
+          `${error instanceof Error ? error.message : '관심사 저장 중 오류가 발생했습니다.'}`,
+        );
       } finally {
         await interestQr.release();
       }
