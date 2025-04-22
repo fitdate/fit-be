@@ -8,6 +8,7 @@ import { CreateMatchDto } from './dto/create-match.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../notification/dto/create-notification.dto';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class MatchService {
@@ -16,6 +17,7 @@ export class MatchService {
     private matchRepository: Repository<Match>,
     private readonly profileService: ProfileService,
     private readonly notificationService: NotificationService,
+    private readonly userService: UserService,
   ) {}
 
   // 유사도 계산
@@ -117,8 +119,19 @@ export class MatchService {
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: Profile; user2: Profile }[];
   }> {
-    // 현재 사용자의 프로필 가져오기
+    // 현재 사용자의 성별 가져오기
+    const currentUser = await this.userService.findOne(userId);
+
+    if (!currentUser) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    // 유사도 계산을 위해 현재 사용자의 프로필 정보 가져오기
     const currentProfile = await this.profileService.getProfileByUserId(userId);
+
+    if (!currentProfile) {
+      throw new NotFoundException('프로필을 찾을 수 없습니다.');
+    }
 
     // 모든 프로필 가져오기 (현재 사용자 제외)
     const allProfiles = await this.profileService.findAll();
@@ -126,7 +139,7 @@ export class MatchService {
       (profile) =>
         profile.user &&
         profile.user.id !== userId &&
-        profile.user.gender !== currentProfile.user.gender, // 성별 다른 사람만 가져오기
+        profile.user.gender !== currentUser.gender, // 성별 다른 사람만 가져오기
     );
 
     // 유사도 계산 및 정렬
@@ -161,7 +174,7 @@ export class MatchService {
       profilesWithSimilarity.splice(selectedIndex, 1);
     }
 
-    // 최적의 매칭 쌍 찾기
+    // 매칭 생성
     const matches: { matchId: string; user1: Profile; user2: Profile }[] = [];
 
     // 2명씩 매칭

@@ -102,7 +102,10 @@ export class UserService {
   }
 
   findOne(id: string) {
-    return this.userRepository.findOne({ where: { id } });
+    return this.userRepository.findOne({
+      where: { id },
+      relations: ['profile'],
+    });
   }
 
   async saveUser(userName: string, socketId: string) {
