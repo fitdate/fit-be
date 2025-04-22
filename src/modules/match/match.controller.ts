@@ -7,16 +7,26 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Matching')
 @Controller('match')
-@UseGuards(JwtAuthGuard)
 export class MatchController {
   constructor(private readonly matchService: MatchService) {}
 
   @ApiOperation({
-    summary: '랜덤 매칭 4명 조회',
+    summary: '비로그인 사용자 랜덤 매칭 조회',
+    description: '남자-남자, 여자-여자 매칭을 각각 1쌍씩 랜덤으로 조회합니다.',
+  })
+  @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
+  @Get('random/public')
+  async findRandomPublicMatches() {
+    return this.matchService.findRandomPublicMatches();
+  }
+
+  @ApiOperation({
+    summary: '로그인 사용자 랜덤 매칭 4명 조회',
     description: '성별이 다른 4명의 랜덤 매칭을 조회합니다.',
   })
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
+  @UseGuards(JwtAuthGuard)
   @Get('random')
   async findRandomMatches(@CurrentUser() user: User) {
     return this.matchService.findRandomMatches(user.id);
