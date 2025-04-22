@@ -198,6 +198,8 @@ export class AuthService {
       log(
         `Checking registerDto.images: ${JSON.stringify(registerDto.images, null, 2)}`,
       );
+      log(`registerDto.images type: ${typeof registerDto.images}`);
+      log(`registerDto.images is array: ${Array.isArray(registerDto.images)}`);
       if (registerDto.images?.length) {
         log(`Found ${registerDto.images.length} images to process`);
         log('Starting profile image processing');
