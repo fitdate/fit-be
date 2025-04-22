@@ -230,7 +230,8 @@ export class AuthService {
       }
 
       // 3. 프로필 이미지 저장
-      if (registerDto.images?.length) {
+      if (registerDto.images && registerDto.images.length > 0) {
+        log(`Received image URLs: ${JSON.stringify(registerDto.images)}`);
         const imageQr = this.dataSource.createQueryRunner();
         await imageQr.connect();
         await imageQr.startTransaction();
@@ -239,6 +240,11 @@ export class AuthService {
         try {
           const profileImages = await Promise.all(
             registerDto.images.map(async (url, index) => {
+              log(`Processing image ${index + 1}: ${url}`);
+              if (!url) {
+                log(`Skipping null/undefined URL at index ${index}`);
+                return null;
+              }
               const key = this.s3Service.extractKeyFromUrl(url);
               const moved = await this.profileImageService.moveTempToProfileImage(
                 tempUser.profile.id,
@@ -253,18 +259,29 @@ export class AuthService {
             }),
           );
 
-          await imageQr.manager.save(ProfileImage, profileImages);
+          // null 값 필터링
+          const validProfileImages = profileImages.filter(
+            (image) => image !== null,
+          );
+          if (validProfileImages.length === 0) {
+            log('No valid images to save, skipping image save');
+            return;
+          }
+
+          await imageQr.manager.save(ProfileImage, validProfileImages);
           log(`Profile images saved successfully for user: ${tempUser.id}`);
           await imageQr.commitTransaction();
         } catch (error) {
           await imageQr.rollbackTransaction();
           errorBuffer.push(
-            new Error(`Profile image save failed: ${error.message}`),
+            new Error(`Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`),
           );
-          log(`Profile image save failed: ${error.message}`);
+          log(`Profile image save failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`);
         } finally {
           await imageQr.release();
         }
+      } else {
+        log('No profile images provided, skipping image save');
       }
 
       // 4. MBTI 저장
