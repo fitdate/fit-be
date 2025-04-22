@@ -166,7 +166,7 @@ export class MatchService {
     // 모든 프로필 가져오기
     const allProfiles = await this.profileService.findAll();
 
-    // 성별별로 프로필 분리 (null 체크 추가)
+    // 성별별로 프로필 분리
     const maleProfiles = allProfiles.filter(
       (profile) => profile.user && profile.user.gender === '남자',
     );
@@ -196,6 +196,11 @@ export class MatchService {
     // 남자-남자 매칭
     if (selectedMaleProfiles.length === 2) {
       const matchId = uuidv4();
+      await this.create({
+        matchId,
+        user1Id: selectedMaleProfiles[0].user.id,
+        user2Id: selectedMaleProfiles[1].user.id,
+      });
       matches.push({
         matchId,
         user1: selectedMaleProfiles[0],
@@ -206,6 +211,11 @@ export class MatchService {
     // 여자-여자 매칭
     if (selectedFemaleProfiles.length === 2) {
       const matchId = uuidv4();
+      await this.create({
+        matchId,
+        user1Id: selectedFemaleProfiles[0].user.id,
+        user2Id: selectedFemaleProfiles[1].user.id,
+      });
       matches.push({
         matchId,
         user1: selectedFemaleProfiles[0],
