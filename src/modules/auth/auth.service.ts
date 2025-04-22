@@ -60,8 +60,14 @@ export class AuthService {
       isMain: boolean;
     } | null> = [];
 
+    log(`Starting to process ${images.length} images`);
+    log(`Input images: ${JSON.stringify(images, null, 2)}`);
+
     for (let i = 0; i < images.length; i += CHUNK_SIZE) {
       const chunk = images.slice(i, i + CHUNK_SIZE);
+      log(
+        `Processing chunk ${i / CHUNK_SIZE + 1}: ${JSON.stringify(chunk, null, 2)}`,
+      );
       const chunkResults = await Promise.all(
         chunk.map(async (url, index) => {
           try {
@@ -71,34 +77,53 @@ export class AuthService {
               return null;
             }
 
+            log(`Extracting key from URL: ${url}`);
             const key = this.s3Service.extractKeyFromUrl(url);
+            log(`Extracted key: ${key}`);
+
+            log(
+              `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
+            );
             const moved = await this.profileImageService.moveTempToProfileImage(
               profileId,
               key,
             );
+            log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
 
-            return {
+            const result = {
               profile: { id: profileId },
               imageUrl: moved.url,
               key: moved.key,
               isMain: i + index === 0,
             };
+            log(
+              `Created profile image object: ${JSON.stringify(result, null, 2)}`,
+            );
+            return result;
           } catch (err) {
             log(
               `Failed to process image ${i + index + 1}: ${
                 err instanceof Error ? err.message : err
               }`,
             );
+            if (err instanceof Error && err.stack) {
+              log(`Error stack: ${err.stack}`);
+            }
             return null;
           }
         }),
       );
+      log(
+        `Chunk ${i / CHUNK_SIZE + 1} results: ${JSON.stringify(chunkResults, null, 2)}`,
+      );
       results.push(...chunkResults);
     }
 
-    return results.filter(
+    const filteredResults = results.filter(
       (img): img is NonNullable<typeof img> => img !== null,
     );
+    log(`Final filtered results: ${JSON.stringify(filteredResults, null, 2)}`);
+    return filteredResults;
   }
 
   async register(registerDto: RegisterDto) {
@@ -177,9 +202,18 @@ export class AuthService {
           log,
         );
 
+        log(`Processed ${profileImages.length} images`);
         if (profileImages.length > 0) {
-          await qr.manager.save(ProfileImage, profileImages);
+          log('Saving profile images to database');
+          log(`Profile images data: ${JSON.stringify(profileImages, null, 2)}`);
+          const savedImages = await qr.manager.save(
+            ProfileImage,
+            profileImages,
+          );
+          log(`Saved ${savedImages.length} profile images to database`);
           log(`Profile images saved successfully for user: ${user.id}`);
+        } else {
+          log('No profile images to save');
         }
       }
 
