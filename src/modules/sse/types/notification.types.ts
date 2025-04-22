@@ -1,15 +1,8 @@
-export interface NotificationDto {
-  message: string;
-  timestamp: Date;
-  type: NotificationType;
-  data?: Record<string, any>;
-}
+import { NotificationType } from '../../../common/enum/notification.enum';
 
-export enum NotificationType {
-  CHAT = 'chat',
-  MATCHING = 'matching',
-  SYSTEM = 'system',
-  LIKE = 'like',
-  COMMENT = 'comment',
-  FOLLOW = 'follow',
+export interface Notification {
+  type: NotificationType;
+  title?: string;
+  content?: string;
+  data?: Record<string, any>;
 }

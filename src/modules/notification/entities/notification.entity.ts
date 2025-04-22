@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { BaseTable } from 'src/common/entity/base-table.entity';
 import { User } from 'src/modules/user/entities/user.entity';
-import { NotificationType } from '../dto/create-notification.dto';
+import { NotificationType } from '../../../common/enum/notification.enum';
 
 @Entity()
 export class Notification extends BaseTable {

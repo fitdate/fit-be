@@ -7,7 +7,7 @@ import { Match } from './entities/match.entity';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from '../notification/dto/create-notification.dto';
+import { NotificationType } from 'src/common/enum/notification.enum';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -49,7 +49,7 @@ export class MatchService {
     }
 
     // 직업 유사도
-    if (profile1.job === profile2.job) {
+    if (profile1.user.job === profile2.user.job) {
       similarity += 20;
     }
 
@@ -365,7 +365,9 @@ export class MatchService {
 
     // 상대방에게 채팅방 입장 알림 전송
     await this.notificationService.create({
-      type: NotificationType.COFFEE_CHAT as NotificationType,
+      title: '채팅방 입장 알림',
+      content: '상대방이 채팅방에 입장했습니다. 대화를 시작해보세요!',
+      type: NotificationType.COFFEE_CHAT,
       receiverId: Number(opponentId),
       data: {
         matchId,

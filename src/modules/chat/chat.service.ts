@@ -5,7 +5,7 @@ import { ChatMessage } from './entities/chat-message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from '../notification/dto/create-notification.dto';
+import { NotificationType } from '../../common/enum/notification.enum';
 
 @Injectable()
 export class ChatService {

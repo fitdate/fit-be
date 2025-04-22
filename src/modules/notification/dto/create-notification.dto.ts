@@ -5,13 +5,7 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
-
-export enum NotificationType {
-  MATCH = 'MATCH',
-  LIKE = 'LIKE',
-  COFFEE_CHAT = 'COFFEE_CHAT',
-  CHAT = 'CHAT',
-}
+import { NotificationType } from '../../../common/enum/notification.enum';
 
 export class CreateNotificationDto {
   @IsOptional()

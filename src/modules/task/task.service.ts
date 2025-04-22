@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { SseService } from '../sse/sse.service';
-import { NotificationType } from '../sse/types/notification.types';
 import {
   DAILY_COFFEE_CHAT_AM_10,
   DAILY_PRE_COFFEE_CHAT_AM_9_55,
 } from './const/task-time';
+import { NotificationType } from '../../common/enum/notification.enum';
 
 @Injectable()
 export class TaskService {
@@ -21,9 +21,12 @@ export class TaskService {
     // todo: 커피챗 서비스 사용하기
     // 사용자들에게 커피챗 알림 보내기기
     this.sseService.sendNotification('실제 유저 넣기', {
-      message: '커피챗이 시작되었습니다!',
-      timestamp: new Date(),
       type: NotificationType.SYSTEM,
+      title: '커피챗 알림',
+      content: '커피챗이 시작되었습니다!',
+      data: {
+        timestamp: new Date(),
+      },
     });
   }
 
@@ -34,9 +37,12 @@ export class TaskService {
     // todo: 커피챗 서비스 사용하기
     // 사용자들에게 커피챗 시작 전 5분 알림 보내기
     this.sseService.sendNotification('실제 유저 넣기', {
-      message: '커피챗 시작 전 5분입니다!',
-      timestamp: new Date(),
       type: NotificationType.SYSTEM,
+      title: '커피챗 알림',
+      content: '커피챗 시작 전 5분입니다!',
+      data: {
+        timestamp: new Date(),
+      },
     });
   }
 }

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { MessageEvent } from '@nestjs/common';
 import { Subject } from 'rxjs';
-import { NotificationDto } from './types/notification.types';
+import { Notification } from './types/notification.types';
 
 @Injectable()
 export class SseService {
@@ -34,7 +34,7 @@ export class SseService {
     return this.clients;
   }
 
-  sendNotification(userId: string, notification: NotificationDto) {
+  sendNotification(userId: string, notification: Notification) {
     const client = this.clients.get(userId);
     if (client) {
       client.next({ data: notification } as MessageEvent);

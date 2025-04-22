@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Like } from './entities/like.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from '../notification/dto/create-notification.dto';
+import { NotificationType } from '../../common/enum/notification.enum';
 
 @Injectable()
 export class LikeService {

@@ -21,6 +21,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { Notification } from './entities/notification.entity';
 
@@ -36,6 +37,55 @@ export class NotificationController {
     status: 201,
     description: '알림이 생성되었습니다.',
     type: Notification,
+  })
+  @ApiBody({
+    type: CreateNotificationDto,
+    examples: {
+      match: {
+        summary: '매칭 알림',
+        value: {
+          type: 'MATCH',
+          receiverId: 1,
+          title: '새로운 매칭',
+          content: '새로운 매칭이 생성되었습니다.',
+        },
+      },
+      like: {
+        summary: '좋아요 알림',
+        value: {
+          type: 'LIKE',
+          receiverId: 1,
+          title: '새로운 좋아요',
+          content: '누군가가 당신의 프로필을 좋아합니다.',
+        },
+      },
+      coffeeChat: {
+        summary: '커피챗 알림',
+        value: {
+          type: 'COFFEE_CHAT',
+          receiverId: 1,
+          title: '커피챗 요청',
+          content: '새로운 커피챗 요청이 있습니다.',
+          data: {
+            chatId: 123,
+            senderId: 456,
+          },
+        },
+      },
+      chat: {
+        summary: '채팅 알림',
+        value: {
+          type: 'CHAT',
+          receiverId: 1,
+          title: '대화방 입장',
+          content: '상대방이 대화방에 입장했습니다.',
+          data: {
+            chatRoomId: 789,
+            messageId: 123,
+          },
+        },
+      },
+    },
   })
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {
