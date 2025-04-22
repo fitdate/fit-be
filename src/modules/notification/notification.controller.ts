@@ -45,7 +45,7 @@ export class NotificationController {
         summary: '매칭 알림',
         value: {
           type: 'MATCH',
-          receiverId: '123e4567-e89b-12d3-a456-426614174000',
+          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
           title: '새로운 매칭',
           content: '새로운 매칭이 생성되었습니다.',
         },
@@ -54,7 +54,7 @@ export class NotificationController {
         summary: '좋아요 알림',
         value: {
           type: 'LIKE',
-          receiverId: '123e4567-e89b-12d3-a456-426614174000',
+          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
           title: '새로운 좋아요',
           content: '누군가가 당신의 프로필을 좋아합니다.',
         },
@@ -63,7 +63,7 @@ export class NotificationController {
         summary: '커피챗 알림',
         value: {
           type: 'COFFEE_CHAT',
-          receiverId: '123e4567-e89b-12d3-a456-426614174000',
+          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
           title: '커피챗 요청',
           content: '새로운 커피챗 요청이 있습니다.',
           data: {
@@ -76,7 +76,7 @@ export class NotificationController {
         summary: '채팅 알림',
         value: {
           type: 'CHAT',
-          receiverId: '123e4567-e89b-12d3-a456-426614174000',
+          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
           title: '대화방 입장',
           content: '상대방이 대화방에 입장했습니다.',
           data: {
