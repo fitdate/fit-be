@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserSocialDto } from './dto/create-user-social.dto';
+
 @Injectable()
 export class UserService {
   constructor(
@@ -102,31 +103,5 @@ export class UserService {
 
   findOne(id: string) {
     return this.userRepository.findOne({ where: { id } });
-  }
-
-  async saveUser(userName: string, socketId: string) {
-    let user = await this.userRepository.findOne({ where: { name: userName } });
-
-    if (!user) {
-      user = this.userRepository.create({
-        name: userName,
-        chatToken: socketId,
-        chatOnline: true,
-      });
-    } else {
-      user.chatToken = socketId;
-      user.chatOnline = true;
-    }
-
-    await this.userRepository.save(user);
-    return user;
-  }
-
-  async checkUser(socketId: string) {
-    const user = await this.userRepository.findOne({
-      where: { chatToken: socketId },
-    });
-    if (!user) throw new Error('user not found');
-    return user;
   }
 }

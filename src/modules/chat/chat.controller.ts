@@ -20,21 +20,30 @@ import { User } from '../user/entities/user.entity';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @ApiOperation({ summary: '채팅방 생성' })
-  @ApiResponse({ status: 201, description: '채팅방이 성공적으로 생성됨' })
-  @Post('chatRooms')
-  async createRoom(@Body('name') name: string) {
-    return this.chatService.createRoom(name);
+  @ApiOperation({
+    summary: '매칭 채팅방 생성',
+    description:
+      '매칭 결과 페이지에서 매칭 성공 시 자동으로 호출되어 채팅방을 생성합니다. 매칭된 두 사용자가 자동으로 참여자로 추가되고, 양쪽 사용자에게 채팅방 입장 알림이 전송됩니다.',
+  })
+  @ApiResponse({ status: 201, description: '매칭 채팅방이 성공적으로 생성됨' })
+  @Post('matchingRooms')
+  async createMatchingRoom(@Body() body: { user1Id: string; user2Id: string }) {
+    return this.chatService.createMatchingRoom(body.user1Id, body.user2Id);
   }
 
-  @ApiOperation({ summary: '채팅방 목록 조회' })
+  @ApiOperation({
+    summary: '채팅방 목록 조회',
+  })
   @ApiResponse({ status: 200, description: '채팅방 목록 조회 성공' })
   @Get('chatRooms')
   async getRooms() {
     return this.chatService.getRooms();
   }
 
-  @ApiOperation({ summary: '채팅방 상세 정보 조회' })
+  @ApiOperation({
+    summary: '채팅방 상세 정보 조회',
+    description: '특정 채팅방의 상세 정보를 조회합니다.',
+  })
   @ApiResponse({ status: 200, description: '채팅방 상세 정보 조회 성공' })
   @Get('chatRooms/:chatRoomId')
   async getRoom(@Param('chatRoomId') chatRoomId: string) {
@@ -79,6 +88,47 @@ export class ChatController {
   ) {
     return this.chatService.sendChatRoomEntryNotification(
       chatRoomId,
+      user.id,
+      body.opponentId,
+    );
+  }
+
+  @ApiOperation({ summary: '채팅방 입장' })
+  @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
+  @Post('chatRooms/:chatRoomId/enter')
+  async enterRoom(
+    @CurrentUser() user: User,
+    @Param('chatRoomId') chatRoomId: string,
+  ) {
+    return this.chatService.enterRoom(chatRoomId, user.id);
+  }
+
+  @ApiOperation({
+    summary: '대화방 버튼 클릭 시 채팅방 입장',
+    description:
+      '채팅 페이지에서 대화방 버튼을 클릭하면 호출됩니다. 기존 채팅방이 있으면 해당 채팅방을 반환하고, 없으면 새로 생성합니다.',
+  })
+  @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
+  @Post('chatRooms/findOrCreate')
+  async findOrCreateChatRoom(
+    @CurrentUser() user: User,
+    @Body() body: { opponentId: string },
+  ) {
+    return this.chatService.findOrCreateChatRoom(user.id, body.opponentId);
+  }
+
+  @ApiOperation({
+    summary: '알림 메시지의 채팅하기 버튼 클릭 시 채팅방 입장',
+    description:
+      '매칭 알림의 채팅하기 버튼을 클릭하면 호출됩니다. 기존 채팅방이 있으면 해당 채팅방을 반환하고, 없으면 새로 생성합니다.',
+  })
+  @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
+  @Post('chatRooms/fromNotification')
+  async createChatRoomFromNotification(
+    @CurrentUser() user: User,
+    @Body() body: { opponentId: string },
+  ) {
+    return this.chatService.createChatRoomFromNotification(
       user.id,
       body.opponentId,
     );
