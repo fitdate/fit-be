@@ -194,7 +194,11 @@ export class AuthService {
       log(`User created successfully with ID: ${user.id}`);
 
       // 3. 프로필 이미지 저장
+      log(
+        `Checking registerDto.images: ${JSON.stringify(registerDto.images, null, 2)}`,
+      );
       if (registerDto.images?.length) {
+        log(`Found ${registerDto.images.length} images to process`);
         log('Starting profile image processing');
         const profileImages = await this.processImagesInChunks(
           registerDto.images,
@@ -205,16 +209,38 @@ export class AuthService {
         log(`Processed ${profileImages.length} images`);
         if (profileImages.length > 0) {
           log('Saving profile images to database');
-          log(`Profile images data: ${JSON.stringify(profileImages, null, 2)}`);
+          log(
+            `Profile images data before save: ${JSON.stringify(
+              profileImages,
+              null,
+              2,
+            )}`,
+          );
+
+          // 각 이미지 객체의 구조 확인
+          profileImages.forEach((img, index) => {
+            log(`Image ${index + 1} structure check:`);
+            log(`- profile.id: ${img.profile.id}`);
+            log(`- imageUrl: ${img.imageUrl}`);
+            log(`- key: ${img.key}`);
+            log(`- isMain: ${img.isMain}`);
+          });
+
           const savedImages = await qr.manager.save(
             ProfileImage,
             profileImages,
           );
+
           log(`Saved ${savedImages.length} profile images to database`);
+          log(
+            `Profile images after save: ${JSON.stringify(savedImages, null, 2)}`,
+          );
           log(`Profile images saved successfully for user: ${user.id}`);
         } else {
           log('No profile images to save');
         }
+      } else {
+        log('No images found in registerDto.images');
       }
 
       // 4. MBTI 저장

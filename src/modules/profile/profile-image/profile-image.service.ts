@@ -175,7 +175,7 @@ export class ProfileImageService {
     await this.s3Service.deleteFile(url, bucketName);
   }
 
-  async moveTempToProfileImage(userId: string, fileKey: string) {
+  async moveTempToProfileImage(profileId: string, fileKey: string) {
     this.logger.log(`임시 이미지를 프로필 이미지로 이동 시작: ${fileKey}`);
     const bucketName = this.configService.getOrThrow('aws.bucketName', {
       infer: true,
@@ -189,7 +189,7 @@ export class ProfileImageService {
         throw new BadRequestException('잘못된 파일 경로입니다.');
       }
 
-      const newKey = `profile-images/${userId}/${fileName}`;
+      const newKey = `profile-images/${profileId}/${fileName}`;
 
       this.logger.log(`이미지 복사 시작: ${fileKey} -> ${newKey}`);
       const copy = new CopyObjectCommand({
