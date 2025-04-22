@@ -171,8 +171,9 @@ export class AuthService {
     await qr.startTransaction();
 
     try {
-      const hashedPassword = await this.hashService.hash(registerDto.password);
-      tempUser.password = hashedPassword;
+      // const hashedPassword = await this.hashService.hash(registerDto.password);
+      // tempUser.password = hashedPassword;
+      tempUser.password = registerDto.password;
       tempUser.nickname = registerDto.nickname;
       tempUser.name = registerDto.name;
       tempUser.birthday = registerDto.birthday;
