@@ -118,39 +118,49 @@ export class AuthService {
   }
 
   async emailTempRegister(email: string) {
-    // 인증 완료 후 Redis에서 인증 상태 삭제
+    this.logger.log(`Starting emailTempRegister for: ${email}`);
     const verifiedKey = `email-verified:${email}`;
     await this.redisService.del(verifiedKey);
 
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
+    this.logger.log(`Transaction started for email: ${email}`);
 
     try {
+      this.logger.log(`Attempting to save temp user for email: ${email}`);
       const user = await qr.manager.save(User, {
         email,
         role: UserRole.TEMP_USER,
         authProvider: AuthProvider.EMAIL,
       });
+      this.logger.log(
+        `Temp user saved successfully - ID: ${user.id}, Email: ${user.email}, AuthProvider: ${user.authProvider}`,
+      );
 
+      this.logger.log(`Attempting to save profile for user: ${user.id}`);
       const profile = await qr.manager.save(Profile, {
         user: { id: user.id },
       });
+      this.logger.log(`Profile saved successfully for user: ${user.id}`);
 
       await qr.commitTransaction();
+      this.logger.log(`Transaction committed successfully for email: ${email}`);
       return { user, profile };
     } catch (error) {
-      await qr.rollbackTransaction();
       this.logger.error(
-        `Failed to create temp user for email: ${email}`,
+        `Transaction failed for email: ${email}`,
         error instanceof Error ? error.stack : undefined,
       );
+      await qr.rollbackTransaction();
+      this.logger.log(`Transaction rolled back for email: ${email}`);
       throw new InternalServerErrorException(
         '기본 유저 생성 중 오류가 발생했습니다.',
         { cause: error },
       );
     } finally {
       await qr.release();
+      this.logger.log(`QueryRunner released for email: ${email}`);
     }
   }
 
@@ -162,8 +172,10 @@ export class AuthService {
     const isEmailVerified = await this.checkEmailVerification(
       registerDto.email,
     );
+    this.logger.log(`Email verification status: ${isEmailVerified}`);
 
     const tempUser = await this.userService.findUserByEmail(registerDto.email);
+    this.logger.log(`Found temp user: ${tempUser ? `ID: ${tempUser.id}, AuthProvider: ${tempUser.authProvider}` : 'Not found'}`);
 
     if (!tempUser) {
       throw new UnauthorizedException('인증이 완료되지 않은 이메일입니다.');
@@ -680,14 +692,13 @@ export class AuthService {
         `Saved verification status - Key: ${verifiedKey}, Value: ${savedValue}, TTL: ${verifiedTtlSeconds} seconds`,
       );
 
-      // 인증 코드 삭제
-      await this.redisService.del(codeKey);
-      this.logger.log(`Deleted verification code key: ${codeKey}`);
-
       // 임시 유저 생성
       await this.emailTempRegister(email);
 
       this.logger.log(`Successfully verified email: ${email}`);
+      // 인증 코드 삭제
+      await this.redisService.del(codeKey);
+      this.logger.log(`Deleted verification code key: ${codeKey}`);
 
       return {
         verified: true,
