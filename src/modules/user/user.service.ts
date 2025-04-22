@@ -94,7 +94,10 @@ export class UserService {
   }
 
   findUserByEmail(email: string) {
-    return this.userRepository.findOne({ where: { email } });
+    return this.userRepository.findOne({
+      where: { email },
+      relations: ['profile'],
+    });
   }
 
   findUserByNickname(nickname: string) {
