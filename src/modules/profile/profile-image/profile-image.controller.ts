@@ -32,7 +32,7 @@ export class ProfileImageController {
   constructor(private readonly profileImageService: ProfileImageService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Upload multiple profile images' })
+  @ApiOperation({ summary: '프로필 이미지 업로드' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -50,10 +50,10 @@ export class ProfileImageController {
   })
   @ApiResponse({
     status: 201,
-    description: 'Profile images uploaded successfully',
+    description: '프로필 이미지 업로드 성공',
   })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
+  @ApiResponse({ status: 500, description: '서버 오류' })
   @UseInterceptors(FilesInterceptor('files', 6)) // 최대 6개의 파일 업로드 가능
   async uploadProfileImages(
     @UploadedFiles() files: MulterFile[],
@@ -61,7 +61,7 @@ export class ProfileImageController {
     @UserId() userId: string,
   ) {
     if (!files || files.length === 0) {
-      throw new BadRequestException('No files were uploaded');
+      throw new BadRequestException('업로드된 파일이 없습니다.');
     }
 
     return this.profileImageService.uploadProfileImages(userId, files);
@@ -92,10 +92,10 @@ export class ProfileImageController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Profile images updated successfully',
+    description: '프로필 이미지 업데이트 성공',
   })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
+  @ApiResponse({ status: 500, description: '서버 오류' })
   @UseInterceptors(FilesInterceptor('files', 6))
   async updateProfileImages(
     @Param('profileId') profileId: string,
@@ -103,7 +103,7 @@ export class ProfileImageController {
     @UploadedFiles() files: MulterFile[],
   ) {
     if (!files || files.length === 0) {
-      throw new BadRequestException('No files were uploaded');
+      throw new BadRequestException('업로드된 파일이 없습니다.');
     }
 
     return this.profileImageService.updateProfileImages(
@@ -130,14 +130,14 @@ export class ProfileImageController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Profile images deleted successfully',
+    description: '프로필 이미지 삭제 성공',
   })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 500, description: '서버 오류' })
   async deleteProfileImages(
     @Body() deleteProfileImageDto: DeleteProfileImageDto,
   ) {
     if (!deleteProfileImageDto.ids || deleteProfileImageDto.ids.length === 0) {
-      throw new BadRequestException('No image IDs provided');
+      throw new BadRequestException('이미지 ID가 제공되지 않았습니다.');
     }
 
     return this.profileImageService.deleteProfileImages(
@@ -146,10 +146,10 @@ export class ProfileImageController {
   }
 
   @Patch('set-main-image')
-  @ApiOperation({ summary: 'Set main image' })
-  @ApiResponse({ status: 200, description: 'Main image set successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiOperation({ summary: '메인 이미지 설정' })
+  @ApiResponse({ status: 200, description: '메인 이미지가 설정되었습니다.' })
+  @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
+  @ApiResponse({ status: 500, description: '서버 오류' })
   async setMainImage(@UserId() userId: string, @Param('id') imageId: string) {
     return this.profileImageService.setMainImage(userId, imageId);
   }
@@ -158,10 +158,10 @@ export class ProfileImageController {
   @ApiOperation({ summary: 'Get profile images' })
   @ApiResponse({
     status: 200,
-    description: 'Profile images retrieved successfully',
+    description: '프로필 이미지 조회 성공',
   })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 400, description: '잘못된 요청입니다.' })
+  @ApiResponse({ status: 500, description: '서버 오류' })
   async getProfileImages(@UserId() userId: string) {
     return this.profileImageService.getProfileImages(userId);
   }
