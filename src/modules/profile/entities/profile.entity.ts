@@ -34,7 +34,7 @@ export class Profile {
   @OneToMany(() => ProfileImage, (profileImage) => profileImage.profile)
   profileImage: ProfileImage[];
 
-  @OneToOne(() => Mbti, (mbti) => mbti.profile)
+  @OneToOne(() => Mbti, (mbti) => mbti.profile, { nullable: true })
   @JoinColumn()
   mbti: Mbti;
 

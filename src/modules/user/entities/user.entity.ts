@@ -22,16 +22,16 @@ export class User extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: false })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   password: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   nickname: string;
 
-  @Column()
+  @Column({ nullable: true })
   name: string;
 
   @Column({ nullable: true })
@@ -54,7 +54,7 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   phone?: string;
 
-  @OneToOne(() => Profile, (profile) => profile.user)
+  @OneToOne(() => Profile, (profile) => profile.user, { nullable: true })
   @JoinColumn()
   profile: Profile;
 
@@ -70,7 +70,7 @@ export class User extends BaseTable {
   @OneToMany(() => Like, (like) => like.user)
   likedBy: Like[];
 
-  @Column({ default: 30 })
+  @Column({ default: 30, nullable: true })
   likeCount: number;
 
   @OneToMany(() => Pass, (pass) => pass.passedUser)
@@ -103,7 +103,6 @@ export class User extends BaseTable {
   @ManyToMany(() => ChatRoom, (room) => room.users)
   chatRooms: ChatRoom[];
 
-  @OneToOne(() => UserList, (userList) => userList.user)
-  @JoinColumn()
+  @OneToOne(() => UserList, (userList) => userList.user, { nullable: true })
   userList: UserList;
 }

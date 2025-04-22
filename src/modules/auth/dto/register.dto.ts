@@ -17,7 +17,7 @@ import { CreateUserMbtiDto } from 'src/modules/profile/mbti/dto/create-mbti.dto'
 import { CreateUserFeedbackDto } from 'src/modules/profile/feedback/dto/create-user-feedback.dto';
 import { CreateUserIntroductionDto } from 'src/modules/profile/introduction/dto/create-user-introduction.dto';
 import { CreateUserInterestCategoryDto } from 'src/modules/profile/interest-category/dto/create-user-interest-category.dto';
-
+import { CreateProfileImageDto } from 'src/modules/profile/profile-image/dto/create-profile-image.dto';
 export class RegisterDto {
   @ApiProperty({
     description: '이메일',
@@ -142,4 +142,27 @@ export class RegisterDto {
   })
   @IsOptional()
   interestCategory?: CreateUserInterestCategoryDto;
+
+  @ApiProperty({
+    description: '프로필 이미지 정보',
+    type: CreateProfileImageDto,
+  })
+  @IsOptional()
+  profileImageUrls?: CreateProfileImageDto[];
+
+  @ApiProperty({
+    description: '직업',
+    example: '개발자',
+  })
+  @IsString()
+  @IsOptional()
+  job?: string;
+
+  @ApiProperty({
+    description: '소개',
+    example: '안녕하세요!',
+  })
+  @IsString()
+  @IsOptional()
+  intro?: string;
 }
