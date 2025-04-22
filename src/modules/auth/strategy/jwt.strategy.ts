@@ -1,10 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
-import { AuthGuard, PassportStrategy } from '@nestjs/passport';
+import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-jwt';
 import { TokenPayload } from '../types/token-payload.types';
 import { Request } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 
 const cookieExtractor = (req: Request) => {
   if (!req || !req.cookies) {
