@@ -99,7 +99,7 @@ export class ProfileImageController {
     return this.profileImageService.updateProfileImages(
       profileId,
       files,
-      updateProfileImageDto.oldImageIds || [],
+      updateProfileImageDto.oldImageIds,
     );
   }
 

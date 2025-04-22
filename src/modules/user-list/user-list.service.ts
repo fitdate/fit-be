@@ -14,11 +14,5 @@ export class UserListService {
   ) {}
   filterUserList(userId: string, userListDto: CreateUserListDto) {}
 
-  BaseUserList(userId: string) {
-    const user = this.userService.getUserById(userId);
-    if (!user) {
-      throw new NotFoundException('유저를 찾을 수 없습니다다');
-    }
-    
-  }
+  BaseUserList(userId: string) {}
 }
