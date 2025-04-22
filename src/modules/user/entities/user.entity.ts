@@ -70,8 +70,11 @@ export class User extends BaseTable {
   @OneToMany(() => Like, (like) => like.user)
   likedBy: Like[];
 
-  @Column({ default: 30, nullable: true })
+  @Column({ default: 0, nullable: true })
   likeCount: number;
+
+  @Column({ default: 100, nullable: true })
+  coffee: number;
 
   @OneToMany(() => Pass, (pass) => pass.passedUser)
   passedBy: Pass[];
