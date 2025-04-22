@@ -138,4 +138,9 @@ export class CreateUserDto extends BaseTable {
   @IsEnum(AuthProvider)
   @IsNotEmpty()
   authProvider: AuthProvider;
+
+  @Expose()
+  @IsString()
+  @IsOptional()
+  job?: string;
 }

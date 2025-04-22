@@ -12,6 +12,11 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from 'src/common/enum/user-role.enum';
+import { CreateProfileDto } from 'src/modules/profile/dto/create-profile.dto';
+import { CreateUserMbtiDto } from 'src/modules/profile/mbti/dto/create-mbti.dto';
+import { CreateUserFeedbackDto } from 'src/modules/profile/feedback/dto/create-user-feedback.dto';
+import { CreateUserIntroductionDto } from 'src/modules/profile/introduction/dto/create-user-introduction.dto';
+import { CreateUserInterestCategoryDto } from 'src/modules/profile/interest-category/dto/create-user-interest-category.dto';
 
 export class RegisterDto {
   @ApiProperty({
@@ -102,4 +107,39 @@ export class RegisterDto {
   })
   @IsEnum(UserRole)
   role: UserRole = UserRole.USER;
+
+  @ApiProperty({
+    description: '프로필 정보',
+    type: CreateProfileDto,
+  })
+  @IsOptional()
+  profile?: CreateProfileDto;
+
+  @ApiProperty({
+    description: 'MBTI 정보',
+    type: CreateUserMbtiDto,
+  })
+  @IsOptional()
+  mbti?: CreateUserMbtiDto;
+
+  @ApiProperty({
+    description: '피드백 정보',
+    type: CreateUserFeedbackDto,
+  })
+  @IsOptional()
+  feedback?: CreateUserFeedbackDto;
+
+  @ApiProperty({
+    description: '소개 정보',
+    type: CreateUserIntroductionDto,
+  })
+  @IsOptional()
+  introduction?: CreateUserIntroductionDto;
+
+  @ApiProperty({
+    description: '관심 카테고리 정보',
+    type: CreateUserInterestCategoryDto,
+  })
+  @IsOptional()
+  interestCategory?: CreateUserInterestCategoryDto;
 }

@@ -50,6 +50,8 @@ export class User extends BaseTable {
   height: string;
 
   @Column({ nullable: true })
+  job?: string;
+  @Column({ nullable: true })
   phone?: string;
 
   @OneToOne(() => Profile, (profile) => profile.user)

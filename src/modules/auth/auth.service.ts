@@ -113,14 +113,12 @@ export class AuthService {
       phone,
       region,
       role,
+      profile,
+      mbti,
+      feedback,
+      introduction,
+      interestCategory,
     } = registerDto;
-
-    // const isEmailVerified = await this.checkEmailVerification(email);
-    // if (!isEmailVerified) {
-    //   throw new UnauthorizedException(
-    //     '이메일 인증이 완료되지 않았습니다. 인증 후 회원가입이 가능합니다.',
-    //   );
-    // }
 
     const userEmail = await this.userService.findUserByEmail(email);
     if (userEmail) {
@@ -166,36 +164,24 @@ export class AuthService {
       phone,
       region: userRegion,
       role,
-      isProfileComplete: true,
+      isProfileComplete: false,
       authProvider: userAuthProvider,
     });
 
     // 프로필 자동 생성
     await this.profileService.createFullProfile(user.id, {
-      createProfileDto: {
-        intro: '',
-        job: '',
-      },
-      createUserMbtiDto: {
-        mbti: '',
-      },
-      createUserFeedbackDto: {
-        feedbackIds: [],
-        profileId: '',
-      },
-      createUserIntroductionDto: {
+      createProfileDto: profile || { intro: '', job: '' },
+      createUserMbtiDto: mbti || { mbti: '' },
+      createUserFeedbackDto: feedback || { feedbackIds: [], profileId: '' },
+      createUserIntroductionDto: introduction || {
         introductionIds: [],
         profileId: '',
       },
-      createUserInterestCategoryDto: {
+      createUserInterestCategoryDto: interestCategory || {
         interestCategoryIds: [],
         profileId: '',
       },
     });
-
-    // 인증 완료 후 Redis에서 인증 상태 삭제
-    // const verifiedKey = `email-verified:${email}`;
-    // await this.redisService.del(verifiedKey);
 
     this.logger.log(
       `Successfully registered user with email: ${registerDto.email}`,
