@@ -29,10 +29,12 @@ import { UserInterestCategory } from '../profile/interest-category/entities/user
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 import { S3Service } from '../s3/s3.service';
+import { TokenService } from './token.service';
+import { RequestWithUser } from './types/request.types';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
+  protected readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly userService: UserService,
@@ -46,6 +48,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly s3Service: S3Service,
     private readonly profileImageService: ProfileImageService,
+    private readonly tokenService: TokenService,
   ) {}
   private async processImagesInChunks(
     images: string[],
@@ -80,7 +83,9 @@ export class AuthService {
             log(`Extracting key from URL: ${url}`);
             const key = this.s3Service.extractKeyFromUrl(url);
             log(`Extracted key: ${key}`);
-            log(`URL components: ${JSON.stringify(url.split('.amazonaws.com/'), null, 2)}`);
+            log(
+              `URL components: ${JSON.stringify(url.split('.amazonaws.com/'), null, 2)}`,
+            );
 
             log(
               `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
@@ -370,10 +375,24 @@ export class AuthService {
     this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
-    this.logger.log(
-      `Successfully logged in user with email: ${loginDto.email}`,
-    );
-    return this.generateTokens(user.id, user.role, origin);
+
+    const { accessToken, refreshToken } =
+      await this.tokenService.generateTokens(user.id, user.role);
+
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    return {
+      accessToken,
+      refreshToken,
+      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+    };
   }
 
   //이메일 로그인
@@ -384,10 +403,27 @@ export class AuthService {
   ): Promise<LoginResponse> {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
-    const tokens = this.generateTokens(user.id, user.role, req.headers.origin);
+    const { accessToken, refreshToken } =
+      await this.tokenService.generateTokens(user.id, user.role);
 
-    res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
-    res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    res.cookie(
+      'accessToken',
+      accessToken,
+      this.createCookieOptions(accessTokenMaxAge, req.headers.origin),
+    );
+    res.cookie(
+      'refreshToken',
+      refreshToken,
+      this.createCookieOptions(refreshTokenMaxAge, req.headers.origin),
+    );
 
     const userData = await this.userService.findOne(user.id);
     if (!userData) {
@@ -403,13 +439,20 @@ export class AuthService {
   }
 
   //로그아웃
-  handleLogout(req: Request, res: Response) {
+  async handleLogout(req: RequestWithUser, res: Response) {
     try {
       const cookieOptions = this.logoutCookieOptions(req.headers.origin);
 
       // 쿠키 만료 설정
       res.cookie('accessToken', '', cookieOptions.accessOptions);
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
+
+      // Refresh Token 취소
+      const userId = req.user?.sub;
+      const tokenId = (req.user as { tokenId?: string })?.tokenId;
+      if (userId && tokenId) {
+        await this.tokenService.revokeRefreshToken(userId, tokenId);
+      }
 
       return {
         message: '로그아웃 성공',
@@ -537,30 +580,6 @@ export class AuthService {
       );
     }
   }
-  // 토큰 생성
-  generateTokens(
-    userId: string,
-    userRole: UserRole,
-    origin?: string,
-  ): JwtTokenResponse {
-    const accessToken = this.issueToken(userId, userRole, false);
-    const refreshToken = this.issueToken(userId, userRole, true);
-
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
-
-    return {
-      accessToken,
-      refreshToken,
-      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
-    };
-  }
 
   //쿠키
   createCookieOptions(maxAge: number, origin?: string): CookieOptions {
@@ -601,67 +620,6 @@ export class AuthService {
       accessOptions: this.createCookieOptions(0, origin),
       refreshOptions: this.createCookieOptions(0, origin),
     };
-  }
-
-  issueToken(userId: string, userRole: UserRole, isRefreshToken: boolean) {
-    const accessTokenSecret = this.configService.getOrThrow(
-      'jwt.accessTokenSecret',
-      {
-        infer: true,
-      },
-    );
-
-    const refreshTokenSecret = this.configService.getOrThrow(
-      'jwt.refreshTokenSecret',
-      {
-        infer: true,
-      },
-    );
-
-    const accessTokenExpiresIn = this.configService.getOrThrow(
-      'jwt.accessTokenTtl',
-      {
-        infer: true,
-      },
-    );
-
-    const refreshTokenExpiresIn = this.configService.getOrThrow(
-      'jwt.refreshTokenTtl',
-      {
-        infer: true,
-      },
-    );
-
-    const tokenType = isRefreshToken ? 'refresh' : 'access';
-
-    const audience = this.configService.getOrThrow('jwt.audience', {
-      infer: true,
-    });
-
-    const issuer = this.configService.getOrThrow('jwt.issuer', {
-      infer: true,
-    });
-
-    const tokenSecret = isRefreshToken ? refreshTokenSecret : accessTokenSecret;
-
-    const tokenTtl = isRefreshToken
-      ? refreshTokenExpiresIn
-      : accessTokenExpiresIn;
-
-    const token = this.jwtService.sign(
-      {
-        sub: userId,
-        role: userRole,
-        type: tokenType,
-      },
-      {
-        secret: tokenSecret,
-        expiresIn: tokenTtl,
-        audience,
-        issuer,
-      },
-    );
-    return token;
   }
 
   async sendVerificationEmail(
@@ -786,7 +744,23 @@ export class AuthService {
       }
     }
 
-    const tokenResponse = this.generateTokens(user.id, user.role, origin);
+    const { accessToken, refreshToken } =
+      await this.tokenService.generateTokens(user.id, user.role);
+
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    const tokenResponse = {
+      accessToken,
+      refreshToken,
+      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+    };
 
     // 프로필 완성 여부 확인
     const isProfileComplete = user.isProfileComplete || false;
@@ -933,6 +907,51 @@ export class AuthService {
     } finally {
       await qr.release();
       log('QueryRunner released');
+    }
+  }
+
+  // 토큰 갱신 메서드 추가
+  async refreshTokens(
+    userId: string,
+    oldTokenId: string,
+    origin?: string,
+  ): Promise<JwtTokenResponse> {
+    const { accessToken, refreshToken } =
+      await this.tokenService.rotateRefreshToken(userId, oldTokenId);
+
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    return {
+      accessToken,
+      refreshToken,
+      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+    };
+  }
+
+  async checkAndRefreshActivity(userId: string): Promise<boolean> {
+    try {
+      // 토큰 유효성 검사
+      const isValid = await this.tokenService.validateRefreshToken(
+        userId,
+        userId,
+      );
+      if (!isValid) {
+        return false;
+      }
+
+      // 토큰 갱신
+      await this.tokenService.rotateRefreshToken(userId, userId);
+      return true;
+    } catch (error) {
+      this.logger.error(`Activity check failed for user ${userId}:`, error);
+      return false;
     }
   }
 }

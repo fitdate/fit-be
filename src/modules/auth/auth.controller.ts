@@ -21,6 +21,7 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
+import { RequestWithUser } from './types/request.types';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -99,7 +100,10 @@ export class AuthController {
   @Post('logout')
   @ApiOperation({ summary: '로그아웃' })
   @ApiResponse({ status: 200, description: '로그아웃 성공' })
-  logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  logout(
+    @Req() req: RequestWithUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.authService.handleLogout(req, res);
   }
 

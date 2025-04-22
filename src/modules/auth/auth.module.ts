@@ -13,6 +13,7 @@ import { LocationModule } from '../location/location.module';
 import { ProfileModule } from '../profile/profile.module';
 import { S3Module } from '../s3/s3.module';
 import { ProfileImageModule } from '../profile/profile-image/profile-image.module';
+import { TokenService } from './token.service';
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { ProfileImageModule } from '../profile/profile-image/profile-image.modul
     },
     JwtStrategy,
     GoogleStrategy,
+    TokenService,
   ],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, JwtModule, TokenService],
 })
 export class AuthModule {}

@@ -57,6 +57,7 @@ import { ChatModule } from './modules/chat/chat.module';
 // import { ChatController } from './modules/chat/chat.controller';
 import { UserListModule } from './modules/user-list/user-list.module';
 import { Reflector } from '@nestjs/core';
+import { ActivityMiddleware } from './modules/auth/middleware/activity.middleware';
 
 @Module({
   imports: [
@@ -151,6 +152,7 @@ import { Reflector } from '@nestjs/core';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ActivityMiddleware).forRoutes('*');
     // consumer
     //   .apply(AuthMiddleware)
     //   .exclude(
