@@ -362,6 +362,12 @@ export class AuthService {
       logBuffer.forEach((logMessage, index) => {
         log(`[${index + 1}] ${logMessage}`);
       });
+      log(
+        `Error details: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+      );
+      if (error instanceof Error && error.stack) {
+        log(`Error stack: ${error.stack}`);
+      }
       throw new InternalServerErrorException(
         '회원가입 중 오류가 발생했습니다.',
         { cause: error },
