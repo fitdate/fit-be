@@ -55,7 +55,7 @@ export class AuthService {
     const CHUNK_SIZE = 3; // 동시에 처리할 이미지 수
     const results: Array<{
       profile: { id: string };
-      url: string;
+      imageUrl: string;
       key: string;
       isMain: boolean;
     } | null> = [];
@@ -79,7 +79,7 @@ export class AuthService {
 
             return {
               profile: { id: profileId },
-              url: moved.url,
+              imageUrl: moved.url,
               key: moved.key,
               isMain: i + index === 0,
             };
@@ -767,5 +767,109 @@ export class AuthService {
       },
       origin,
     );
+  }
+
+  async deleteAccount(userId: string) {
+    const logBuffer: string[] = [];
+    const log = (message: string) => {
+      logBuffer.push(message);
+      this.logger.log(message);
+    };
+
+    log(`Starting account deletion for user: ${userId}`);
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+
+    try {
+      // 1. 사용자 정보 조회
+      const user = await qr.manager.findOne(User, {
+        where: { id: userId },
+        relations: ['profile'],
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 2. 프로필 이미지 삭제
+      log('Deleting profile images');
+      const profileImages = await qr.manager.find(ProfileImage, {
+        where: { profile: { id: user.profile.id } },
+      });
+
+      // S3에서 이미지 삭제
+      for (const image of profileImages) {
+        const bucketName = this.configService.getOrThrow('aws.bucketName', {
+          infer: true,
+        });
+        await this.s3Service.deleteFile(image.key, bucketName);
+      }
+
+      // 데이터베이스에서 이미지 레코드 삭제
+      await qr.manager.remove(ProfileImage, profileImages);
+      log('Profile images deleted successfully');
+
+      // 3. MBTI 삭제
+      log('Deleting MBTI');
+      await qr.manager.delete(Mbti, { profile: { id: user.profile.id } });
+      log('MBTI deleted successfully');
+
+      // 4. 피드백 삭제
+      log('Deleting feedback');
+      await qr.manager.delete(UserFeedback, {
+        profile: { id: user.profile.id },
+      });
+      log('Feedback deleted successfully');
+
+      // 5. 자기소개 삭제
+      log('Deleting introduction');
+      await qr.manager.delete(UserIntroduction, {
+        profile: { id: user.profile.id },
+      });
+      log('Introduction deleted successfully');
+
+      // 6. 관심사 삭제
+      log('Deleting interests');
+      await qr.manager.delete(UserInterestCategory, {
+        profile: { id: user.profile.id },
+      });
+      log('Interests deleted successfully');
+
+      // 7. 프로필 삭제
+      log('Deleting profile');
+      await qr.manager.remove(Profile, user.profile);
+      log('Profile deleted successfully');
+
+      // 8. 사용자 삭제
+      log('Deleting user');
+      await qr.manager.remove(User, user);
+      log('User deleted successfully');
+
+      // 9. Redis에서 인증 상태 삭제
+      const verifiedKey = `email-verified:${user.email}`;
+      await this.redisService.del(verifiedKey);
+      log('Email verification status deleted from Redis');
+
+      await qr.commitTransaction();
+      log('Account deletion completed successfully');
+
+      return { message: '회원탈퇴가 완료되었습니다.' };
+    } catch (error) {
+      await qr.rollbackTransaction();
+      log('Transaction rolled back due to error');
+      log(`${error instanceof Error ? error.message : '오류 확인해주세요'}`);
+      if (error instanceof Error && error.stack) {
+        log(`Error stack: ${error.stack}`);
+      }
+      throw new InternalServerErrorException(
+        '회원탈퇴 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    } finally {
+      await qr.release();
+      log('QueryRunner released');
+    }
   }
 }

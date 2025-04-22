@@ -7,6 +7,7 @@ import {
   Req,
   Res,
   BadRequestException,
+  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -19,6 +20,7 @@ import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
+import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -212,5 +214,11 @@ export class AuthController {
         cause: error,
       });
     }
+  }
+
+  @Delete('account')
+  @UseGuards(JwtAuthGuard)
+  async deleteAccount(@Req() req: Request) {
+    return this.authService.deleteAccount(req.user.id);
   }
 }

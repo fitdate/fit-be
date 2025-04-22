@@ -12,6 +12,9 @@ export class ProfileImage {
   @Column()
   imageUrl: string;
 
+  @Column()
+  key: string;
+
   @Column({ default: false })
   isMain: boolean;
 }
