@@ -29,7 +29,7 @@ export class ProfileImageService {
     private configService: ConfigService<AllConfig>,
     private dataSource: DataSource,
   ) {
-    this.logger.log('Initializing S3 client');
+    this.logger.log('S3 클라이언트 초기화 중...');
     this.s3Client = new S3Client({
       region: this.configService.getOrThrow('aws.region', { infer: true }),
       credentials: {
@@ -41,14 +41,14 @@ export class ProfileImageService {
         }),
       },
     });
-    this.logger.log('S3 client initialized successfully');
+    this.logger.log('S3 클라이언트 초기화 완료');
   }
 
   async uploadProfileImages(userId: string, files: MulterFile[]) {
-    this.logger.log(`Uploading profile images for user ID: ${userId}`);
+    this.logger.log(`사용자 ID ${userId}의 프로필 이미지 업로드 시작`);
     if (!files || files.length === 0) {
-      this.logger.warn('No files provided');
-      throw new BadRequestException('No files provided');
+      this.logger.warn('업로드할 파일이 없습니다');
+      throw new BadRequestException('업로드할 파일이 없습니다');
     }
 
     try {
@@ -60,7 +60,7 @@ export class ProfileImageService {
 
       if (!profile) {
         throw new BadRequestException(
-          `Profile not found for user ID: ${userId}. Please create a profile first.`,
+          `사용자 ID ${userId}에 대한 프로필을 찾을 수 없습니다. 먼저 프로필을 생성해주세요.`,
         );
       }
 
@@ -97,16 +97,14 @@ export class ProfileImageService {
 
         await this.profileImageRepository.save(profileImage);
         uploadedImages.push(profileImage);
-        this.logger.log(
-          `Profile image uploaded successfully: ${uniqueFileName}`,
-        );
+        this.logger.log(`프로필 이미지 업로드 성공: ${uniqueFileName}`);
       }
 
       return uploadedImages;
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('파일 업로드 실패', errorMessage);
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error('프로필 이미지 업로드 실패', errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 업로드에 실패했습니다.',
       );
@@ -118,11 +116,12 @@ export class ProfileImageService {
     files: MulterFile[],
     oldImageIds: string[],
   ) {
-    this.logger.log(`Updating profile images for profile ID: ${profileId}`);
+    this.logger.log(`프로필 ID ${profileId}의 이미지 업데이트 시작`);
     if (!files || files.length === 0) {
-      this.logger.warn('업로드된 파일이 없습니다.');
-      throw new BadRequestException('업로드된 파일이 없습니다.');
+      this.logger.warn('업로드할 파일이 없습니다');
+      throw new BadRequestException('업로드할 파일이 없습니다');
     }
+
     try {
       // 기존 이미지 삭제
       if (oldImageIds && oldImageIds.length > 0) {
@@ -160,16 +159,14 @@ export class ProfileImageService {
 
         await this.profileImageRepository.save(profileImage);
         uploadedImages.push(profileImage);
-        this.logger.log(
-          `Profile image uploaded successfully: ${uniqueFileName}`,
-        );
+        this.logger.log(`프로필 이미지 업로드 성공: ${uniqueFileName}`);
       }
 
       return uploadedImages;
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('파일 업데이트 실패', errorMessage);
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error('프로필 이미지 업데이트 실패', errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 업데이트에 실패했습니다.',
       );
@@ -177,7 +174,7 @@ export class ProfileImageService {
   }
 
   async deleteProfileImages(ids: string[]) {
-    this.logger.log(`Deleting profile images with IDs: ${ids.join(', ')}`);
+    this.logger.log(`프로필 이미지 삭제 시작: ${ids.join(', ')}`);
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -191,12 +188,12 @@ export class ProfileImageService {
         });
 
         if (!profileImage) {
-          this.logger.warn(`프로필 이미지 찾을 수 없음: ${id}`);
+          this.logger.warn(`프로필 이미지를 찾을 수 없습니다: ${id}`);
           continue;
         }
 
         // S3에서 삭제
-        this.logger.log(`Deleting from S3: ${profileImage.imageUrl}`);
+        this.logger.log(`S3에서 삭제 중: ${profileImage.imageUrl}`);
         const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
         await this.s3Client.send(
           new DeleteObjectCommand({
@@ -213,14 +210,14 @@ export class ProfileImageService {
       }
 
       await queryRunner.commitTransaction();
-      this.logger.log(`Profile images deleted successfully: ${ids.join(', ')}`);
-      return { message: 'Profile images deleted successfully' };
+      this.logger.log(`프로필 이미지 삭제 완료: ${ids.join(', ')}`);
+      return { message: '프로필 이미지가 성공적으로 삭제되었습니다.' };
     } catch (error: unknown) {
       await queryRunner.rollbackTransaction();
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+        error instanceof Error ? error.message : '알 수 없는 오류';
       this.logger.error(
-        `Failed to delete profile images: ${ids.join(', ')}`,
+        `프로필 이미지 삭제 실패: ${ids.join(', ')}`,
         errorMessage,
       );
       throw new InternalServerErrorException(
@@ -232,10 +229,7 @@ export class ProfileImageService {
   }
 
   async deleteProfileImage(id: string) {
-    this.logger.log(`프로필 이미지 삭제제: ${id}`);
-    if (!id) {
-      throw new BadRequestException('이미지 ID가 제공되지 않았습니다.');
-    }
+    this.logger.log(`프로필 이미지 삭제 시작: ${id}`);
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -247,12 +241,12 @@ export class ProfileImageService {
       });
 
       if (!profileImage) {
-        this.logger.warn(`프로필 이미지 찾을 수 없음: ${id}`);
-        throw new BadRequestException('프로필 이미지 찾을 수 없음');
+        this.logger.warn(`프로필 이미지를 찾을 수 없습니다: ${id}`);
+        throw new BadRequestException('프로필 이미지를 찾을 수 없습니다');
       }
 
       // S3에서 삭제
-      this.logger.log(`S3에서 삭제: ${profileImage.imageUrl}`);
+      this.logger.log(`S3에서 삭제 중: ${profileImage.imageUrl}`);
       const s3Key = `profile-images/${profileImage.imageUrl.split('/').pop()}`;
       await this.s3Client.send(
         new DeleteObjectCommand({
@@ -267,13 +261,13 @@ export class ProfileImageService {
       await queryRunner.manager.remove(profileImage);
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Profile image deleted successfully: ${id}`);
-      return { message: 'Profile image deleted successfully' };
+      this.logger.log(`프로필 이미지 삭제 완료: ${id}`);
+      return { message: '프로필 이미지가 성공적으로 삭제되었습니다.' };
     } catch (error: unknown) {
       await queryRunner.rollbackTransaction();
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to delete profile image: ${id}`, errorMessage);
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error(`프로필 이미지 삭제 실패: ${id}`, errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 삭제에 실패했습니다.',
       );
@@ -301,7 +295,7 @@ export class ProfileImageService {
   }
 
   async getProfileImages(userId: string) {
-    this.logger.log(`프로필 이미지 조회: ${userId}`);
+    this.logger.log(`사용자 ID ${userId}의 프로필 이미지 조회 시작`);
     try {
       // 프로필 찾기
       const profile = await this.profileRepository.findOne({
@@ -310,7 +304,7 @@ export class ProfileImageService {
 
       if (!profile) {
         throw new BadRequestException(
-          `프로필 찾을 수 없음: ${userId}. 프로필 생성 후 다시 시도해주세요.`,
+          `사용자 ID ${userId}에 대한 프로필을 찾을 수 없습니다. 먼저 프로필을 생성해주세요.`,
         );
       }
 
@@ -320,11 +314,11 @@ export class ProfileImageService {
         order: { isMain: 'DESC' }, // 메인 이미지가 먼저 오도록 정렬
       });
 
-      this.logger.log(`프로필 이미지 조회 성공: ${images.length}개`);
+      this.logger.log(`프로필 이미지 조회 완료: ${images.length}개`);
       return images;
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+        error instanceof Error ? error.message : '알 수 없는 오류';
       this.logger.error('프로필 이미지 조회 실패', errorMessage);
       throw new InternalServerErrorException(
         '프로필 이미지 조회에 실패했습니다.',

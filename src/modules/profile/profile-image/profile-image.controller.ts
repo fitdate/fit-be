@@ -138,6 +138,7 @@ export class ProfileImageController {
     return this.profileImageService.setMainImage(userId, imageId);
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Get profile images' })
   @ApiResponse({
