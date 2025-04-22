@@ -119,6 +119,7 @@ export class AuthService {
 
     try {
       const user = await qr.manager.save(User, {
+        email,
         role: UserRole.TEMP_USER,
         authProvider: AuthProvider.EMAIL,
       });
@@ -128,10 +129,13 @@ export class AuthService {
       });
 
       await qr.commitTransaction();
-
       return { user, profile };
     } catch (error) {
       await qr.rollbackTransaction();
+      this.logger.error(
+        `Failed to create temp user for email: ${email}`,
+        error instanceof Error ? error.stack : undefined,
+      );
       throw new InternalServerErrorException(
         '기본 유저 생성 중 오류가 발생했습니다.',
         { cause: error },
