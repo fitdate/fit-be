@@ -50,9 +50,6 @@ export class Profile {
   )
   interestLocation: InterestLocation[];
 
-  @Column({ nullable: true })
-  job: string;
-
   @OneToOne(() => User, (user) => user.profile)
   user: User;
 }
