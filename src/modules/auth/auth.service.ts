@@ -6,7 +6,6 @@ import { AllConfig } from 'src/common/config/config.types';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { RegisterDto } from './dto/register.dto';
-import { TokenPayload } from './types/token-payload.types';
 import { EmailLoginDto } from './dto/email-login.dto';
 import { MailerService } from '../mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
@@ -30,7 +29,6 @@ import { UserInterestCategory } from '../profile/interest-category/entities/user
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 import { S3Service } from '../s3/s3.service';
-import pLimit from 'p-limit';
 
 @Injectable()
 export class AuthService {
@@ -49,116 +47,59 @@ export class AuthService {
     private readonly s3Service: S3Service,
     private readonly profileImageService: ProfileImageService,
   ) {}
+  private async processImagesInChunks(
+    images: string[],
+    profileId: string,
+    log: (message: string) => void,
+  ) {
+    const CHUNK_SIZE = 3; // 동시에 처리할 이미지 수
+    const results: Array<{
+      profile: { id: string };
+      url: string;
+      key: string;
+      isMain: boolean;
+    } | null> = [];
 
-  parseBasicToken(rawToken: string) {
-    const basicToken = rawToken.split(' ')[1];
-    if (basicToken.length !== 2) {
-      throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
+    for (let i = 0; i < images.length; i += CHUNK_SIZE) {
+      const chunk = images.slice(i, i + CHUNK_SIZE);
+      const chunkResults = await Promise.all(
+        chunk.map(async (url, index) => {
+          try {
+            log(`Processing image ${i + index + 1}: ${url}`);
+            if (!url) {
+              log(`Skipping null/undefined URL at index ${i + index}`);
+              return null;
+            }
+
+            const key = this.s3Service.extractKeyFromUrl(url);
+            const moved = await this.profileImageService.moveTempToProfileImage(
+              profileId,
+              key,
+            );
+
+            return {
+              profile: { id: profileId },
+              url: moved.url,
+              key: moved.key,
+              isMain: i + index === 0,
+            };
+          } catch (err) {
+            log(
+              `Failed to process image ${i + index + 1}: ${
+                err instanceof Error ? err.message : err
+              }`,
+            );
+            return null;
+          }
+        }),
+      );
+      results.push(...chunkResults);
     }
 
-    const [basic, token] = basicToken;
-
-    if (basic.toLocaleLowerCase() !== 'basic') {
-      throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
-    }
-
-    const decodedToken = Buffer.from(token, 'base64').toString('utf-8');
-    const tokenSplit = decodedToken.split(':');
-
-    if (tokenSplit.length !== 2) {
-      throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
-    }
-
-    const [email, password] = tokenSplit;
-
-    return { email, password };
+    return results.filter(
+      (img): img is NonNullable<typeof img> => img !== null,
+    );
   }
-
-  async parseBearerToken(
-    rawToken: string,
-    isRefreshToken: boolean,
-  ): Promise<TokenPayload> {
-    const [bearer, token] = rawToken.split(' ');
-
-    if (!bearer || !token) {
-      throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
-    }
-
-    if (bearer.toLocaleLowerCase() !== 'bearer') {
-      throw new UnauthorizedException('토큰 포맷이 잘못되었습니다.');
-    }
-
-    try {
-      const payload = await this.jwtService.verifyAsync<TokenPayload>(token, {
-        secret: this.configService.getOrThrow(
-          isRefreshToken ? 'jwt.refreshTokenSecret' : 'jwt.accessTokenSecret',
-          {
-            infer: true,
-          },
-        ),
-      });
-      if (isRefreshToken && payload.type !== 'refresh') {
-        throw new UnauthorizedException('리프레시 토큰이 아닙니다.');
-      }
-
-      if (!isRefreshToken && payload.type !== 'access') {
-        throw new UnauthorizedException('엑세스 토큰이 아닙니다.');
-      }
-
-      return payload;
-    } catch (error) {
-      throw new UnauthorizedException('토큰이 만료되었거나 잘못되었습니다.', {
-        cause: error,
-      });
-    }
-  }
-
-  // async emailTempRegister(email: string) {
-  //   this.logger.log(`Starting emailTempRegister for: ${email}`);
-  //   const verifiedKey = `email-verified:${email}`;
-  //   await this.redisService.del(verifiedKey);
-
-  //   const qr = this.dataSource.createQueryRunner();
-  //   await qr.connect();
-  //   await qr.startTransaction();
-  //   this.logger.log(`Transaction started for email: ${email}`);
-
-  //   try {
-  //     this.logger.log(`Attempting to save temp user for email: ${email}`);
-  //     const user = await qr.manager.save(User, {
-  //       email,
-  //       role: UserRole.TEMP_USER,
-  //       authProvider: AuthProvider.EMAIL,
-  //     });
-  //     this.logger.log(
-  //       `Temp user saved successfully - ID: ${user.id}, Email: ${user.email}, AuthProvider: ${user.authProvider}`,
-  //     );
-
-  //     this.logger.log(`Attempting to save profile for user: ${user.id}`);
-  //     const profile = await qr.manager.save(Profile, {
-  //       user: { id: user.id },
-  //     });
-  //     this.logger.log(`Profile saved successfully for user: ${user.id}`);
-
-  //     await qr.commitTransaction();
-  //     this.logger.log(`Transaction committed successfully for email: ${email}`);
-  //     return { user, profile };
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `Transaction failed for email: ${email}`,
-  //       error instanceof Error ? error.stack : undefined,
-  //     );
-  //     await qr.rollbackTransaction();
-  //     this.logger.log(`Transaction rolled back for email: ${email}`);
-  //     throw new InternalServerErrorException(
-  //       '기본 유저 생성 중 오류가 발생했습니다.',
-  //       { cause: error },
-  //     );
-  //   } finally {
-  //     await qr.release();
-  //     this.logger.log(`QueryRunner released for email: ${email}`);
-  //   }
-  // }
 
   async register(registerDto: RegisterDto) {
     const logBuffer: string[] = [];
@@ -169,6 +110,14 @@ export class AuthService {
     };
 
     log(`Attempting to register new user with email: ${registerDto.email}`);
+
+    // 이메일 인증 여부 확인
+    const isEmailVerified = await this.checkEmailVerification(
+      registerDto.email,
+    );
+    if (!isEmailVerified) {
+      throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    }
 
     // 기존 유저 확인
     const existingUser = await this.userService.findUserByEmail(
@@ -231,43 +180,12 @@ export class AuthService {
             log(`Starting profile image save transaction for: ${user.id}`);
 
             try {
-              const limit = pLimit(3); // 동시에 3개까지만 실행
-              const imageTasks = registerDto.images.map((url, index) =>
-                limit(async () => {
-                  try {
-                    log(`Processing image ${index + 1}: ${url}`);
-                    if (!url) {
-                      log(`Skipping null/undefined URL at index ${index}`);
-                      return null;
-                    }
-
-                    const key = this.s3Service.extractKeyFromUrl(url);
-                    const moved =
-                      await this.profileImageService.moveTempToProfileImage(
-                        profile.id,
-                        key,
-                      );
-
-                    return {
-                      profile: { id: profile.id },
-                      url: moved.url,
-                      key: moved.key,
-                      isMain: index === 0,
-                    };
-                  } catch (err) {
-                    log(
-                      `Failed to process image ${index + 1}: ${
-                        err instanceof Error ? err.message : err
-                      }`,
-                    );
-                    return null;
-                  }
-                }),
+              const profileImages = await this.processImagesInChunks(
+                registerDto.images,
+                profile.id,
+                log,
               );
 
-              const profileImages = (await Promise.all(imageTasks)).filter(
-                (img): img is NonNullable<typeof img> => img !== null,
-              );
               if (profileImages.length > 0) {
                 await imageQr.manager.save(ProfileImage, profileImages);
                 log(`Profile images saved successfully for user: ${user.id}`);
@@ -418,6 +336,13 @@ export class AuthService {
               { cause: errorBuffer },
             );
           }
+
+          // 회원가입 성공 시 Redis에서 인증 상태 삭제
+          const verifiedKey = `email-verified:${registerDto.email}`;
+          await this.redisService.del(verifiedKey);
+          log(
+            `Email verification status deleted from Redis for: ${registerDto.email}`,
+          );
 
           return { user, profile };
         } catch (error) {
