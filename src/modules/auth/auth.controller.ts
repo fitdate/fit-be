@@ -8,6 +8,8 @@ import {
   Res,
   BadRequestException,
   Delete,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -22,7 +24,8 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { RequestWithUser } from './types/request.types';
-
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { MulterFile } from 'src/modules/s3/types/multer.types';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -32,9 +35,17 @@ export class AuthController {
   @SkipProfileComplete()
   @Public()
   @Post('register')
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
   @ApiOperation({ summary: '회원 가입' })
   @ApiResponse({ status: 201, description: '회원 가입 성공' })
-  register(@Body() registerDto: RegisterDto) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @UploadedFiles() files: { images?: MulterFile[] },
+  ) {
+    // 이미지 파일이 있는 경우 처리
+    if (files?.images) {
+      registerDto.images = files.images.map((file) => file.path);
+    }
     return this.authService.register(registerDto);
   }
 

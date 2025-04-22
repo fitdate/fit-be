@@ -134,8 +134,10 @@ export class RegisterDto {
   interests?: string[];
 
   @ApiProperty({
-    description: '프로필 이미지 URL 목록',
-    example: ['https://example.com/image1.jpg'],
+    description: '프로필 이미지 URL 배열',
+    example: [
+      'https://fit-aws-bucket.s3.ap-northeast-2.amazonaws.com/temp/xxx.png',
+    ],
     type: [String],
   })
   @IsOptional()
