@@ -62,7 +62,7 @@ export class ProfileImageController {
   }
 
   @Put(':profileId')
-  @ApiOperation({ summary: 'Update multiple profile images' })
+  @ApiOperation({ summary: '프로필 이미지 일괄 업데이트' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -104,7 +104,7 @@ export class ProfileImageController {
   }
 
   @Delete('batch')
-  @ApiOperation({ summary: 'Delete multiple profile images' })
+  @ApiOperation({ summary: '프로필 이미지 일괄 삭제' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -140,7 +140,7 @@ export class ProfileImageController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'Get profile images' })
+  @ApiOperation({ summary: '프로필 이미지 조회' })
   @ApiResponse({
     status: 200,
     description: '프로필 이미지 조회 성공',
