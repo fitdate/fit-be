@@ -35,4 +35,7 @@ export class Notification extends BaseTable {
 
   @Column()
   receiverId: number;
+
+  @Column({ type: 'json', nullable: true })
+  data: Record<string, any>;
 }
