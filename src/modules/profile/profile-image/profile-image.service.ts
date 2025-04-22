@@ -190,11 +190,16 @@ export class ProfileImageService {
       }
 
       const newKey = `profile-images/${profileId}/${fileName}`;
+      const copySource = `${bucketName}/${fileKey}`;
 
       this.logger.log(`이미지 복사 시작: ${fileKey} -> ${newKey}`);
+      this.logger.log(`CopySource: ${copySource}`);
+      this.logger.log(`Bucket: ${bucketName}`);
+      this.logger.log(`NewKey: ${newKey}`);
+
       const copy = new CopyObjectCommand({
         Bucket: bucketName,
-        CopySource: `${bucketName}/${fileKey}`,
+        CopySource: copySource,
         Key: newKey,
       });
 

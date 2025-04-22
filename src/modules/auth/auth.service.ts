@@ -80,6 +80,7 @@ export class AuthService {
             log(`Extracting key from URL: ${url}`);
             const key = this.s3Service.extractKeyFromUrl(url);
             log(`Extracted key: ${key}`);
+            log(`URL components: ${JSON.stringify(url.split('.amazonaws.com/'), null, 2)}`);
 
             log(
               `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
