@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorator/current-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorator/public.decorator';
+import { SelectMatchDto } from './dto/select-match.dto';
 
 @ApiTags('Matching')
 @Controller('match')
@@ -52,14 +53,11 @@ export class MatchController {
   @Post('select')
   async selectMatch(
     @CurrentUser() user: User,
-    @Body() body: { matchId: string; selectedUserId: string },
+    @Body() selectMatchDto: SelectMatchDto,
   ) {
-    if (!body || !body.matchId || !body.selectedUserId) {
-      throw new BadRequestException('matchId와 selectedUserId는 필수입니다.');
-    }
     return this.matchService.sendSelectionNotification(
-      body.matchId,
-      body.selectedUserId,
+      selectMatchDto.matchId,
+      selectMatchDto.selectedUserId,
       user.id,
     );
   }
@@ -75,13 +73,10 @@ export class MatchController {
   @Post('select-all')
   async selectAllMatch(
     @CurrentUser() user: User,
-    @Body() body: { matchId: string },
+    @Body() selectMatchDto: SelectMatchDto,
   ) {
-    if (!body || !body.matchId) {
-      throw new BadRequestException('matchId는 필수입니다.');
-    }
     return this.matchService.sendAllSelectionNotification(
-      body.matchId,
+      selectMatchDto.matchId,
       user.id,
     );
   }
@@ -97,13 +92,13 @@ export class MatchController {
   @Post('enter-chat')
   async enterChat(
     @CurrentUser() user: User,
-    @Body() body: { matchId: string },
+    @Body() selectMatchDto: SelectMatchDto,
   ) {
-    if (!body || !body.matchId) {
+    if (!selectMatchDto || !selectMatchDto.matchId) {
       throw new BadRequestException('matchId는 필수입니다.');
     }
     return this.matchService.sendChatRoomEntryNotification(
-      body.matchId,
+      selectMatchDto.matchId,
       user.id,
     );
   }
