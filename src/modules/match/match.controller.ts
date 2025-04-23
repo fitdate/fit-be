@@ -50,11 +50,21 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
+  @UseGuards(JwtAuthGuard)
   @Post('select')
   async selectMatch(
     @CurrentUser() user: User,
     @Body() selectMatchDto: SelectMatchDto,
   ) {
+    if (!user) {
+      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+    }
+    if (!selectMatchDto.selectedUserId) {
+      throw new BadRequestException('selectedUserId는 필수입니다.');
+    }
+    if (!selectMatchDto.matchId) {
+      throw new BadRequestException('matchId는 필수입니다.');
+    }
     return this.matchService.sendSelectionNotification(
       selectMatchDto.matchId,
       selectMatchDto.selectedUserId,
