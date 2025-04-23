@@ -172,56 +172,43 @@ export class MatchService {
       usersWithSimilarity.splice(selectedIndex, 1);
     }
 
-    // 매칭 생성 - 트랜잭션으로 한 번에 처리
+    // 매칭 생성
     const matches: { matchId: string; user1: User; user2: User }[] = [];
-    const queryRunner =
-      this.matchRepository.manager.connection.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
-    try {
-      // 2명씩 매칭
-      for (let i = 0; i < selectedUsers.length; i += 2) {
-        if (i + 1 < selectedUsers.length) {
-          const matchId = uuidv4();
-          const match = queryRunner.manager.create(Match, {
-            id: matchId,
-            user1: { id: selectedUsers[i].id },
-            user2: { id: selectedUsers[i + 1].id },
-          });
+    // 2명씩 매칭
+    for (let i = 0; i < selectedUsers.length; i += 2) {
+      if (i + 1 < selectedUsers.length) {
+        const matchId = uuidv4();
+        await this.create({
+          matchId,
+          user1Id: selectedUsers[i].id,
+          user2Id: selectedUsers[i + 1].id,
+        });
 
-          await queryRunner.manager.save(match);
-          matches.push({
-            matchId,
-            user1: selectedUsers[i],
-            user2: selectedUsers[i + 1],
-          });
+        // 알림 전송
+        await this.notificationService.create({
+          title: '새로운 매칭이 생성되었습니다!',
+          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+          type: NotificationType.MATCH,
+          receiverId: selectedUsers[i].id,
+        });
 
-          // 알림 전송
-          await this.notificationService.create({
-            title: '새로운 매칭이 생성되었습니다!',
-            content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-            type: NotificationType.MATCH,
-            receiverId: selectedUsers[i].id,
-          });
+        await this.notificationService.create({
+          title: '새로운 매칭이 생성되었습니다!',
+          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+          type: NotificationType.MATCH,
+          receiverId: selectedUsers[i + 1].id,
+        });
 
-          await this.notificationService.create({
-            title: '새로운 매칭이 생성되었습니다!',
-            content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-            type: NotificationType.MATCH,
-            receiverId: selectedUsers[i + 1].id,
-          });
-        }
+        matches.push({
+          matchId,
+          user1: selectedUsers[i],
+          user2: selectedUsers[i + 1],
+        });
       }
-
-      await queryRunner.commitTransaction();
-      return { matches };
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
     }
+
+    return { matches };
   }
 
   async findRandomPublicMatches(): Promise<{
