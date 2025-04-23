@@ -2,7 +2,7 @@ import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { UserFilterService } from './user-filter.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { UserFilterWrapperDto } from './dto/user-filter.dto';
+import { UserFilterDto } from './dto/user-filter.dto';
 import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('User Filter')
 @Controller('user-filter')
@@ -25,8 +25,8 @@ export class UserFilterController {
   @Patch('user-filter')
   updateUserFilter(
     @UserId() userId: string,
-    @Body() userFilterDto: InstanceType<typeof UserFilterWrapperDto>,
+    @Body() userFilterDto: UserFilterDto,
   ) {
-    return this.userFilterService.updateFilter(userId, userFilterDto.filters);
+    return this.userFilterService.updateFilter(userId, userFilterDto);
   }
 }

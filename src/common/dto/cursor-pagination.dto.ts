@@ -17,4 +17,8 @@ export class CursorPaginationDto {
   @IsOptional()
   @Transform(({ value }: { value: string }) => parseInt(value))
   take: number = 10;
+
+  @IsString()
+  @IsOptional()
+  seed?: string;
 }

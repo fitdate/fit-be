@@ -15,6 +15,8 @@ import { UserWithScore } from '../filter/types/user-with-score.type';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
+import { RedisService } from '../redis/redis.service';
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -24,6 +26,7 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     private readonly filterService: FilterService,
     private readonly cursorPaginationUtil: CursorPaginationUtil,
+    private readonly redisService: RedisService,
   ) {}
 
   createUser(createUserDto: CreateUserDto) {
@@ -244,16 +247,34 @@ export class UserService {
 
   //회원목록 유저 찾기
   async getUserList(dto: CursorPaginationDto) {
+    const seed = dto.seed || uuidv4();
+    const cacheKey = `userList:${seed}:${dto.order.join('_')}:${dto.take}`;
+    const cached = await this.redisService.get(cacheKey);
+
+    if (cached) {
+      return JSON.parse(cached) as {
+        users: User[];
+        nextCursor: string;
+        totalCount: number;
+      };
+    }
+
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount']);
+
+    qb.where('user.seed LIKE :seed', { seed: `${seed}%` });
+    qb.orderBy('user.seed', 'ASC');
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
 
     const [users, totalCount] = await qb.getManyAndCount();
 
-    return { users, nextCursor, totalCount };
+    const result = { users, nextCursor, totalCount };
+    const cacheTtl = 300;
+    await this.redisService.set(cacheKey, JSON.stringify(result), cacheTtl);
+    return result;
   }
 
   // 페이징 처리로 모든 사용자 정보 가져오기
