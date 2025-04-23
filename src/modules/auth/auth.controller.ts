@@ -231,7 +231,7 @@ export class AuthController {
     }
   }
 
-  @Delete('account')
+  @Delete('delete-account')
   async deleteAccount(@UserId() userId: string) {
     return this.authService.deleteAccount(userId);
   }
