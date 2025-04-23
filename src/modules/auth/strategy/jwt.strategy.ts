@@ -6,12 +6,17 @@ import { Request } from 'express';
 import { AllConfig } from 'src/common/config/config.types';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/modules/user/user.service';
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private userService: UserService,
     private configService: ConfigService<AllConfig>,
   ) {
+    const secretOrKey = configService.getOrThrow('jwt.accessTokenSecret', {
+      infer: true,
+    });
+
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // 쿠키에서 토큰 추출
@@ -22,16 +27,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
       ignoreExpiration: false,
-      secretOrKey: this.configService.getOrThrow('jwt.accessTokenSecret', {
-        infer: true,
-      }),
+      secretOrKey,
     });
   }
 
   async validate(payload: any): Promise<unknown> {
     const { sub } = payload;
     const user = await this.userService.findUserByEmail(sub);
-    const { password, ...rest } = user;
+    const { ...rest } = user;
     return rest;
   }
 }

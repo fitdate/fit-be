@@ -1,13 +1,11 @@
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { Controller, Post } from '@nestjs/common';
 import { SeedManagerService } from './seed-manager.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RBAC } from 'src/common/decorator/rbac.decorator';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 
 @ApiTags('Seed Manager')
 @Controller('seed-manager')
-@UseGuards(JwtAuthGuard)
 export class SeedManagerController {
   constructor(private readonly seedManagerService: SeedManagerService) {}
 
