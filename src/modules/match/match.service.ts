@@ -112,10 +112,10 @@ export class MatchService {
     };
   }
 
+  // 랜덤 매칭 생성 (로그인)
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
-    // 현재 사용자의 성별 가져오기
     const currentUser = await this.userService.findOne(userId);
     if (!currentUser) {
       throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
@@ -125,7 +125,6 @@ export class MatchService {
       throw new NotFoundException('사용자의 성별 정보가 필요합니다.');
     }
 
-    // 모든 사용자 정보 가져오기
     const allUsers = await this.userService.getAllUserInfo();
 
     // 현재 사용자 제외하고 성별이 다른 사용자만 필터링
@@ -184,6 +183,7 @@ export class MatchService {
     return { matches };
   }
 
+  // 공개 매칭 생성 (비로그인)
   async findRandomPublicMatches(): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
@@ -298,22 +298,41 @@ export class MatchService {
     currentUserId: string,
   ): Promise<void> {
     try {
+      console.log(
+        `[sendSelectionNotification] 시작 - matchId: ${matchId}, selectedUserId: ${selectedUserId}, currentUserId: ${currentUserId}`,
+      );
+
       const match = await this.findByMatchId(matchId);
       if (!match) {
+        console.log(
+          `[sendSelectionNotification] 매치를 찾을 수 없음 - matchId: ${matchId}`,
+        );
         throw new NotFoundException('매치를 찾을 수 없습니다.');
       }
 
       const currentUser = await this.userService.findOne(currentUserId);
       if (!currentUser) {
+        console.log(
+          `[sendSelectionNotification] 현재 사용자를 찾을 수 없음 - currentUserId: ${currentUserId}`,
+        );
         throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
       }
+
+      console.log(
+        `[sendSelectionNotification] 알림 생성 시도 - receiverId: ${selectedUserId}, type: ${NotificationType.MATCH}`,
+      );
 
       await this.notificationService.create({
         receiverId: selectedUserId,
         type: NotificationType.MATCH,
+        title: '새로운 매칭 알림',
         content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
         data: { matchId },
       });
+
+      console.log(
+        `[sendSelectionNotification] 알림 생성 성공 - receiverId: ${selectedUserId}`,
+      );
     } catch (error) {
       console.error(
         `[sendSelectionNotification] 알림 전송 실패: ${(error as Error).message}`,
@@ -352,12 +371,14 @@ export class MatchService {
         this.notificationService.create({
           receiverId: match.user1.id,
           type: NotificationType.MATCH,
+          title: '새로운 매칭 알림',
           content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
           data: { matchId },
         }),
         this.notificationService.create({
           receiverId: match.user2.id,
           type: NotificationType.MATCH,
+          title: '새로운 매칭 알림',
           content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
           data: { matchId },
         }),
@@ -400,6 +421,7 @@ export class MatchService {
       await this.notificationService.create({
         receiverId,
         type: NotificationType.COFFEE_CHAT,
+        title: '새로운 채팅 알림',
         content: `${currentUser.nickname}님이 채팅방에 입장했습니다!`,
         data: { matchId },
       });

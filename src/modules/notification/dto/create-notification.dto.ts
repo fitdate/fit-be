@@ -5,7 +5,7 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
-import { NotificationType } from '../../../common/enum/notification.enum';
+import { NotificationType } from '../../../../common/enum/notification.enum';
 
 export class CreateNotificationDto {
   @IsOptional()

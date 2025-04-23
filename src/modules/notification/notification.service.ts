@@ -45,9 +45,10 @@ export class NotificationService {
         throw new InternalServerErrorException('수신자 ID가 필요합니다.');
       }
 
-      const notification = this.notificationRepository.create(
-        createNotificationDto,
-      );
+      const notification = this.notificationRepository.create({
+        ...createNotificationDto,
+        receiver: { id: createNotificationDto.receiverId },
+      });
       const savedNotification =
         await this.notificationRepository.save(notification);
 
