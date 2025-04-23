@@ -19,7 +19,7 @@ async function bootstrap() {
       'https://fit-date.co.kr',
       'https://www.fit-date.co.kr',
       'http://localhost:3000',
-      'http://localhost:5173',
+      'http://localhost:3001',
     ], // 정확한 origin 명시
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
