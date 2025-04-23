@@ -6,18 +6,7 @@ import { Request } from 'express';
 import { AllConfig } from 'src/common/config/config.types';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/modules/user/user.service';
-
-const cookieExtractor = (req: Request) => {
-  if (!req || !req.cookies) {
-    throw new UnauthorizedException('쿠키를 찾을 수 없습니다');
-  }
-
-  const token = req.cookies.accessToken as string;
-  if (!token) {
-    throw new UnauthorizedException('액세스 토큰이 없습니다');
-  }
-  return token;
-};
+import { TokenPayload } from '../types/token-payload.types';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -35,7 +24,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromExtractors([
         // 쿠키에서 토큰 추출
         (request: Request) => {
-          this.logger.debug(`Extracting token from cookies: ${JSON.stringify(request.cookies)}`);
+          this.logger.debug(
+            `Extracting token from cookies: ${JSON.stringify(request.cookies)}`,
+          );
           return request?.cookies?.accessToken;
         },
         // Bearer 토큰에서 추출
@@ -46,14 +37,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any): Promise<unknown> {
+  async validate(payload: TokenPayload): Promise<unknown> {
     this.logger.debug(`Validating payload: ${JSON.stringify(payload)}`);
     const { sub } = payload;
-    const user = await this.userService.findUserByEmail(sub);
+    this.logger.debug(`Looking up user by ID: ${sub}`);
+    const user = await this.userService.findOne(sub);
     this.logger.debug(`Found user: ${JSON.stringify(user)}`);
     
     if (!user) {
-      this.logger.error(`User not found for sub: ${sub}`);
+      this.logger.error(`User not found for ID: ${sub}`);
       throw new UnauthorizedException('User not found');
     }
 
