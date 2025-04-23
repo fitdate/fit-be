@@ -138,11 +138,18 @@ export class MatchService {
     );
     console.log('현재 사용자 정보:', currentUser);
 
-    if (!currentUser || !currentUser.gender) {
+    if (!currentUser) {
       this.logger.error(
         `[findRandomMatches] 사용자 정보 없음: userId=${userId}`,
       );
       throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
+    }
+
+    if (!currentUser.gender) {
+      this.logger.error(
+        `[findRandomMatches] 사용자 성별 정보 없음: userId=${userId}`,
+      );
+      throw new NotFoundException('사용자의 성별 정보가 필요합니다.');
     }
 
     // 모든 사용자 정보 가져오기
