@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserSocialDto } from './dto/create-user-social.dto';
+import { FilterUsersDto } from './dto/filter-user.dto';
 
 @Injectable()
 export class UserService {
@@ -44,6 +45,19 @@ export class UserService {
     return requiredFields.every((field) => {
       const value = data[field as keyof UpdateUserDto];
       return value !== undefined && value !== null && value !== '';
+    });
+  }
+
+  async getAllUserInfo() {
+    return this.userRepository.find({
+      relations: [
+        'profile',
+        'profile.mbti',
+        'profile.userIntroductions',
+        'profile.userFeedbacks',
+        'profile.interestCategory',
+        'profile.profileImages',
+      ],
     });
   }
 
@@ -114,7 +128,14 @@ export class UserService {
   async findOne(id: string) {
     return this.userRepository.findOne({
       where: { id },
-      relations: ['profile'],
+      relations: [
+        'profile',
+        'profile.mbti',
+        'profile.userIntroductions',
+        'profile.userFeedbacks',
+        'profile.interestCategory',
+        'profile.profileImages',
+      ],
     });
   }
 
@@ -124,5 +145,49 @@ export class UserService {
       socketId,
     });
     return this.userRepository.save(user);
+  }
+
+  async getFilteredUsers(filter: FilterUsersDto, userId: string) {
+    const { ageMin, ageMax, minLikes } = filter;
+    const today = new Date();
+
+    const currentUser = await this.findOne(userId);
+    if (!currentUser) {
+      throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+    }
+
+    const query = this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.mbti', 'mbti')
+      .leftJoinAndSelect('profile.userIntroductions', 'userIntroductions')
+      .leftJoinAndSelect('profile.userFeedbacks', 'userFeedbacks')
+      .leftJoinAndSelect('profile.interestCategory', 'interestCategory')
+      .leftJoinAndSelect('profile.profileImages', 'profileImages')
+      .where('user.id != :userId', { userId })
+      .andWhere('user.gender != :gender', { gender: currentUser.gender })
+      .andWhere('user.isProfileComplete = :isComplete', { isComplete: true });
+
+    if (ageMin) {
+      const maxBirthYear = today.getFullYear() - ageMin;
+      query.andWhere(
+        'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) <= :maxBirthYear',
+        { maxBirthYear },
+      );
+    }
+
+    if (ageMax) {
+      const minBirthYear = today.getFullYear() - ageMax;
+      query.andWhere(
+        'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) >= :minBirthYear',
+        { minBirthYear },
+      );
+    }
+
+    if (minLikes) {
+      query.andWhere('user.likeCount >= :minLikes', { minLikes });
+    }
+
+    return query.getMany();
   }
 }
