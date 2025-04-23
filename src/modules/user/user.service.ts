@@ -15,6 +15,9 @@ import { UserWithScore } from '../filter/types/user-with-score.type';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
+import { RedisService } from '../redis/redis.service';
+import { v4 as uuidv4 } from 'uuid';
+import { Request, Response } from 'express';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -24,6 +27,7 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     private readonly filterService: FilterService,
     private readonly cursorPaginationUtil: CursorPaginationUtil,
+    private readonly redisService: RedisService,
   ) {}
 
   createUser(createUserDto: CreateUserDto) {
@@ -243,10 +247,53 @@ export class UserService {
   }
 
   //회원목록 유저 찾기
-  async getUserList(dto: CursorPaginationDto) {
+  async getUserList(dto: CursorPaginationDto, request: Request, res: Response) {
+    let userListSeed;
+
+    // 비로그인 유저는 쿠키나 IP 기반으로 고유한 seed 생성
+    const cookieSeed: string =
+      (request.cookies['userSeed'] as string) || uuidv4();
+
+    // 쿠키에 seed 저장 (비로그인 상태에서 동일한 seed 사용)
+    if (!request.cookies['userSeed']) {
+      // 쿠키에 `userSeed` 저장 (예: 1시간)
+      res.cookie('userSeed', cookieSeed, {
+        maxAge: 60 * 60 * 1000, // 1시간
+        httpOnly: true,
+      });
+    }
+
+    // 비로그인 유저의 `userListSeed` 값 관리
+    userListSeed = cookieSeed;
+
+    // Redis에서 캐시된 `userListSeed` 값 가져오기
+    const cachedSeed = await this.redisService.get(
+      `userListSeed:${userListSeed}`,
+    );
+
+    if (!cachedSeed) {
+      // Redis에 `userListSeed`가 없다면, 새로운 `seed` 생성해서 저장
+      const newSeed = uuidv4(); // 새로운 랜덤 `seed` 생성
+      const cacheTtl = 60 * 5; // 5분 동안 유지
+
+      // Redis에 새로운 `userListSeed` 값을 저장
+      await this.redisService.set(
+        `userListSeed:${userListSeed}`,
+        newSeed,
+        cacheTtl,
+      );
+
+      userListSeed = newSeed; // 갱신된 `seed` 값으로 설정
+    }
+
+    // seed 값에 맞춰서 유저 목록 조회
     const qb = this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount']);
+      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount'])
+      .where('user.seed LIKE :seed', { seed: `${userListSeed}%` });
+
+    // 순서는 랜덤하게!
+    qb.orderBy('RANDOM()');
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);

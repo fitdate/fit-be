@@ -1,4 +1,11 @@
-import { Controller, Get, Patch, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Request,
+  Response,
+} from '@nestjs/common';
 import { UserFilterService } from './user-filter.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -11,8 +18,8 @@ export class UserFilterController {
 
   @Get('filtered-users')
   @Public()
-  getFilteredUsers() {
-    return this.userFilterService.getFilteredUsers();
+  getFilteredUsers(@Request() request, @Response() response) {
+    return this.userFilterService.getFilteredUsers(request, response);
   }
 
   @Get('user-filter')

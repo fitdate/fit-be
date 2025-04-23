@@ -4,6 +4,8 @@ import { UserFilter } from './entities/user-filter.entity';
 import { UserService } from '../user/user.service';
 import { Repository } from 'typeorm';
 import { UserFilterDto } from './dto/user-filter.dto';
+import { Request, Response } from 'express';
+
 @Injectable()
 export class UserFilterService {
   private readonly logger = new Logger(UserFilterService.name);
@@ -27,55 +29,17 @@ export class UserFilterService {
     return filter;
   }
 
-  async getFilteredUsers() {
+  async getFilteredUsers(request: Request, response: Response) {
     this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
-    // if (!userId) {
-    //   this.logger.debug(
-    //     '로그인하지 않은 사용자를 위한 기본 필터링을 적용합니다.',
-    //   );
-    //   return this.userService.getUserList();
-    // }
-    return this.userService.getUserList({
-      cursor: null,
-      order: ['id_ASC', 'likeCount_DESC'],
-      take: 6,
-    });
-    // const filter = await this.getUserFilter(userId);
-    // if (!filter) {
-    //   this.logger.debug('필터 설정이 없어 기본값을 사용합니다.');
-    //   const users = await this.userService.getFilteredUsers(userId, {
-    //     ageMin: 20,
-    //     ageMax: 60,
-    //     minLikes: 0,
-    //   });
-    //   return users.map((user) => ({
-    //     id: user.id,
-    //     nickname: user.nickname,
-    //     region: user.region,
-    //     likeCount: user.likeCount,
-    //   }));
-    // }
-
-    // this.logger.debug(
-    //   `적용될 필터: ${JSON.stringify({
-    //     ageMin: filter.minAge ?? 20,
-    //     ageMax: filter.maxAge ?? 60,
-    //     minLikes: filter.minLikeCount ?? 0,
-    //   })}`,
-    // );
-
-    // const users = await this.userService.getFilteredUsers(userId, {
-    //   ageMin: filter.minAge ?? 20,
-    //   ageMax: filter.maxAge ?? 60,
-    //   minLikes: filter.minLikeCount ?? 0,
-    // });
-
-    // return users.map((user) => ({
-    //   id: user.id,
-    //   nickname: user.nickname,
-    //   region: user.region,
-    //   likeCount: user.likeCount,
-    // }));
+    return this.userService.getUserList(
+      {
+        cursor: null,
+        order: ['seed_ASC'],
+        take: 6,
+      },
+      request,
+      response,
+    );
   }
 
   async updateFilter(userId: string, dto: UserFilterDto) {

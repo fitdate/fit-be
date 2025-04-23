@@ -7,10 +7,16 @@ import { UserStatisticsService } from './services/user-statistics.service';
 import { LocationModule } from '../location/location.module';
 import { FilterModule } from '../filter/filter.module';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
+import { RedisService } from '../redis/redis.service';
 @Module({
   imports: [TypeOrmModule.forFeature([User]), LocationModule, FilterModule],
   controllers: [UserController],
-  providers: [UserService, UserStatisticsService, CursorPaginationUtil],
+  providers: [
+    UserService,
+    UserStatisticsService,
+    CursorPaginationUtil,
+    RedisService,
+  ],
   exports: [
     UserService,
     UserStatisticsService,
