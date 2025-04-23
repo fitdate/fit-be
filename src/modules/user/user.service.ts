@@ -247,17 +247,24 @@ export class UserService {
 
   //회원목록 유저 찾기
   async getUserList(dto: CursorPaginationDto) {
-    const seed = dto.seed || uuidv4();
-    const cacheKey = `userList:${seed}:${dto.order.join('_')}:${dto.take}`;
-    const cached = await this.redisService.get(cacheKey);
+    this.logger.debug(`getUserList 시작 - dto: ${JSON.stringify(dto)}`);
 
+    const seed = dto.seed || uuidv4();
+    this.logger.debug(`사용된 seed: ${seed}`);
+
+    const cacheKey = `userList:${seed}:${dto.order.join('_')}:${dto.take}`;
+    this.logger.debug(`캐시 키: ${cacheKey}`);
+
+    const cached = await this.redisService.get(cacheKey);
     if (cached) {
+      this.logger.debug('캐시에서 데이터를 가져왔습니다');
       return JSON.parse(cached) as {
         users: User[];
         nextCursor: string;
         totalCount: number;
       };
     }
+    this.logger.debug('캐시에 데이터가 없어 DB에서 조회합니다');
 
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -266,14 +273,23 @@ export class UserService {
     qb.where('"user"."seed" LIKE :seed', { seed: `${seed}%` });
     qb.orderBy('"user"."seed"', 'ASC');
 
+    this.logger.debug(`생성된 쿼리: ${qb.getQuery()}`);
+    this.logger.debug(`쿼리 파라미터: ${JSON.stringify(qb.getParameters())}`);
+
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
+    this.logger.debug(`다음 커서: ${nextCursor}`);
 
     const [users, totalCount] = await qb.getManyAndCount();
+    this.logger.debug(
+      `조회된 사용자 수: ${users.length}, 전체 수: ${totalCount}`,
+    );
 
     const result = { users, nextCursor, totalCount };
     const cacheTtl = 300;
     await this.redisService.set(cacheKey, JSON.stringify(result), cacheTtl);
+    this.logger.debug(`결과를 캐시에 저장했습니다. TTL: ${cacheTtl}초`);
+
     return result;
   }
 
