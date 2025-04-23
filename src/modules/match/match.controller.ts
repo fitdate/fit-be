@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { MatchService } from './match.service';
-import { CurrentUser } from '../../common/decorator/current-user.decorator';
+import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorator/public.decorator';
@@ -35,7 +35,7 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @Get('random')
-  async findRandomMatches(@CurrentUser() user: User) {
+  async findRandomMatches(@UserId() user: User) {
     if (!user || !user.id) {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
     }
@@ -52,7 +52,7 @@ export class MatchController {
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
   @Post('select')
   async selectMatch(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Body() selectMatchDto: SelectMatchDto,
   ) {
     if (!user) {
@@ -81,7 +81,7 @@ export class MatchController {
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
   @Post('select-all')
   async selectAllMatch(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Body() selectMatchDto: SelectMatchDto,
   ) {
     return this.matchService.sendAllSelectionNotification(
@@ -100,7 +100,7 @@ export class MatchController {
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
   @Post('enter-chat')
   async enterChat(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Body() selectMatchDto: SelectMatchDto,
   ) {
     if (!selectMatchDto || !selectMatchDto.matchId) {
