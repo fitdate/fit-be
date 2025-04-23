@@ -239,15 +239,20 @@ export class MatchService {
   }
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
-    const match = this.matchRepository.create({
-      id: createMatchDto.matchId,
-      user1: { id: createMatchDto.user1Id },
-      user2: { id: createMatchDto.user2Id },
-    });
-
     // 사용자 존재 여부 확인
     const user1 = await this.userService.findOne(createMatchDto.user1Id);
     const user2 = await this.userService.findOne(createMatchDto.user2Id);
+
+    if (!user1 || !user2) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    // 사용자 ID로 매칭 생성
+    const match = this.matchRepository.create({
+      id: createMatchDto.matchId,
+      user1: { id: user1.id },
+      user2: { id: user2.id },
+    });
 
     if (user1) {
       await this.notificationService.create({
