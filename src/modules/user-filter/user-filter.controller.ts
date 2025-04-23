@@ -3,15 +3,16 @@ import { UserFilterService } from './user-filter.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
-import { OptionalUserId } from 'src/common/decorator/optional-user.decorator';
+import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('User Filter')
 @Controller('user-filter')
 export class UserFilterController {
   constructor(private readonly userFilterService: UserFilterService) {}
 
   @Get('filtered-users')
-  getFilteredUsers(@OptionalUserId() userId?: string) {
-    return this.userFilterService.getFilteredUsers(userId);
+  @Public()
+  getFilteredUsers() {
+    return this.userFilterService.getFilteredUsers();
   }
 
   @Get('user-filter')

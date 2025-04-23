@@ -182,6 +182,7 @@ export class MatchService {
 
     // 유사도 계산 및 정렬
     const usersWithSimilarity = oppositeGenderUsers
+      .filter((user) => user.id !== userId) // 현재 사용자 제외
       .map((user) => ({
         user,
         similarity: this.calculateSimilarity(currentUser, user),
