@@ -13,7 +13,7 @@ import { User } from '../user/entities/user.entity';
 export class MatchService {
   constructor(
     @InjectRepository(Match)
-    private matchRepository: Repository<Match>,
+    private readonly matchRepository: Repository<Match>,
     private readonly notificationService: NotificationService,
     private readonly userService: UserService,
   ) {}
@@ -245,23 +245,29 @@ export class MatchService {
       user2: { id: createMatchDto.user2Id },
     });
 
+    // 사용자 존재 여부 확인
+    const user1 = await this.userService.findOne(createMatchDto.user1Id);
+    const user2 = await this.userService.findOne(createMatchDto.user2Id);
+
+    if (user1) {
+      await this.notificationService.create({
+        title: '새로운 매칭이 생성되었습니다!',
+        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+        type: NotificationType.MATCH,
+        receiverId: createMatchDto.user1Id,
+      });
+    }
+
+    if (user2) {
+      await this.notificationService.create({
+        title: '새로운 매칭이 생성되었습니다!',
+        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+        type: NotificationType.MATCH,
+        receiverId: createMatchDto.user2Id,
+      });
+    }
+
     const savedMatch = await this.matchRepository.save(match);
-
-    // 매칭 알림 생성
-    await this.notificationService.create({
-      title: '새로운 매칭이 생성되었습니다!',
-      content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-      type: NotificationType.MATCH,
-      receiverId: createMatchDto.user1Id,
-    });
-
-    await this.notificationService.create({
-      title: '새로운 매칭이 생성되었습니다!',
-      content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-      type: NotificationType.MATCH,
-      receiverId: createMatchDto.user2Id,
-    });
-
     return savedMatch;
   }
 
