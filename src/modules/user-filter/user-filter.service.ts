@@ -27,8 +27,14 @@ export class UserFilterService {
     return filter;
   }
 
-  async getFilteredUsers(userId: string) {
+  async getFilteredUsers(userId?: string) {
     this.logger.debug(`사용자 ${userId}의 필터링된 사용자 목록을 조회합니다.`);
+    if (!userId) {
+      this.logger.debug(
+        '로그인하지 않은 사용자를 위한 기본 필터링을 적용합니다.',
+      );
+      return this.userService.getUserList();
+    }
     const filter = await this.getUserFilter(userId);
     if (!filter) {
       this.logger.debug('필터 설정이 없어 기본값을 사용합니다.');

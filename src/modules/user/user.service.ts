@@ -54,6 +54,14 @@ export class UserService {
     });
   }
 
+  //회원목록 유저 찾기기
+  async getUserList() {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount'])
+      .getMany();
+  }
+
   async getAllUserInfo() {
     return this.userRepository.find({
       relations: [
