@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
@@ -9,13 +10,20 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserSocialDto } from './dto/create-user-social.dto';
-import { FilterUsersDto } from './dto/filter-user.dto';
+import { UserFilterService } from '../user-filter/user-filter.service';
+import { FilterService } from '../filter/filter.service';
+import { UserWithScore } from '../filter/types/user-with-score.type';
+import { FilteredUsersDto } from './dto/filtered-user.dto';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly userFilterService: UserFilterService,
+    private readonly filterService: FilterService,
   ) {}
 
   createUser(createUserDto: CreateUserDto) {
@@ -147,29 +155,61 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
-  async getFilteredUsers(filter: FilterUsersDto, userId: string) {
-    const { ageMin, ageMax, minLikes } = filter;
+  async getFilteredUsers(
+    currentUserId: string,
+    filteredUsersDto: FilteredUsersDto,
+  ): Promise<UserWithScore[]> {
+    this.logger.debug(
+      `필터링된 사용자 조회 시작 - 현재 사용자: ${currentUserId}, 필터: ${JSON.stringify(
+        filteredUsersDto,
+      )}`,
+    );
+
+    const { ageMin, ageMax, minLikes } = filteredUsersDto;
     const today = new Date();
 
-    const currentUser = await this.findOne(userId);
+    const currentUser = await this.findOne(currentUserId);
     if (!currentUser) {
+      this.logger.error(`현재 사용자를 찾을 수 없음: ${currentUserId}`);
       throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
     }
 
     const query = this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.profile', 'profile')
-      .leftJoinAndSelect('profile.mbti', 'mbti')
-      .leftJoinAndSelect('profile.userIntroductions', 'userIntroductions')
-      .leftJoinAndSelect('profile.userFeedbacks', 'userFeedbacks')
-      .leftJoinAndSelect('profile.interestCategory', 'interestCategory')
-      .leftJoinAndSelect('profile.profileImage', 'profileImage')
-      .where('user.id != :userId', { userId })
+      .select([
+        'user.id',
+        'user.nickname',
+        'user.birthday',
+        'user.gender',
+        'user.region',
+        'user.job',
+        'user.likeCount',
+        'profile.id',
+        'mbti.mbti',
+        'profileImages.imageUrl',
+        'profileImages.isMain',
+        'userIntroductions.id',
+        'userIntroductions.introduction',
+        'userFeedbacks.id',
+        'userFeedbacks.feedback',
+        'interestCategory.id',
+        'interestCategory.category',
+      ])
+      .leftJoin('user.profile', 'profile')
+      .leftJoin('profile.mbti', 'mbti')
+      .leftJoin('profile.userIntroductions', 'userIntroductions')
+      .leftJoin('userIntroductions.introduction', 'introduction')
+      .leftJoin('profile.userFeedbacks', 'userFeedbacks')
+      .leftJoin('userFeedbacks.feedback', 'feedback')
+      .leftJoin('profile.interestCategory', 'interestCategory')
+      .leftJoin('interestCategory.category', 'category')
+      .where('user.id != :userId', { userId: currentUserId })
       .andWhere('user.gender != :gender', { gender: currentUser.gender })
       .andWhere('user.isProfileComplete = :isComplete', { isComplete: true });
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;
+      this.logger.debug(`최대 출생연도 필터 적용: ${maxBirthYear}`);
       query.andWhere(
         'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) <= :maxBirthYear',
         { maxBirthYear },
@@ -178,6 +218,7 @@ export class UserService {
 
     if (ageMax) {
       const minBirthYear = today.getFullYear() - ageMax;
+      this.logger.debug(`최소 출생연도 필터 적용: ${minBirthYear}`);
       query.andWhere(
         'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) >= :minBirthYear',
         { minBirthYear },
@@ -185,9 +226,19 @@ export class UserService {
     }
 
     if (minLikes) {
+      this.logger.debug(`최소 좋아요 수 필터 적용: ${minLikes}`);
       query.andWhere('user.likeCount >= :minLikes', { minLikes });
     }
 
-    return query.getMany();
+    const users = await query.getMany();
+    this.logger.debug(`필터링된 사용자 수: ${users.length}`);
+
+    const usersWithScores = this.filterService.addCompatibilityScores(
+      users,
+      currentUser,
+    );
+    this.logger.debug(`호환성 점수 계산 완료`);
+
+    return usersWithScores;
   }
 }

@@ -2,7 +2,7 @@ import { IsOptional, IsInt, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class FilterUsersDto {
+export class FilteredUsersDto {
   @ApiProperty({
     description: '최소 나이',
     required: false,
