@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, Min, Max } from 'class-validator';
 
-export class CreateUserListDto {
+export class UserFilterDto {
   // @ApiProperty({
   //   description: '최대 거리',
   //   example: 100,

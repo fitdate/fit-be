@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserFilter } from './entities/user-filter.entity';
 import { UserService } from '../user/user.service';
 import { Repository } from 'typeorm';
-
+import { UserFilterDto } from './dto/user-filter.dto';
 @Injectable()
 export class UserFilterService {
   private readonly logger = new Logger(UserFilterService.name);
@@ -52,7 +52,7 @@ export class UserFilterService {
     });
   }
 
-  async updateFilter(userId: string, dto: UserFilter) {
+  async updateFilter(userId: string, dto: UserFilterDto) {
     this.logger.debug(
       `사용자 ${userId}의 필터 설정을 업데이트합니다: ${JSON.stringify(dto)}`,
     );
@@ -62,10 +62,8 @@ export class UserFilterService {
 
     if (!filter) {
       this.logger.debug('새로운 필터 설정을 생성합니다.');
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { user: _, ...filterData } = dto;
       filter = this.userFilterRepository.create({
-        ...filterData,
+        ...dto,
         user: { id: userId },
       });
     } else {

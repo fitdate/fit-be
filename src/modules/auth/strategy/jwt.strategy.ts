@@ -41,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: TokenPayload) {
     this.logger.debug(`Validating token payload: ${JSON.stringify(payload)}`);
-    
+
     // 토큰 타입 검증
     if (payload.type !== 'access') {
       this.logger.error(`Invalid token type: ${payload.type}`);
@@ -56,7 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     this.logger.debug(`User validated successfully: ${user.id}`);
-    
+
     // payload의 sub를 유지하면서 사용자 정보를 추가
     return {
       ...payload,

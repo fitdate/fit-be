@@ -47,7 +47,7 @@ export class User extends BaseTable {
   region?: string;
 
   @Column({ nullable: true })
-  height: string;
+  height: number;
 
   @Column({ nullable: true })
   job?: string;
