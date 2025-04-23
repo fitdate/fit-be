@@ -1,6 +1,6 @@
 import {
   IsString,
-  IsNumber,
+  IsUUID,
   IsEnum,
   IsOptional,
   IsObject,
@@ -19,8 +19,8 @@ export class CreateNotificationDto {
   @IsEnum(NotificationType)
   type: NotificationType;
 
-  @IsNumber()
-  receiverId: number;
+  @IsUUID('4')
+  receiverId: string;
 
   @IsOptional()
   @IsObject()

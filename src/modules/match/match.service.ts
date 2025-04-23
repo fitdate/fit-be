@@ -260,14 +260,14 @@ export class MatchService {
       title: '새로운 매칭이 생성되었습니다!',
       content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
       type: NotificationType.MATCH,
-      receiverId: Number(createMatchDto.user1Id),
+      receiverId: createMatchDto.user1Id,
     });
 
     await this.notificationService.create({
       title: '새로운 매칭이 생성되었습니다!',
       content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
       type: NotificationType.MATCH,
-      receiverId: Number(createMatchDto.user2Id),
+      receiverId: createMatchDto.user2Id,
     });
 
     return savedMatch;
@@ -320,7 +320,7 @@ export class MatchService {
     // 선택된 사용자에게 알림 전송
     await this.notificationService.create({
       type: NotificationType.MATCH,
-      receiverId: Number(selectedUserId),
+      receiverId: selectedUserId,
       data: {
         matchId,
         senderId: currentUserId,
@@ -345,7 +345,7 @@ export class MatchService {
     // 두 명의 사용자에게 알림 전송
     await this.notificationService.create({
       type: NotificationType.MATCH,
-      receiverId: Number(match.user1.id),
+      receiverId: match.user1.id,
       data: {
         matchId,
         senderId: currentUserId,
@@ -354,7 +354,7 @@ export class MatchService {
 
     await this.notificationService.create({
       type: NotificationType.MATCH,
-      receiverId: Number(match.user2.id),
+      receiverId: match.user2.id,
       data: {
         matchId,
         senderId: currentUserId,
@@ -385,7 +385,7 @@ export class MatchService {
       title: '채팅방 입장 알림',
       content: '상대방이 채팅방에 입장했습니다. 대화를 시작해보세요!',
       type: NotificationType.COFFEE_CHAT,
-      receiverId: Number(opponentId),
+      receiverId: opponentId,
       data: {
         matchId,
         senderId: currentUserId,

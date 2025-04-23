@@ -33,8 +33,8 @@ export class Notification extends BaseTable {
   @JoinColumn()
   receiver: User;
 
-  @Column()
-  receiverId: number;
+  @Column({ type: 'uuid' })
+  receiverId: string;
 
   @Column({ type: 'json', nullable: true })
   data: Record<string, any>;

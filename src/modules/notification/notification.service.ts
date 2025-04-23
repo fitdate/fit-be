@@ -48,7 +48,7 @@ export class NotificationService {
    * @param userId 알림을 조회할 사용자의 ID
    * @returns 사용자의 알림 목록
    */
-  async findAll(userId: number) {
+  async findAll(userId: string) {
     this.logger.log(`사용자 ${userId}의 알림 목록 조회`);
     return this.notificationRepository.find({
       where: { receiverId: userId },
@@ -97,7 +97,7 @@ export class NotificationService {
    * @param userId 알림을 삭제할 사용자의 ID
    * @returns 삭제 작업 결과
    */
-  async removeAll(userId: number) {
+  async removeAll(userId: string) {
     this.logger.log(`사용자 ${userId}의 모든 알림 삭제`);
     return this.notificationRepository.delete({ receiverId: userId });
   }
