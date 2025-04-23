@@ -1,10 +1,19 @@
-import { Controller, Post, Body, Patch, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Patch,
+  Get,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SkipProfileComplete } from '../auth/guard/profile-complete.guard';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { FilteredUsersDto } from './dto/filtered-user.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -86,8 +95,16 @@ export class UserController {
     return this.userService.findOne(userId);
   }
 
-  @Get('user-filter')
-  getUserFilter(@UserId() userId: string) {
-    // return this.userService.getFilteredUsers(userId);
+  @Get('user-nickname/:nickname')
+  getUserNickname(@Param('nickname') nickname: string) {
+    return this.userService.findUserByNickname(nickname);
+  }
+
+  @Get('filtered-users')
+  getFilteredUsers(
+    @UserId() userId: string,
+    @Query() filteredUsersDto: FilteredUsersDto,
+  ) {
+    return this.userService.getFilteredUsers(userId, filteredUsersDto);
   }
 }

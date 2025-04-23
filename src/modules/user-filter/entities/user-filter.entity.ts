@@ -3,17 +3,17 @@ import { User } from 'src/modules/user/entities/user.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';
 
 @Entity()
-export class UserList {
+export class UserFilter {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User, (user) => user.userList)
+  @OneToOne(() => User, (user) => user.userFilter)
   user: User;
 
-  @Column({ default: 10 })
-  @Min(0)
-  @Max(10)
-  maxDistance: number;
+  // @Column({ default: 10 })
+  // @Min(0)
+  // @Max(10)
+  // maxDistance: number;
 
   @Column({ default: 20 })
   @Min(20)

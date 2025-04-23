@@ -55,10 +55,10 @@ import { AdminModule } from './modules/admin/admin.module';
 // import { AdminController } from './modules/admin/admin.controller';
 import { ChatModule } from './modules/chat/chat.module';
 // import { ChatController } from './modules/chat/chat.controller';
-import { UserListModule } from './modules/user-list/user-list.module';
+import { UserFilterModule } from './modules/user-filter/user-filter.module';
 import { Reflector } from '@nestjs/core';
 import { ActivityMiddleware } from './modules/auth/middleware/activity.middleware';
-
+import { FilterModule } from './modules/filter/filter.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -127,7 +127,8 @@ import { ActivityMiddleware } from './modules/auth/middleware/activity.middlewar
     MailerModule,
     AdminModule,
     ChatModule,
-    UserListModule,
+    UserFilterModule,
+    FilterModule,
   ],
   controllers: [AppController],
   providers: [
