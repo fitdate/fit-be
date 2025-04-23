@@ -106,15 +106,15 @@ export class MatchService {
     user1: User;
     user2: User;
   }> {
-    if (!user1?.id || !user2?.id) {
+    if (!user1?.profile?.id || !user2?.profile?.id) {
       throw new Error('유효하지 않은 사용자입니다.');
     }
 
     const matchId = uuidv4();
     await this.create({
       matchId,
-      user1Id: user1.id,
-      user2Id: user2.id,
+      user1Id: user1.profile.id,
+      user2Id: user2.profile.id,
     });
     return {
       matchId,
@@ -126,42 +126,22 @@ export class MatchService {
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
-    console.log('=== 매칭 시작 ===');
-    console.log('현재 사용자 ID:', userId);
-
-    // 현재 사용자와 다른 성별의 사용자들을 한 번의 쿼리로 가져옴
+    // 현재 사용자의 성별 가져오기
     const currentUser = await this.userService.findOne(userId);
+
     if (!currentUser || !currentUser.gender) {
       throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
     }
 
-    console.log('현재 사용자 정보:', {
-      id: currentUser.id,
-      gender: currentUser.gender,
-      nickname: currentUser.nickname,
-    });
-
-    const oppositeGender = currentUser.gender === '남자' ? '여자' : '남자';
+    // 모든 사용자 정보 가져오기
     const allUsers = await this.userService.getAllUserInfo();
 
     // 현재 사용자 제외하고 성별이 다른 사용자만 필터링
-    const oppositeGenderUsers = allUsers.filter(
-      (user) => user && user.id && user.gender === oppositeGender,
+    const otherUsers = allUsers.filter((user) => user.id !== userId);
+    const oppositeGenderUsers = this.filterUsersByGender(
+      otherUsers,
+      currentUser.gender === '남자' ? '여자' : '남자',
     );
-
-    console.log('반대 성별 사용자 수:', oppositeGenderUsers.length);
-    console.log(
-      '반대 성별 사용자 목록:',
-      oppositeGenderUsers.map((u) => ({
-        id: u.id,
-        gender: u.gender,
-        nickname: u.nickname,
-      })),
-    );
-
-    if (oppositeGenderUsers.length < 2) {
-      throw new NotFoundException('매칭 가능한 사용자가 충분하지 않습니다.');
-    }
 
     // 유사도 계산 및 정렬
     const usersWithSimilarity = oppositeGenderUsers
@@ -191,25 +171,8 @@ export class MatchService {
         }
       }
 
-      const selectedUser = usersWithSimilarity[selectedIndex].user;
-      if (selectedUser && selectedUser.id) {
-        selectedUsers.push(selectedUser);
-      }
+      selectedUsers.push(usersWithSimilarity[selectedIndex].user);
       usersWithSimilarity.splice(selectedIndex, 1);
-    }
-
-    console.log('선택된 사용자 수:', selectedUsers.length);
-    console.log(
-      '선택된 사용자 목록:',
-      selectedUsers.map((u) => ({
-        id: u.id,
-        gender: u.gender,
-        nickname: u.nickname,
-      })),
-    );
-
-    if (selectedUsers.length < 2) {
-      throw new NotFoundException('매칭 가능한 사용자가 충분하지 않습니다.');
     }
 
     // 매칭 생성
@@ -218,82 +181,12 @@ export class MatchService {
     // 2명씩 매칭
     for (let i = 0; i < selectedUsers.length; i += 2) {
       if (i + 1 < selectedUsers.length) {
-        const user1 = selectedUsers[i];
-        const user2 = selectedUsers[i + 1];
-
-        if (!user1?.id || !user2?.id) {
-          console.log('유효하지 않은 사용자 ID 발견:', {
-            user1: user1?.id,
-            user2: user2?.id,
-          });
-          continue;
-        }
-
-        const matchId = uuidv4();
-        console.log('매칭 생성:', {
-          matchId,
-          user1: {
-            id: user1.id,
-            gender: user1.gender,
-            nickname: user1.nickname,
-          },
-          user2: {
-            id: user2.id,
-            gender: user2.gender,
-            nickname: user2.nickname,
-          },
-        });
-
-        await this.create({
-          matchId,
-          user1Id: user1.id,
-          user2Id: user2.id,
-        });
-
-        // 알림 전송
-        await this.notificationService.create({
-          title: '새로운 매칭이 생성되었습니다!',
-          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-          type: NotificationType.MATCH,
-          receiverId: user1.id,
-        });
-
-        await this.notificationService.create({
-          title: '새로운 매칭이 생성되었습니다!',
-          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-          type: NotificationType.MATCH,
-          receiverId: user2.id,
-        });
-
-        matches.push({
-          matchId,
-          user1,
-          user2,
-        });
+        const match = await this.createMatch(
+          selectedUsers[i],
+          selectedUsers[i + 1],
+        );
+        matches.push(match);
       }
-    }
-
-    console.log('=== 매칭 결과 ===');
-    console.log('생성된 매칭 수:', matches.length);
-    console.log(
-      '매칭 목록:',
-      matches.map((m) => ({
-        matchId: m.matchId,
-        user1: {
-          id: m.user1.id,
-          gender: m.user1.gender,
-          nickname: m.user1.nickname,
-        },
-        user2: {
-          id: m.user2.id,
-          gender: m.user2.gender,
-          nickname: m.user2.nickname,
-        },
-      })),
-    );
-
-    if (matches.length === 0) {
-      throw new NotFoundException('매칭을 생성할 수 없습니다.');
     }
 
     return { matches };
@@ -346,57 +239,36 @@ export class MatchService {
   }
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
+    const match = this.matchRepository.create({
+      id: createMatchDto.matchId,
+      user1: { id: createMatchDto.user1Id },
+      user2: { id: createMatchDto.user2Id },
+    });
+
     // 사용자 존재 여부 확인
     const user1 = await this.userService.findOne(createMatchDto.user1Id);
     const user2 = await this.userService.findOne(createMatchDto.user2Id);
 
-    if (!user1 || !user2) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-
-    // 트랜잭션 시작
-    const queryRunner =
-      this.matchRepository.manager.connection.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // 사용자 ID로 매칭 생성
-      const match = this.matchRepository.create({
-        id: createMatchDto.matchId,
-        user1: { id: user1.id },
-        user2: { id: user2.id },
+    if (user1) {
+      await this.notificationService.create({
+        title: '새로운 매칭이 생성되었습니다!',
+        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+        type: NotificationType.MATCH,
+        receiverId: createMatchDto.user1Id,
       });
-
-      const savedMatch = await queryRunner.manager.save(match);
-
-      // 알림 전송
-      if (user1) {
-        await this.notificationService.create({
-          title: '새로운 매칭이 생성되었습니다!',
-          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-          type: NotificationType.MATCH,
-          receiverId: createMatchDto.user1Id,
-        });
-      }
-
-      if (user2) {
-        await this.notificationService.create({
-          title: '새로운 매칭이 생성되었습니다!',
-          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-          type: NotificationType.MATCH,
-          receiverId: createMatchDto.user2Id,
-        });
-      }
-
-      await queryRunner.commitTransaction();
-      return savedMatch;
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
     }
+
+    if (user2) {
+      await this.notificationService.create({
+        title: '새로운 매칭이 생성되었습니다!',
+        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+        type: NotificationType.MATCH,
+        receiverId: createMatchDto.user2Id,
+      });
+    }
+
+    const savedMatch = await this.matchRepository.save(match);
+    return savedMatch;
   }
 
   async findAll(): Promise<Match[]> {
