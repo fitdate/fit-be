@@ -210,20 +210,28 @@ export class MatchService {
 
     // 남자-남자 매칭
     if (selectedMaleProfiles.length === 2) {
-      const match = await this.createMatch(
-        selectedMaleProfiles[0],
-        selectedMaleProfiles[1],
-      );
-      matches.push(match);
+      try {
+        const match = await this.createMatch(
+          selectedMaleProfiles[0],
+          selectedMaleProfiles[1],
+        );
+        matches.push(match);
+      } catch (error) {
+        console.error('남자-남자 매칭 생성 실패:', error);
+      }
     }
 
     // 여자-여자 매칭
     if (selectedFemaleProfiles.length === 2) {
-      const match = await this.createMatch(
-        selectedFemaleProfiles[0],
-        selectedFemaleProfiles[1],
-      );
-      matches.push(match);
+      try {
+        const match = await this.createMatch(
+          selectedFemaleProfiles[0],
+          selectedFemaleProfiles[1],
+        );
+        matches.push(match);
+      } catch (error) {
+        console.error('여자-여자 매칭 생성 실패:', error);
+      }
     }
 
     return { matches };
