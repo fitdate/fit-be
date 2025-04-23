@@ -263,8 +263,8 @@ export class UserService {
       .createQueryBuilder('user')
       .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount']);
 
-    qb.where('user.seed LIKE :seed', { seed: `${seed}%` });
-    qb.orderBy('user.seed', 'ASC');
+    qb.where('"user"."seed" LIKE :seed', { seed: `${seed}%` });
+    qb.orderBy('"user"."seed"', 'ASC');
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
