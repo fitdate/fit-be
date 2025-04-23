@@ -1,13 +1,11 @@
 import {
   Controller,
   Get,
-  UseGuards,
   Post,
   Body,
   BadRequestException,
 } from '@nestjs/common';
 import { MatchService } from './match.service';
-import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { CurrentUser } from '../../common/decorator/current-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -34,7 +32,6 @@ export class MatchController {
     summary: '로그인 사용자 랜덤 매칭 4명 조회',
     description: '성별이 다른 4명의 랜덤 매칭을 조회합니다.',
   })
-  @UseGuards(JwtAuthGuard)
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @Get('random')
@@ -53,7 +50,6 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  @UseGuards(JwtAuthGuard)
   @Post('select')
   async selectMatch(
     @CurrentUser() user: User,
@@ -83,7 +79,6 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  @UseGuards(JwtAuthGuard)
   @Post('select-all')
   async selectAllMatch(
     @CurrentUser() user: User,
@@ -103,7 +98,6 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '알림 전송 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  @UseGuards(JwtAuthGuard)
   @Post('enter-chat')
   async enterChat(
     @CurrentUser() user: User,
