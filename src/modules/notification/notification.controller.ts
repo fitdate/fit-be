@@ -147,7 +147,9 @@ export class NotificationController {
   @Sse('events')
   streamNotifications(@Req() req: RequestWithUser): Observable<MessageEvent> {
     return this.notificationService.getNotificationStream().pipe(
-      filter((notification) => notification.receiverId === req.user.id),
+      filter(
+        (notification) => notification.receiverId === req.user.id.toString(),
+      ),
       map((notification) => ({
         data: JSON.stringify(notification),
       })),
