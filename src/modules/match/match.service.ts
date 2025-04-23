@@ -187,47 +187,65 @@ export class MatchService {
   async findRandomPublicMatches(): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
-    // 모든 사용자 정보 가져오기
-    const allUsers = await this.userService.getAllUserInfo();
+    try {
+      this.logger.log('공개 매칭 시작');
 
-    // 성별별로 사용자 분리
-    const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
-    const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
+      // 페이징 처리로 사용자 정보 가져오기 (10명씩)
+      const { users: allUsers } =
+        await this.userService.getAllUserInfoWithPagination(1, 10);
+      this.logger.log(`총 ${allUsers.length}명의 사용자 정보 로드 완료`);
 
-    // 각 성별에서 랜덤으로 2명씩 선택
-    const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
-    const selectedFemaleUsers = this.selectRandomUsers(femaleUsers, 2);
+      // 성별별로 사용자 분리
+      const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
+      const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
 
-    // 매칭 생성
-    const matches: { matchId: string; user1: User; user2: User }[] = [];
+      this.logger.log(
+        `남성 ${maleUsers.length}명, 여성 ${femaleUsers.length}명 분리 완료`,
+      );
 
-    // 남자-남자 매칭
-    if (selectedMaleUsers.length === 2) {
-      try {
-        const match = await this.createMatch(
-          selectedMaleUsers[0],
-          selectedMaleUsers[1],
-        );
-        matches.push(match);
-      } catch (error) {
-        console.error('남자-남자 매칭 생성 실패:', error);
+      // 각 성별에서 랜덤으로 2명씩 선택
+      const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
+      const selectedFemaleUsers = this.selectRandomUsers(femaleUsers, 2);
+
+      // 매칭 생성
+      const matches: { matchId: string; user1: User; user2: User }[] = [];
+
+      // 남자-남자 매칭
+      if (selectedMaleUsers.length === 2) {
+        try {
+          const match = await this.createMatch(
+            selectedMaleUsers[0],
+            selectedMaleUsers[1],
+          );
+          matches.push(match);
+          this.logger.log('남자-남자 매칭 생성 성공');
+        } catch (error) {
+          this.logger.error('남자-남자 매칭 생성 실패:', error);
+        }
       }
-    }
 
-    // 여자-여자 매칭
-    if (selectedFemaleUsers.length === 2) {
-      try {
-        const match = await this.createMatch(
-          selectedFemaleUsers[0],
-          selectedFemaleUsers[1],
-        );
-        matches.push(match);
-      } catch (error) {
-        console.error('여자-여자 매칭 생성 실패:', error);
+      // 여자-여자 매칭
+      if (selectedFemaleUsers.length === 2) {
+        try {
+          const match = await this.createMatch(
+            selectedFemaleUsers[0],
+            selectedFemaleUsers[1],
+          );
+          matches.push(match);
+          this.logger.log('여자-여자 매칭 생성 성공');
+        } catch (error) {
+          this.logger.error('여자-여자 매칭 생성 실패:', error);
+        }
       }
-    }
 
-    return { matches };
+      this.logger.log(`총 ${matches.length}개의 매칭 생성 완료`);
+      return { matches };
+    } catch (error) {
+      this.logger.error('공개 매칭 생성 실패:', error);
+      throw new InternalServerErrorException(
+        '매칭 생성 중 오류가 발생했습니다.',
+      );
+    }
   }
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
