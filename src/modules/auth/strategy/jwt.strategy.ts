@@ -36,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         // 쿠키에서 토큰 추출
         (request: Request) => {
           this.logger.debug(`Extracting token from cookies: ${JSON.stringify(request.cookies)}`);
-          return request?.cookies?.Authentication;
+          return request?.cookies?.accessToken;
         },
         // Bearer 토큰에서 추출
         ExtractJwt.fromAuthHeaderAsBearerToken(),

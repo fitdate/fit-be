@@ -414,16 +414,30 @@ export class AuthService {
     const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
     const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
-    res.cookie(
-      'accessToken',
-      accessToken,
-      this.createCookieOptions(accessTokenMaxAge, req.headers.origin),
+    this.logger.debug(`Setting cookies with options:`, {
+      accessTokenMaxAge,
+      refreshTokenMaxAge,
+      origin: req.headers.origin,
+    });
+
+    const accessOptions = this.createCookieOptions(
+      accessTokenMaxAge,
+      req.headers.origin,
     );
-    res.cookie(
-      'refreshToken',
-      refreshToken,
-      this.createCookieOptions(refreshTokenMaxAge, req.headers.origin),
+    const refreshOptions = this.createCookieOptions(
+      refreshTokenMaxAge,
+      req.headers.origin,
     );
+
+    this.logger.debug(`Cookie options:`, {
+      accessOptions,
+      refreshOptions,
+    });
+
+    res.cookie('accessToken', accessToken, accessOptions);
+    res.cookie('refreshToken', refreshToken, refreshOptions);
+
+    this.logger.debug(`Cookies set successfully`);
 
     const userData = await this.userService.findOne(user.id);
     if (!userData) {
@@ -583,6 +597,7 @@ export class AuthService {
 
   //쿠키
   createCookieOptions(maxAge: number, origin?: string): CookieOptions {
+    this.logger.debug(`Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`);
     let domain: string | undefined;
 
     const configDomain = this.configService.get('app.host', {
@@ -590,6 +605,7 @@ export class AuthService {
     });
     if (configDomain) {
       domain = configDomain;
+      this.logger.debug(`Using config domain: ${domain}`);
     } else if (origin) {
       // 환경 변수에 설정이 없는 경우 origin에서 도메인 추출
       const hostname = new URL(origin).hostname;
@@ -599,9 +615,10 @@ export class AuthService {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         domain = hostname;
       }
+      this.logger.debug(`Using origin hostname as domain: ${domain}`);
     }
 
-    return {
+    const options: CookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -609,6 +626,9 @@ export class AuthService {
       domain: '.fit-date.co.kr', //배포할때 삭제하기,
       path: '/',
     };
+
+    this.logger.debug(`Created cookie options:`, options);
+    return options;
   }
 
   //로그아웃
@@ -616,10 +636,13 @@ export class AuthService {
     accessOptions: CookieOptions;
     refreshOptions: CookieOptions;
   } {
-    return {
+    this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
+    const options = {
       accessOptions: this.createCookieOptions(0, origin),
       refreshOptions: this.createCookieOptions(0, origin),
     };
+    this.logger.debug(`Created logout cookie options:`, options);
+    return options;
   }
 
   async sendVerificationEmail(

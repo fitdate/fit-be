@@ -25,17 +25,21 @@ export class TokenService {
     refreshToken: string;
     tokenId: string;
   }> {
+    this.logger.debug(`Generating tokens for user: ${userId}, role: ${userRole}`);
     // 토큰 ID 생성 (UUID)
     const tokenId = uuidv4();
+    this.logger.debug(`Generated tokenId: ${tokenId}`);
 
     // Access Token 생성
     const accessToken = this.generateAccessToken(userId, userRole);
+    this.logger.debug(`Generated access token for user: ${userId}`);
 
     // Refresh Token 생성 및 Redis 저장
     const refreshToken = await this.generateAndStoreRefreshToken(
       userId,
       tokenId,
     );
+    this.logger.debug(`Generated and stored refresh token for user: ${userId}`);
 
     return {
       accessToken,
@@ -45,6 +49,7 @@ export class TokenService {
   }
 
   private generateAccessToken(userId: string, userRole: UserRole): string {
+    this.logger.debug(`Generating access token for user: ${userId}`);
     const accessTokenSecret = this.configService.getOrThrow(
       'jwt.accessTokenSecret',
       {
@@ -58,6 +63,11 @@ export class TokenService {
         infer: true,
       },
     );
+
+    this.logger.debug(`Access token configuration:`, {
+      expiresIn: accessTokenExpiresIn,
+      hasSecret: !!accessTokenSecret,
+    });
 
     return this.jwtService.sign(
       {
@@ -76,6 +86,7 @@ export class TokenService {
     userId: string,
     tokenId: string,
   ): Promise<string> {
+    this.logger.debug(`Generating refresh token for user: ${userId}, tokenId: ${tokenId}`);
     const refreshTokenSecret = this.configService.getOrThrow(
       'jwt.refreshTokenSecret',
       {
@@ -89,6 +100,11 @@ export class TokenService {
         infer: true,
       },
     );
+
+    this.logger.debug(`Refresh token configuration:`, {
+      expiresIn: refreshTokenExpiresIn,
+      hasSecret: !!refreshTokenSecret,
+    });
 
     // Refresh Token 생성
     const refreshToken = this.jwtService.sign(
@@ -105,11 +121,14 @@ export class TokenService {
 
     // Redis에 토큰 ID 저장
     const ttlSeconds = parseTimeToSeconds(refreshTokenExpiresIn);
-    await this.redisService.set(
-      `refresh:${userId}:${tokenId}`,
-      tokenId,
+    const redisKey = `refresh:${userId}:${tokenId}`;
+    this.logger.debug(`Storing refresh token in Redis:`, {
+      key: redisKey,
       ttlSeconds,
-    );
+    });
+
+    await this.redisService.set(redisKey, tokenId, ttlSeconds);
+    this.logger.debug(`Successfully stored refresh token in Redis`);
 
     return refreshToken;
   }
@@ -118,33 +137,47 @@ export class TokenService {
     userId: string,
     tokenId: string,
   ): Promise<boolean> {
-    const storedTokenId = await this.redisService.get(
-      `refresh:${userId}:${tokenId}`,
-    );
-    return storedTokenId === tokenId;
+    this.logger.debug(`Validating refresh token for user: ${userId}, tokenId: ${tokenId}`);
+    const redisKey = `refresh:${userId}:${tokenId}`;
+    const storedTokenId = await this.redisService.get(redisKey);
+    
+    const isValid = storedTokenId === tokenId;
+    this.logger.debug(`Refresh token validation result:`, {
+      isValid,
+      storedTokenId,
+      expectedTokenId: tokenId,
+    });
+
+    return isValid;
   }
 
   async revokeRefreshToken(userId: string, tokenId: string): Promise<void> {
-    await this.redisService.del(`refresh:${userId}:${tokenId}`);
-    this.logger.log(
-      `Revoked refresh token for user: ${userId}, tokenId: ${tokenId}`,
-    );
+    this.logger.debug(`Revoking refresh token for user: ${userId}, tokenId: ${tokenId}`);
+    const redisKey = `refresh:${userId}:${tokenId}`;
+    await this.redisService.del(redisKey);
+    this.logger.debug(`Successfully revoked refresh token`);
   }
 
   async rotateRefreshToken(
     userId: string,
     oldTokenId: string,
   ): Promise<{ accessToken: string; refreshToken: string; tokenId: string }> {
+    this.logger.debug(`Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`);
     // 이전 토큰 유효성 검사
     const isValid = await this.validateRefreshToken(userId, oldTokenId);
     if (!isValid) {
+      this.logger.warn(`Invalid refresh token during rotation for user: ${userId}`);
       throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
     }
 
     // 이전 토큰 삭제
     await this.revokeRefreshToken(userId, oldTokenId);
+    this.logger.debug(`Successfully revoked old refresh token`);
 
     // 새로운 토큰 발급
-    return this.generateTokens(userId, UserRole.USER);
+    const newTokens = await this.generateTokens(userId, UserRole.USER);
+    this.logger.debug(`Successfully generated new tokens for user: ${userId}`);
+    
+    return newTokens;
   }
 }
