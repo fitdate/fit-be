@@ -126,21 +126,18 @@ export class MatchService {
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
-    // 현재 사용자의 성별 가져오기
+    // 현재 사용자와 다른 성별의 사용자들을 한 번의 쿼리로 가져옴
     const currentUser = await this.userService.findOne(userId);
-
     if (!currentUser || !currentUser.gender) {
       throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
     }
 
-    // 모든 사용자 정보 가져오기
+    const oppositeGender = currentUser.gender === '남자' ? '여자' : '남자';
     const allUsers = await this.userService.getAllUserInfo();
 
     // 현재 사용자 제외하고 성별이 다른 사용자만 필터링
-    const otherUsers = allUsers.filter((user) => user.id !== userId);
-    const oppositeGenderUsers = this.filterUsersByGender(
-      otherUsers,
-      currentUser.gender === '남자' ? '여자' : '남자',
+    const oppositeGenderUsers = allUsers.filter(
+      (user) => user.id !== userId && user.gender === oppositeGender,
     );
 
     // 유사도 계산 및 정렬
@@ -175,21 +172,56 @@ export class MatchService {
       usersWithSimilarity.splice(selectedIndex, 1);
     }
 
-    // 매칭 생성
+    // 매칭 생성 - 트랜잭션으로 한 번에 처리
     const matches: { matchId: string; user1: User; user2: User }[] = [];
+    const queryRunner =
+      this.matchRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // 2명씩 매칭
-    for (let i = 0; i < selectedUsers.length; i += 2) {
-      if (i + 1 < selectedUsers.length) {
-        const match = await this.createMatch(
-          selectedUsers[i],
-          selectedUsers[i + 1],
-        );
-        matches.push(match);
+    try {
+      // 2명씩 매칭
+      for (let i = 0; i < selectedUsers.length; i += 2) {
+        if (i + 1 < selectedUsers.length) {
+          const matchId = uuidv4();
+          const match = queryRunner.manager.create(Match, {
+            id: matchId,
+            user1: { id: selectedUsers[i].id },
+            user2: { id: selectedUsers[i + 1].id },
+          });
+
+          await queryRunner.manager.save(match);
+          matches.push({
+            matchId,
+            user1: selectedUsers[i],
+            user2: selectedUsers[i + 1],
+          });
+
+          // 알림 전송
+          await this.notificationService.create({
+            title: '새로운 매칭이 생성되었습니다!',
+            content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+            type: NotificationType.MATCH,
+            receiverId: selectedUsers[i].id,
+          });
+
+          await this.notificationService.create({
+            title: '새로운 매칭이 생성되었습니다!',
+            content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+            type: NotificationType.MATCH,
+            receiverId: selectedUsers[i + 1].id,
+          });
+        }
       }
-    }
 
-    return { matches };
+      await queryRunner.commitTransaction();
+      return { matches };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findRandomPublicMatches(): Promise<{
