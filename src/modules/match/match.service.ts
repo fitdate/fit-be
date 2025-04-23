@@ -32,7 +32,7 @@ export class MatchService {
     // MBTI 유사도
     if (user1?.profile?.mbti?.mbti && user2?.profile?.mbti?.mbti) {
       if (user1.profile.mbti.mbti === user2.profile.mbti.mbti) {
-        similarity += 30;
+        similarity += 50;
       }
     }
 
@@ -41,48 +41,24 @@ export class MatchService {
       user1?.profile?.interestCategory?.length &&
       user2?.profile?.interestCategory?.length
     ) {
-      const categories1 = user1.profile.interestCategory
-        .filter((cat) => cat.interestCategory && cat.interestCategory.name)
-        .map((cat) => cat.interestCategory.name);
-      const categories2 = user2.profile.interestCategory
-        .filter((cat) => cat.interestCategory && cat.interestCategory.name)
-        .map((cat) => cat.interestCategory.name);
-      const commonCategories = categories1.filter((cat) =>
-        categories2.includes(cat),
+      const categories1 = new Set(
+        user1.profile.interestCategory
+          .filter((cat) => cat.interestCategory && cat.interestCategory.name)
+          .map((cat) => cat.interestCategory.name),
       );
-      similarity +=
-        (commonCategories.length /
-          Math.max(categories1.length, categories2.length)) *
-        30;
-    }
+      const categories2 = new Set(
+        user2.profile.interestCategory
+          .filter((cat) => cat.interestCategory && cat.interestCategory.name)
+          .map((cat) => cat.interestCategory.name),
+      );
 
-    // 직업 유사도
-    if (user1?.job && user2?.job) {
-      if (user1.job === user2.job) {
-        similarity += 20;
-      }
-    }
+      const commonCategories = new Set(
+        [...categories1].filter((cat) => categories2.has(cat)),
+      );
 
-    // 피드백 유사도
-    if (
-      user1?.profile?.userFeedbacks?.length &&
-      user2?.profile?.userFeedbacks?.length
-    ) {
-      const feedback1 = user1.profile.userFeedbacks
-        .filter((fb) => fb?.feedback)
-        .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
-        .join(' ');
-      const feedback2 = user2.profile.userFeedbacks
-        .filter((fb) => fb?.feedback)
-        .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
-        .join(' ');
-      const commonWords = feedback1
-        .split(' ')
-        .filter((word) => feedback2.includes(word));
       similarity +=
-        (commonWords.length /
-          Math.max(feedback1.split(' ').length, feedback2.split(' ').length)) *
-        20;
+        (commonCategories.size / Math.max(categories1.size, categories2.size)) *
+        50;
     }
 
     return similarity;
@@ -261,30 +237,7 @@ export class MatchService {
       user2: { id: createMatchDto.user2Id },
     });
 
-    // 사용자 존재 여부 확인
-    const user1 = await this.userService.findOne(createMatchDto.user1Id);
-    const user2 = await this.userService.findOne(createMatchDto.user2Id);
-
-    if (user1) {
-      await this.notificationService.create({
-        title: '새로운 매칭이 생성되었습니다!',
-        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-        type: NotificationType.MATCH,
-        receiverId: createMatchDto.user1Id,
-      });
-    }
-
-    if (user2) {
-      await this.notificationService.create({
-        title: '새로운 매칭이 생성되었습니다!',
-        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-        type: NotificationType.MATCH,
-        receiverId: createMatchDto.user2Id,
-      });
-    }
-
-    const savedMatch = await this.matchRepository.save(match);
-    return savedMatch;
+    return this.matchRepository.save(match);
   }
 
   async findAll(): Promise<Match[]> {
