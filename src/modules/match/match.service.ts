@@ -7,7 +7,7 @@ import { Match } from './entities/match.entity';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from 'src/common/enum/notification.enum';
+import { NotificationType } from '../../common/enum/notification.enum';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class MatchService {
     let similarity = 0;
 
     // MBTI 유사도
-    if (profile1.mbti && profile2.mbti) {
+    if (profile1?.mbti?.mbti && profile2?.mbti?.mbti) {
       if (profile1.mbti.mbti === profile2.mbti.mbti) {
         similarity += 30;
       }
@@ -33,12 +33,12 @@ export class MatchService {
 
     // 관심 카테고리 유사도
     if (profile1.interestCategory && profile2.interestCategory) {
-      const categories1 = profile1.interestCategory.map(
-        (cat) => cat.interestCategory.name,
-      );
-      const categories2 = profile2.interestCategory.map(
-        (cat) => cat.interestCategory.name,
-      );
+      const categories1 = profile1.interestCategory
+        .filter((cat) => cat.interestCategory && cat.interestCategory.name)
+        .map((cat) => cat.interestCategory.name);
+      const categories2 = profile2.interestCategory
+        .filter((cat) => cat.interestCategory && cat.interestCategory.name)
+        .map((cat) => cat.interestCategory.name);
       const commonCategories = categories1.filter((cat) =>
         categories2.includes(cat),
       );
@@ -49,16 +49,20 @@ export class MatchService {
     }
 
     // 직업 유사도
-    if (profile1.user.job === profile2.user.job) {
-      similarity += 20;
+    if (profile1?.user?.job && profile2?.user?.job) {
+      if (profile1.user.job === profile2.user.job) {
+        similarity += 20;
+      }
     }
 
     // 피드백 유사도
-    if (profile1.userFeedbacks && profile2.userFeedbacks) {
+    if (profile1?.userFeedbacks?.length && profile2?.userFeedbacks?.length) {
       const feedback1 = profile1.userFeedbacks
+        .filter((fb) => fb?.feedback)
         .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
         .join(' ');
       const feedback2 = profile2.userFeedbacks
+        .filter((fb) => fb?.feedback)
         .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
         .join(' ');
       const commonWords = feedback1
@@ -103,6 +107,10 @@ export class MatchService {
     user1: Profile;
     user2: Profile;
   }> {
+    if (!profile1?.user?.id || !profile2?.user?.id) {
+      throw new Error('유효하지 않은 프로필입니다.');
+    }
+
     const matchId = uuidv4();
     await this.create({
       matchId,
@@ -137,8 +145,9 @@ export class MatchService {
     const allProfiles = await this.profileService.findAll();
     const otherProfiles = allProfiles.filter(
       (profile) =>
-        profile.user &&
+        profile?.user?.id &&
         profile.user.id !== userId &&
+        profile?.user?.gender &&
         profile.user.gender !== currentUser.gender, // 성별 다른 사람만 가져오기
     );
 

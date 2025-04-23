@@ -8,8 +8,7 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseTable } from '../../../common/entity/base-table.entity';
-import { PaymentStatus } from '../types/payment.types';
-import { PaymentMethod } from '../types/payment.types';
+import { PaymentStatus, PaymentMethod } from '../types/payment.types';
 
 @Entity()
 export class Payment extends BaseTable {
