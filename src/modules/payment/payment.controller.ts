@@ -19,7 +19,7 @@ import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { Payment } from './entities/payment.entity';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
-import { CurrentUser } from '../../common/decorator/current-user.decorator';
+import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 
 @ApiTags('Payment')
@@ -46,7 +46,7 @@ export class PaymentController {
   async confirmPayment(
     @Query() confirmPaymentDto: ConfirmPaymentDto,
     @Req() req: Request,
-    @CurrentUser() user: User,
+    @UserId() user: User,
   ): Promise<TossPaymentResponse> {
     return this.paymentService.confirmPayment(
       confirmPaymentDto.paymentKey,
@@ -70,10 +70,7 @@ export class PaymentController {
   @ApiResponse({ status: 404, description: '결제 정보를 찾을 수 없음' })
   @Get(':orderId')
   // 주문 ID로 결제 정보 조회
-  async getPayment(
-    @Param('orderId') orderId: string,
-    @CurrentUser() user: User,
-  ) {
+  async getPayment(@Param('orderId') orderId: string, @UserId() user: User) {
     return this.paymentService.getPaymentByOrderId(orderId, user.id);
   }
 }

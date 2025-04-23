@@ -11,7 +11,7 @@ import {
 import { ChatService } from './chat.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
-import { CurrentUser } from '../../common/decorator/current-user.decorator';
+import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 
 @ApiTags('Chat')
@@ -82,7 +82,7 @@ export class ChatController {
   @ApiResponse({ status: 401, description: '인증 실패' })
   @Post('chatRooms/:chatRoomId/enter')
   async enterChatRoom(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Param('chatRoomId') chatRoomId: string,
     @Body() body: { opponentId: string },
   ) {
@@ -97,7 +97,7 @@ export class ChatController {
   @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
   @Post('chatRooms/:chatRoomId/enter')
   async enterRoom(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Param('chatRoomId') chatRoomId: string,
   ) {
     return this.chatService.enterRoom(chatRoomId, user.id);
@@ -111,7 +111,7 @@ export class ChatController {
   @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
   @Post('chatRooms/findOrCreate')
   async findOrCreateChatRoom(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Body() body: { opponentId: string },
   ) {
     return this.chatService.findOrCreateChatRoom(user.id, body.opponentId);
@@ -125,7 +125,7 @@ export class ChatController {
   @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
   @Post('chatRooms/fromNotification')
   async createChatRoomFromNotification(
-    @CurrentUser() user: User,
+    @UserId() user: User,
     @Body() body: { opponentId: string },
   ) {
     return this.chatService.createChatRoomFromNotification(
