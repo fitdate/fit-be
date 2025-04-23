@@ -11,10 +11,13 @@ import { User } from '../user/entities/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorator/public.decorator';
 import { SelectMatchDto } from './dto/select-match.dto';
+import { Logger } from '@nestjs/common';
 
 @ApiTags('Matching')
 @Controller('match')
 export class MatchController {
+  private readonly logger = new Logger(MatchController.name);
+
   constructor(private readonly matchService: MatchService) {}
 
   @ApiOperation({
@@ -35,11 +38,15 @@ export class MatchController {
   @ApiResponse({ status: 200, description: '랜덤 매칭 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @Get('random')
-  async findRandomMatches(@UserId() user: User) {
-    if (!user || !user.id) {
+  async findRandomMatches(@UserId() userId: string) {
+    this.logger.log(`[findRandomMatches] 사용자 ID: ${userId}`);
+
+    if (!userId) {
+      this.logger.error('[findRandomMatches] 사용자 ID 없음');
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
     }
-    return this.matchService.findRandomMatches(user.id);
+
+    return this.matchService.findRandomMatches(userId);
   }
 
   @ApiOperation({
