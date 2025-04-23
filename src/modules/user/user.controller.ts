@@ -68,6 +68,11 @@ export class UserController {
     return this.userService.getUserInfo(userId);
   }
 
+  @Get('all-user-info')
+  getAllUserInfo() {
+    return this.userService.getAllUserInfo();
+  }
+
   @ApiOperation({
     summary: '내 프로필 조회',
     description: '현재 로그인한 사용자의 프로필 정보를 조회합니다.',
@@ -79,5 +84,10 @@ export class UserController {
   @Get('me')
   getMyProfile(@UserId() userId: string) {
     return this.userService.findOne(userId);
+  }
+
+  @Get('user-filter')
+  getUserFilter(@UserId() userId: string) {
+    // return this.userService.getFilteredUsers(userId);
   }
 }
