@@ -1,39 +1,37 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AllConfig } from 'src/common/config/config.types';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-jwt';
-import { TokenPayload } from '../types/token-payload.types';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
-import { AuthGuard } from '@nestjs/passport';
 
-const cookieExtractor = (req: Request) => {
-  if (!req || !req.cookies) {
-    throw new UnauthorizedException('쿠키를 찾을 수 없습니다');
-  }
-
-  const token = req.cookies.accessToken as string;
-  if (!token) {
-    throw new UnauthorizedException('액세스 토큰이 없습니다');
-  }
-  return token;
-};
-
-export class JwtAuthGuard extends AuthGuard('jwt') {}
-
+import { AllConfig } from 'src/common/config/config.types';
+import { ConfigService } from '@nestjs/config';
+import { UserService } from 'src/modules/user/user.service';
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(private configService: ConfigService<AllConfig>) {
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(
+    private userService: UserService,
+    private configService: ConfigService<AllConfig>,
+  ) {
     super({
-      jwtFromRequest: cookieExtractor,
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        // 쿠키에서 토큰 추출
+        (request: Request) => {
+          return request?.cookies?.Authentication;
+        },
+        // Bearer 토큰에서 추출
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
-      secretOrKey: configService.getOrThrow('jwt.accessTokenSecret', {
+      secretOrKey: this.configService.getOrThrow('jwt.accessTokenSecret', {
         infer: true,
       }),
     });
   }
 
-  validate(payload: TokenPayload) {
-    return payload;
+  async validate(payload: any): Promise<unknown> {
+    const { sub } = payload;
+    const user = await this.userService.findUserByEmail(sub);
+    const { password, ...rest } = user;
+    return rest;
   }
 }

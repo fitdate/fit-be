@@ -25,7 +25,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { config, validationSchema } from './common/config/config';
 import { AllConfig } from './common/config/config.types';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { AuthGuard } from './modules/auth/guard/auth.guard';
 // import { AuthMiddleware } from './modules/auth/middleware/auth.middleware';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { LocationModule } from './modules/location/location.module';
@@ -59,6 +58,7 @@ import { UserFilterModule } from './modules/user-filter/user-filter.module';
 import { Reflector } from '@nestjs/core';
 import { ActivityMiddleware } from './modules/auth/middleware/activity.middleware';
 import { FilterModule } from './modules/filter/filter.module';
+import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -134,7 +134,7 @@ import { FilterModule } from './modules/filter/filter.module';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: AuthGuard,
+      useClass: JwtAuthGuard,
     },
     // {
     //   provide: APP_GUARD,
