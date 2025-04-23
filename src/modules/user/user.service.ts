@@ -56,7 +56,7 @@ export class UserService {
         'profile.userIntroductions',
         'profile.userFeedbacks',
         'profile.interestCategory',
-        'profile.profileImages',
+        'profile.profileImage',
       ],
     });
   }
@@ -70,7 +70,7 @@ export class UserService {
         'profile.userIntroductions',
         'profile.userFeedbacks',
         'profile.interestCategory',
-        'profile.profileImages',
+        'profile.profileImage',
       ],
     });
 
@@ -134,7 +134,7 @@ export class UserService {
         'profile.userIntroductions',
         'profile.userFeedbacks',
         'profile.interestCategory',
-        'profile.profileImages',
+        'profile.profileImage',
       ],
     });
   }
@@ -163,7 +163,7 @@ export class UserService {
       .leftJoinAndSelect('profile.userIntroductions', 'userIntroductions')
       .leftJoinAndSelect('profile.userFeedbacks', 'userFeedbacks')
       .leftJoinAndSelect('profile.interestCategory', 'interestCategory')
-      .leftJoinAndSelect('profile.profileImages', 'profileImages')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
       .where('user.id != :userId', { userId })
       .andWhere('user.gender != :gender', { gender: currentUser.gender })
       .andWhere('user.isProfileComplete = :isComplete', { isComplete: true });
