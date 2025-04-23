@@ -13,7 +13,8 @@ import { CreateUserSocialDto } from './dto/create-user-social.dto';
 import { FilterService } from '../filter/filter.service';
 import { UserWithScore } from '../filter/types/user-with-score.type';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
-
+import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
+import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -22,6 +23,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly filterService: FilterService,
+    private readonly cursorPaginationUtil: CursorPaginationUtil,
   ) {}
 
   createUser(createUserDto: CreateUserDto) {
@@ -240,11 +242,17 @@ export class UserService {
     return usersWithScores;
   }
 
-  //회원목록 유저 찾기기
-  async getUserList() {
-    return this.userRepository
+  //회원목록 유저 찾기
+  async getUserList(dto: CursorPaginationDto) {
+    const qb = this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount'])
-      .getMany();
+      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount']);
+
+    const { nextCursor } =
+      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
+
+    const [users, totalCount] = await qb.getManyAndCount();
+
+    return { users, nextCursor, totalCount };
   }
 }

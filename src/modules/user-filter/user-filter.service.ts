@@ -35,7 +35,11 @@ export class UserFilterService {
     //   );
     //   return this.userService.getUserList();
     // }
-    return this.userService.getUserList();
+    return this.userService.getUserList({
+      cursor: 'id_ASC',
+      order: ['id_ASC', 'likeCount_DESC'],
+      take: 10,
+    });
     // const filter = await this.getUserFilter(userId);
     // if (!filter) {
     //   this.logger.debug('필터 설정이 없어 기본값을 사용합니다.');

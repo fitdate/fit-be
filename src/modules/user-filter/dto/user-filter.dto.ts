@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, Min, Max } from 'class-validator';
+import { createWrapperDto } from 'src/common/util/dto-wrapper.util';
 
 export class UserFilterDto {
   // @ApiProperty({
@@ -36,3 +37,8 @@ export class UserFilterDto {
   @Min(0)
   minLikeCount: number = 0;
 }
+
+export const UserFilterWrapperDto = createWrapperDto(
+  UserFilterDto,
+  '유저 필터 조건',
+);
