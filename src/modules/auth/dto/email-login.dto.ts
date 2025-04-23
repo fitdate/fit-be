@@ -10,7 +10,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class EmailLoginDto {
   @ApiProperty({
     description: '이메일',
-    example: 'fitdatepog@naver.com',
+    example: 'hiryuji@kakao.com',
   })
   @IsEmail()
   @IsNotEmpty()
@@ -19,7 +19,7 @@ export class EmailLoginDto {
   @ApiProperty({
     description:
       '비밀번호 : 최소 8자, 최대 16자이며, 영문 대소문자, 숫자, 특수문자를 포함해야 합니다.',
-    example: 'Fitdate123!',
+    example: 'Qwqw1212!',
   })
   @IsNotEmpty()
   @IsString()
