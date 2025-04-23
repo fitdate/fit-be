@@ -58,7 +58,7 @@ export class LikeService {
           // 알림 생성
           await this.notificationService.create({
             type: NotificationType.LIKE,
-            receiverId: Number(likedUserId),
+            receiverId: likedUserId,
             data: {
               senderId: userId,
             },

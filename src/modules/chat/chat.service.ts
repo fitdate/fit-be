@@ -228,7 +228,7 @@ export class ChatService {
   ): Promise<void> {
     await this.notificationService.create({
       type: NotificationType.CHAT,
-      receiverId: Number(opponentId),
+      receiverId: opponentId,
       data: {
         chatRoomId,
         senderId: currentUserId,

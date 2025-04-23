@@ -99,8 +99,8 @@ export class NotificationController {
     type: [Notification],
   })
   @Get()
-  findAll(@Req() req: RequestWithUser) {
-    return this.notificationService.findAll(req.user.id);
+  async findAll(@Req() req: RequestWithUser) {
+    return this.notificationService.findAll(req.user.id.toString());
   }
 
   @ApiOperation({ summary: '알림 상세 조회' })
@@ -135,8 +135,8 @@ export class NotificationController {
   @ApiOperation({ summary: '전체 알림 삭제' })
   @ApiResponse({ status: 200, description: '모든 알림이 삭제되었습니다.' })
   @Delete()
-  removeAll(@Req() req: RequestWithUser) {
-    return this.notificationService.removeAll(req.user.id);
+  async removeAll(@Req() req: RequestWithUser) {
+    return this.notificationService.removeAll(req.user.id.toString());
   }
 
   @ApiOperation({ summary: '실시간 알림 스트림' })
@@ -151,6 +151,16 @@ export class NotificationController {
       map((notification) => ({
         data: JSON.stringify(notification),
       })),
+    );
+  }
+
+  @Get('events')
+  async getEvents(@Req() req: RequestWithUser) {
+    const notifications = await this.notificationService.findAll(
+      req.user.id.toString(),
+    );
+    return notifications.filter(
+      (notification) => notification.receiverId === req.user.id.toString(),
     );
   }
 }
