@@ -437,7 +437,7 @@ export class MatchService {
         `[sendChatRoomEntryNotification] 알림 전송 실패: ${(error as Error).message}`,
       );
       throw new InternalServerErrorException(
-        '알림 전송 중 오류가 발생했습니다.',
+        '알림 전송 중 오류가 발생했습니다.!',
       );
     }
   }
