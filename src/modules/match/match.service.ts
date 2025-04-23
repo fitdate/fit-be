@@ -247,33 +247,49 @@ export class MatchService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    // 사용자 ID로 매칭 생성
-    const match = this.matchRepository.create({
-      id: createMatchDto.matchId,
-      user1: { id: user1.id },
-      user2: { id: user2.id },
-    });
+    // 트랜잭션 시작
+    const queryRunner =
+      this.matchRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (user1) {
-      await this.notificationService.create({
-        title: '새로운 매칭이 생성되었습니다!',
-        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-        type: NotificationType.MATCH,
-        receiverId: createMatchDto.user1Id,
+    try {
+      // 사용자 ID로 매칭 생성
+      const match = this.matchRepository.create({
+        id: createMatchDto.matchId,
+        user1: { id: user1.id },
+        user2: { id: user2.id },
       });
-    }
 
-    if (user2) {
-      await this.notificationService.create({
-        title: '새로운 매칭이 생성되었습니다!',
-        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-        type: NotificationType.MATCH,
-        receiverId: createMatchDto.user2Id,
-      });
-    }
+      const savedMatch = await queryRunner.manager.save(match);
 
-    const savedMatch = await this.matchRepository.save(match);
-    return savedMatch;
+      // 알림 전송
+      if (user1) {
+        await this.notificationService.create({
+          title: '새로운 매칭이 생성되었습니다!',
+          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+          type: NotificationType.MATCH,
+          receiverId: createMatchDto.user1Id,
+        });
+      }
+
+      if (user2) {
+        await this.notificationService.create({
+          title: '새로운 매칭이 생성되었습니다!',
+          content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
+          type: NotificationType.MATCH,
+          receiverId: createMatchDto.user2Id,
+        });
+      }
+
+      await queryRunner.commitTransaction();
+      return savedMatch;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findAll(): Promise<Match[]> {

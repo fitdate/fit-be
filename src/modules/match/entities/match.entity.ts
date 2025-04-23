@@ -10,12 +10,12 @@ export class Match extends BaseTable {
   id: string;
 
   @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user1_id' })
   user1: User;
 
   @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user2_id' })
   user2: User;
 }
