@@ -823,7 +823,14 @@ export class AuthService {
       // 1. 사용자 정보 조회
       const user = await qr.manager.findOne(User, {
         where: { id: userId },
-        relations: ['profile'],
+        relations: [
+          'profile',
+          'profile.profileImages',
+          'profile.mbti',
+          'profile.feedback',
+          'profile.introduction',
+          'profile.interests',
+        ],
       });
 
       if (!user) {
