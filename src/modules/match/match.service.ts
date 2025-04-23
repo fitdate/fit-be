@@ -107,15 +107,15 @@ export class MatchService {
     user1: Profile;
     user2: Profile;
   }> {
-    if (!profile1?.user?.id || !profile2?.user?.id) {
+    if (!profile1?.id || !profile2?.id) {
       throw new Error('유효하지 않은 프로필입니다.');
     }
 
     const matchId = uuidv4();
     await this.create({
       matchId,
-      user1Id: profile1.user.id,
-      user2Id: profile2.user.id,
+      user1Id: profile1.id,
+      user2Id: profile2.id,
     });
     return {
       matchId,
