@@ -89,8 +89,27 @@ export class MatchService {
   }
 
   // 성별 필터링
-  private filterUsersByGender(users: User[], gender: string): User[] {
-    return users.filter((user) => user.gender !== gender);
+  private filterUsersByGender(
+    users: User[],
+    gender: string,
+    currentUserId: string,
+  ): User[] {
+    this.logger.log(
+      `[filterUsersByGender] 필터링 전 사용자 수: ${users.length}`,
+    );
+    this.logger.log(
+      `[filterUsersByGender] 필터링 전 사용자 ID 목록: ${users.map((u) => u.id).join(', ')}`,
+    );
+    const filtered = users.filter(
+      (user) => user.gender !== gender && user.id !== currentUserId,
+    );
+    this.logger.log(
+      `[filterUsersByGender] 필터링 후 사용자 수: ${filtered.length}`,
+    );
+    this.logger.log(
+      `[filterUsersByGender] 필터링 후 사용자 ID 목록: ${filtered.map((u) => u.id).join(', ')}`,
+    );
+    return filtered;
   }
 
   // 랜덤 사용자 선택
@@ -163,10 +182,10 @@ export class MatchService {
     console.log('전체 사용자 수:', allUsers.length);
 
     // 현재 사용자 제외하고 성별이 다른 사용자만 필터링
-    const otherUsers = allUsers.filter((user) => user.id !== userId);
     const oppositeGenderUsers = this.filterUsersByGender(
-      otherUsers,
+      allUsers,
       currentUser.gender === '남자' ? '여자' : '남자',
+      userId,
     );
     this.logger.log(
       `[findRandomMatches] 반대 성별 사용자 수: ${oppositeGenderUsers.length}`,
@@ -182,7 +201,6 @@ export class MatchService {
 
     // 유사도 계산 및 정렬
     const usersWithSimilarity = oppositeGenderUsers
-      .filter((user) => user.id !== userId) // 현재 사용자 제외
       .map((user) => ({
         user,
         similarity: this.calculateSimilarity(currentUser, user),
@@ -254,8 +272,8 @@ export class MatchService {
     const allUsers = await this.userService.getAllUserInfo();
 
     // 성별별로 사용자 분리
-    const maleUsers = this.filterUsersByGender(allUsers, '남자');
-    const femaleUsers = this.filterUsersByGender(allUsers, '여자');
+    const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
+    const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
 
     // 각 성별에서 랜덤으로 2명씩 선택
     const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
