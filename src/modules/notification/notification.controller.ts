@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   Delete,
-  UseGuards,
   Sse,
   MessageEvent,
   Req,
@@ -14,7 +13,6 @@ import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Observable } from 'rxjs';
 import { map, filter } from 'rxjs/operators';
-import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { RequestWithUser } from './types/notification.types';
 import {
   ApiTags,
@@ -28,7 +26,6 @@ import { Notification } from './entities/notification.entity';
 @ApiTags('Notification')
 @ApiBearerAuth()
 @Controller('notification')
-@UseGuards(JwtAuthGuard)
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 

@@ -1,7 +1,6 @@
-import { Controller, Post, Param, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Param, Get } from '@nestjs/common';
 import { PassService } from './pass.service';
 import { User } from '../user/entities/user.entity';
-import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 
 import {
   ApiTags,
@@ -14,7 +13,6 @@ import { UserId } from 'src/common/decorator/get-user.decorator';
 @ApiTags('Pass')
 @ApiBearerAuth()
 @Controller('pass')
-@UseGuards(JwtAuthGuard)
 export class PassController {
   constructor(private readonly passService: PassService) {}
 

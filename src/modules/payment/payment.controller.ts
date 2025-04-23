@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Req } from '@nestjs/common';
 import {
   ApiOperation,
   ApiResponse,
@@ -18,14 +10,12 @@ import { TossPaymentResponse } from './types/toss-payment.types';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { Payment } from './entities/payment.entity';
 import { Request } from 'express';
-import { JwtAuthGuard } from '../auth/strategy/jwt.strategy';
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 
 @ApiTags('Payment')
 @ApiBearerAuth()
 @Controller('payment')
-@UseGuards(JwtAuthGuard)
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
