@@ -106,5 +106,6 @@ export class User extends BaseTable {
   @OneToOne(() => UserFilter, (userFilter) => userFilter.user, {
     nullable: true,
   })
+  @JoinColumn()
   userFilter: UserFilter;
 }
