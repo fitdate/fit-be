@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Match } from './entities/match.entity';
@@ -11,6 +11,8 @@ import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class MatchService {
+  private readonly logger = new Logger(MatchService.name);
+
   constructor(
     @InjectRepository(Match)
     private readonly matchRepository: Repository<Match>,
@@ -126,21 +128,44 @@ export class MatchService {
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
+    this.logger.log(`[findRandomMatches] 시작: userId=${userId}`);
+    console.log('매칭 프로세스 시작:', { userId });
+
     // 현재 사용자의 성별 가져오기
     const currentUser = await this.userService.findOne(userId);
+    this.logger.log(
+      `[findRandomMatches] 현재 사용자 정보 조회: ${JSON.stringify(currentUser)}`,
+    );
+    console.log('현재 사용자 정보:', currentUser);
 
     if (!currentUser || !currentUser.gender) {
+      this.logger.error(
+        `[findRandomMatches] 사용자 정보 없음: userId=${userId}`,
+      );
       throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
     }
 
     // 모든 사용자 정보 가져오기
     const allUsers = await this.userService.getAllUserInfo();
+    this.logger.log(`[findRandomMatches] 전체 사용자 수: ${allUsers.length}`);
+    console.log('전체 사용자 수:', allUsers.length);
 
     // 현재 사용자 제외하고 성별이 다른 사용자만 필터링
     const otherUsers = allUsers.filter((user) => user.id !== userId);
     const oppositeGenderUsers = this.filterUsersByGender(
       otherUsers,
       currentUser.gender === '남자' ? '여자' : '남자',
+    );
+    this.logger.log(
+      `[findRandomMatches] 반대 성별 사용자 수: ${oppositeGenderUsers.length}`,
+    );
+    this.logger.log(
+      `[findRandomMatches] 반대 성별 사용자 ID 목록: ${oppositeGenderUsers.map((user) => user.id).join(', ')}`,
+    );
+    console.log('반대 성별 사용자 수:', oppositeGenderUsers.length);
+    console.log(
+      '반대 성별 사용자 ID 목록:',
+      oppositeGenderUsers.map((user) => user.id),
     );
 
     // 유사도 계산 및 정렬
@@ -150,6 +175,10 @@ export class MatchService {
         similarity: this.calculateSimilarity(currentUser, user),
       }))
       .sort((a, b) => b.similarity - a.similarity);
+    this.logger.log(
+      `[findRandomMatches] 유사도 계산 완료: ${usersWithSimilarity.length}명`,
+    );
+    console.log('유사도 계산 결과:', usersWithSimilarity);
 
     // 유사도 기반 가중치 적용하여 4명 선택
     const selectedUsers: User[] = [];
@@ -157,6 +186,8 @@ export class MatchService {
       (sum, item) => sum + item.similarity,
       0,
     );
+    this.logger.log(`[findRandomMatches] 총 유사도 점수: ${totalSimilarity}`);
+    console.log('총 유사도 점수:', totalSimilarity);
 
     while (selectedUsers.length < 4 && usersWithSimilarity.length > 0) {
       const random = Math.random() * totalSimilarity;
@@ -174,6 +205,10 @@ export class MatchService {
       selectedUsers.push(usersWithSimilarity[selectedIndex].user);
       usersWithSimilarity.splice(selectedIndex, 1);
     }
+    this.logger.log(
+      `[findRandomMatches] 선택된 사용자 수: ${selectedUsers.length}`,
+    );
+    console.log('선택된 사용자:', selectedUsers);
 
     // 매칭 생성
     const matches: { matchId: string; user1: User; user2: User }[] = [];
@@ -186,8 +221,15 @@ export class MatchService {
           selectedUsers[i + 1],
         );
         matches.push(match);
+        this.logger.log(`[findRandomMatches] 매칭 생성: ${match.matchId}`);
+        console.log('생성된 매칭:', match);
       }
     }
+
+    this.logger.log(
+      `[findRandomMatches] 완료: 총 ${matches.length}개의 매칭 생성됨`,
+    );
+    console.log('최종 매칭 결과:', matches);
 
     return { matches };
   }
