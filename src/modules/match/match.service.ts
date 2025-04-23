@@ -83,7 +83,7 @@ export class MatchService {
 
   // 성별 필터링
   private filterUsersByGender(users: User[], gender: string): User[] {
-    return users.filter((user) => user.gender === gender);
+    return users.filter((user) => user.gender !== gender);
   }
 
   // 랜덤 사용자 선택
