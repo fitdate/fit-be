@@ -16,12 +16,7 @@ import { RedisModule } from '../redis/redis.module';
     RedisModule,
   ],
   controllers: [UserController],
-  providers: [
-    UserService,
-    UserStatisticsService,
-    CursorPaginationUtil,
-    RedisService,
-  ],
+  providers: [UserService, UserStatisticsService, CursorPaginationUtil],
   exports: [
     UserService,
     UserStatisticsService,

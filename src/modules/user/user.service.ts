@@ -256,34 +256,34 @@ export class UserService {
 
     // 쿠키에 seed 저장 (비로그인 상태에서 동일한 seed 사용)
     if (!request.cookies['userSeed']) {
-      // 쿠키에 `userSeed` 저장 (예: 1시간)
+      // 쿠키에 userSeed 저장 (예: 1시간)
       res.cookie('userSeed', cookieSeed, {
         maxAge: 60 * 60 * 1000, // 1시간
         httpOnly: true,
       });
     }
 
-    // 비로그인 유저의 `userListSeed` 값 관리
+    // 비로그인 유저의 userListSeed 값 관리
     userListSeed = cookieSeed;
 
-    // Redis에서 캐시된 `userListSeed` 값 가져오기
+    // Redis에서 캐시된 userListSeed 값 가져오기
     const cachedSeed = await this.redisService.get(
       `userListSeed:${userListSeed}`,
     );
 
     if (!cachedSeed) {
-      // Redis에 `userListSeed`가 없다면, 새로운 `seed` 생성해서 저장
-      const newSeed = uuidv4(); // 새로운 랜덤 `seed` 생성
+      // Redis에 userListSeed가 없다면, 새로운 seed 생성해서 저장
+      const newSeed = uuidv4(); // 새로운 랜덤 seed 생성
       const cacheTtl = 60 * 5; // 5분 동안 유지
 
-      // Redis에 새로운 `userListSeed` 값을 저장
+      // Redis에 새로운 userListSeed 값을 저장
       await this.redisService.set(
         `userListSeed:${userListSeed}`,
         newSeed,
         cacheTtl,
       );
 
-      userListSeed = newSeed; // 갱신된 `seed` 값으로 설정
+      userListSeed = newSeed; // 갱신된 seed 값으로 설정
     }
 
     // seed 값에 맞춰서 유저 목록 조회
@@ -295,27 +295,12 @@ export class UserService {
     // 순서는 랜덤하게!
     qb.orderBy('RANDOM()');
 
-    qb.where('"user"."seed" LIKE :seed', { seed: `${seed}%` });
-    qb.orderBy('"user"."seed"', 'ASC');
-
-    this.logger.debug(`생성된 쿼리: ${qb.getQuery()}`);
-    this.logger.debug(`쿼리 파라미터: ${JSON.stringify(qb.getParameters())}`);
-
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
-    this.logger.debug(`다음 커서: ${nextCursor}`);
 
     const [users, totalCount] = await qb.getManyAndCount();
-    this.logger.debug(
-      `조회된 사용자 수: ${users.length}, 전체 수: ${totalCount}`,
-    );
 
-    const result = { users, nextCursor, totalCount };
-    const cacheTtl = 300;
-    await this.redisService.set(cacheKey, JSON.stringify(result), cacheTtl);
-    this.logger.debug(`결과를 캐시에 저장했습니다. TTL: ${cacheTtl}초`);
-
-    return result;
+    return { users, nextCursor, totalCount };
   }
 
   // 페이징 처리로 모든 사용자 정보 가져오기
