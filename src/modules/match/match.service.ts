@@ -32,7 +32,7 @@ export class MatchService {
     // MBTI 유사도
     if (user1?.profile?.mbti?.mbti && user2?.profile?.mbti?.mbti) {
       if (user1.profile.mbti.mbti === user2.profile.mbti.mbti) {
-        similarity += 30;
+        similarity += 50;
       }
     }
 
@@ -41,48 +41,24 @@ export class MatchService {
       user1?.profile?.interestCategory?.length &&
       user2?.profile?.interestCategory?.length
     ) {
-      const categories1 = user1.profile.interestCategory
-        .filter((cat) => cat.interestCategory && cat.interestCategory.name)
-        .map((cat) => cat.interestCategory.name);
-      const categories2 = user2.profile.interestCategory
-        .filter((cat) => cat.interestCategory && cat.interestCategory.name)
-        .map((cat) => cat.interestCategory.name);
-      const commonCategories = categories1.filter((cat) =>
-        categories2.includes(cat),
+      const categories1 = new Set(
+        user1.profile.interestCategory
+          .filter((cat) => cat.interestCategory && cat.interestCategory.name)
+          .map((cat) => cat.interestCategory.name),
       );
-      similarity +=
-        (commonCategories.length /
-          Math.max(categories1.length, categories2.length)) *
-        30;
-    }
+      const categories2 = new Set(
+        user2.profile.interestCategory
+          .filter((cat) => cat.interestCategory && cat.interestCategory.name)
+          .map((cat) => cat.interestCategory.name),
+      );
 
-    // 직업 유사도
-    if (user1?.job && user2?.job) {
-      if (user1.job === user2.job) {
-        similarity += 20;
-      }
-    }
+      const commonCategories = new Set(
+        [...categories1].filter((cat) => categories2.has(cat)),
+      );
 
-    // 피드백 유사도
-    if (
-      user1?.profile?.userFeedbacks?.length &&
-      user2?.profile?.userFeedbacks?.length
-    ) {
-      const feedback1 = user1.profile.userFeedbacks
-        .filter((fb) => fb?.feedback)
-        .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
-        .join(' ');
-      const feedback2 = user2.profile.userFeedbacks
-        .filter((fb) => fb?.feedback)
-        .map((fb) => (typeof fb.feedback === 'string' ? fb.feedback : ''))
-        .join(' ');
-      const commonWords = feedback1
-        .split(' ')
-        .filter((word) => feedback2.includes(word));
       similarity +=
-        (commonWords.length /
-          Math.max(feedback1.split(' ').length, feedback2.split(' ').length)) *
-        20;
+        (commonCategories.size / Math.max(categories1.size, categories2.size)) *
+        50;
     }
 
     return similarity;
@@ -211,47 +187,65 @@ export class MatchService {
   async findRandomPublicMatches(): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
-    // 모든 사용자 정보 가져오기
-    const allUsers = await this.userService.getAllUserInfo();
+    try {
+      this.logger.log('공개 매칭 시작');
 
-    // 성별별로 사용자 분리
-    const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
-    const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
+      // 페이징 처리로 사용자 정보 가져오기 (10명씩)
+      const { users: allUsers } =
+        await this.userService.getAllUserInfoWithPagination(1, 10);
+      this.logger.log(`총 ${allUsers.length}명의 사용자 정보 로드 완료`);
 
-    // 각 성별에서 랜덤으로 2명씩 선택
-    const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
-    const selectedFemaleUsers = this.selectRandomUsers(femaleUsers, 2);
+      // 성별별로 사용자 분리
+      const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
+      const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
 
-    // 매칭 생성
-    const matches: { matchId: string; user1: User; user2: User }[] = [];
+      this.logger.log(
+        `남성 ${maleUsers.length}명, 여성 ${femaleUsers.length}명 분리 완료`,
+      );
 
-    // 남자-남자 매칭
-    if (selectedMaleUsers.length === 2) {
-      try {
-        const match = await this.createMatch(
-          selectedMaleUsers[0],
-          selectedMaleUsers[1],
-        );
-        matches.push(match);
-      } catch (error) {
-        console.error('남자-남자 매칭 생성 실패:', error);
+      // 각 성별에서 랜덤으로 2명씩 선택
+      const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
+      const selectedFemaleUsers = this.selectRandomUsers(femaleUsers, 2);
+
+      // 매칭 생성
+      const matches: { matchId: string; user1: User; user2: User }[] = [];
+
+      // 남자-남자 매칭
+      if (selectedMaleUsers.length === 2) {
+        try {
+          const match = await this.createMatch(
+            selectedMaleUsers[0],
+            selectedMaleUsers[1],
+          );
+          matches.push(match);
+          this.logger.log('남자-남자 매칭 생성 성공');
+        } catch (error) {
+          this.logger.error('남자-남자 매칭 생성 실패:', error);
+        }
       }
-    }
 
-    // 여자-여자 매칭
-    if (selectedFemaleUsers.length === 2) {
-      try {
-        const match = await this.createMatch(
-          selectedFemaleUsers[0],
-          selectedFemaleUsers[1],
-        );
-        matches.push(match);
-      } catch (error) {
-        console.error('여자-여자 매칭 생성 실패:', error);
+      // 여자-여자 매칭
+      if (selectedFemaleUsers.length === 2) {
+        try {
+          const match = await this.createMatch(
+            selectedFemaleUsers[0],
+            selectedFemaleUsers[1],
+          );
+          matches.push(match);
+          this.logger.log('여자-여자 매칭 생성 성공');
+        } catch (error) {
+          this.logger.error('여자-여자 매칭 생성 실패:', error);
+        }
       }
-    }
 
-    return { matches };
+      this.logger.log(`총 ${matches.length}개의 매칭 생성 완료`);
+      return { matches };
+    } catch (error) {
+      this.logger.error('공개 매칭 생성 실패:', error);
+      throw new InternalServerErrorException(
+        '매칭 생성 중 오류가 발생했습니다.',
+      );
+    }
   }
 
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
@@ -261,30 +255,7 @@ export class MatchService {
       user2: { id: createMatchDto.user2Id },
     });
 
-    // 사용자 존재 여부 확인
-    const user1 = await this.userService.findOne(createMatchDto.user1Id);
-    const user2 = await this.userService.findOne(createMatchDto.user2Id);
-
-    if (user1) {
-      await this.notificationService.create({
-        title: '새로운 매칭이 생성되었습니다!',
-        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-        type: NotificationType.MATCH,
-        receiverId: createMatchDto.user1Id,
-      });
-    }
-
-    if (user2) {
-      await this.notificationService.create({
-        title: '새로운 매칭이 생성되었습니다!',
-        content: '새로운 매칭이 생성되었습니다. 매칭결과에서 확인해보세요!',
-        type: NotificationType.MATCH,
-        receiverId: createMatchDto.user2Id,
-      });
-    }
-
-    const savedMatch = await this.matchRepository.save(match);
-    return savedMatch;
+    return this.matchRepository.save(match);
   }
 
   async findAll(): Promise<Match[]> {
