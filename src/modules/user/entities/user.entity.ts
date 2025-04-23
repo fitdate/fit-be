@@ -108,4 +108,7 @@ export class User extends BaseTable {
   })
   @JoinColumn()
   userFilter: UserFilter;
+
+  @Column({ nullable: true })
+  seed?: string;
 }
