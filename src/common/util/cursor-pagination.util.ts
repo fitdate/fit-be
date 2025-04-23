@@ -19,34 +19,39 @@ export class CursorPaginationUtil {
     let order = initialOrder;
 
     if (cursor) {
-      const decodedCursor = Buffer.from(cursor, 'base64').toString('utf-8');
-      const cursorObj = JSON.parse(decodedCursor) as CursorObject;
-      order = cursorObj.order;
-      const { values } = cursorObj;
+      try {
+        const decodedCursor = Buffer.from(cursor, 'base64').toString('utf-8');
+        const cursorObj = JSON.parse(decodedCursor) as CursorObject;
+        order = cursorObj.order;
+        const { values } = cursorObj;
 
-      const columns = Object.keys(values);
-      const conditions: string[] = [];
-      const params: Record<string, number | string> = {};
+        const columns = Object.keys(values);
+        const conditions: string[] = [];
+        const params: Record<string, number | string> = {};
 
-      for (let i = 0; i < columns.length; i++) {
-        const column = columns[i];
-        const orderType = order[i].endsWith('DESC') ? '<' : '>';
+        for (let i = 0; i < columns.length; i++) {
+          const column = columns[i];
+          const orderType = order[i].endsWith('DESC') ? '<' : '>';
 
-        const currentConditions = columns
-          .slice(0, i)
-          .map((c) => `${qb.alias}.${c} = :${c}`)
-          .join(' AND ');
+          const currentConditions = columns
+            .slice(0, i)
+            .map((c) => `${qb.alias}.${c} = :${c}`)
+            .join(' AND ');
 
-        const condition = currentConditions
-          ? `(${currentConditions} AND ${qb.alias}.${column} ${orderType} :${column})`
-          : `${qb.alias}.${column} ${orderType} :${column}`;
+          const condition = currentConditions
+            ? `(${currentConditions} AND ${qb.alias}.${column} ${orderType} :${column})`
+            : `${qb.alias}.${column} ${orderType} :${column}`;
 
-        conditions.push(condition);
-        params[column] = values[column];
+          conditions.push(condition);
+          params[column] = values[column];
+        }
+
+        const whereClause = conditions.join(' OR ');
+        qb.where(whereClause, params);
+      } catch (error) {
+        // cursor가 유효하지 않은 경우 무시하고 계속 진행
+        console.warn('Invalid cursor format:', error);
       }
-
-      const whereClause = conditions.join(' OR ');
-      qb.where(whereClause, params);
     }
 
     for (let i = 0; i < order.length; i++) {

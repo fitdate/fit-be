@@ -36,9 +36,9 @@ export class UserFilterService {
     //   return this.userService.getUserList();
     // }
     return this.userService.getUserList({
-      cursor: 'id_ASC',
+      cursor: null,
       order: ['id_ASC', 'likeCount_DESC'],
-      take: 10,
+      take: 6,
     });
     // const filter = await this.getUserFilter(userId);
     // if (!filter) {
