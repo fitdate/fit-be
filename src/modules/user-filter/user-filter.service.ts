@@ -35,15 +35,23 @@ export class UserFilterService {
       );
       return this.userService.getUserList();
     }
+
     const filter = await this.getUserFilter(userId);
     if (!filter) {
       this.logger.debug('필터 설정이 없어 기본값을 사용합니다.');
-      return this.userService.getFilteredUsers(userId, {
+      const users = await this.userService.getFilteredUsers(userId, {
         ageMin: 20,
         ageMax: 60,
         minLikes: 0,
       });
+      return users.map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+        region: user.region,
+        likeCount: user.likeCount,
+      }));
     }
+
     this.logger.debug(
       `적용될 필터: ${JSON.stringify({
         ageMin: filter.minAge ?? 20,
@@ -51,11 +59,19 @@ export class UserFilterService {
         minLikes: filter.minLikeCount ?? 0,
       })}`,
     );
-    return this.userService.getFilteredUsers(userId, {
+
+    const users = await this.userService.getFilteredUsers(userId, {
       ageMin: filter.minAge ?? 20,
       ageMax: filter.maxAge ?? 60,
       minLikes: filter.minLikeCount ?? 0,
     });
+
+    return users.map((user) => ({
+      id: user.id,
+      nickname: user.nickname,
+      region: user.region,
+      likeCount: user.likeCount,
+    }));
   }
 
   async updateFilter(userId: string, dto: UserFilterDto) {
