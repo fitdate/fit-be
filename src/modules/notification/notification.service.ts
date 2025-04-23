@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
@@ -31,15 +35,41 @@ export class NotificationService {
    * @returns 생성된 알림 객체
    */
   async create(createNotificationDto: CreateNotificationDto) {
-    this.logger.log(`새 알림 생성: ${JSON.stringify(createNotificationDto)}`);
-    const notification = this.notificationRepository.create(
-      createNotificationDto,
-    );
-    const savedNotification =
-      await this.notificationRepository.save(notification);
-    this.notificationSubject.next(savedNotification);
-    this.logger.log(`알림 생성 완료: ID ${savedNotification.id}`);
-    return savedNotification;
+    try {
+      this.logger.log(
+        `새 알림 생성 시도: ${JSON.stringify(createNotificationDto)}`,
+      );
+
+      if (!createNotificationDto.receiverId) {
+        this.logger.error('수신자 ID가 없습니다.');
+        throw new InternalServerErrorException('수신자 ID가 필요합니다.');
+      }
+
+      const notification = this.notificationRepository.create(
+        createNotificationDto,
+      );
+      const savedNotification =
+        await this.notificationRepository.save(notification);
+
+      this.logger.log(`알림 저장 성공: ID ${savedNotification.id}`);
+
+      try {
+        this.notificationSubject.next(savedNotification);
+        this.logger.log(`알림 스트림 전송 성공: ID ${savedNotification.id}`);
+      } catch (streamError: unknown) {
+        this.logger.error(
+          `알림 스트림 전송 실패: ${(streamError as Error).message}`,
+        );
+        // 스트림 전송 실패는 전체 프로세스를 실패시키지 않음
+      }
+
+      return savedNotification;
+    } catch (error) {
+      this.logger.error(`알림 생성 실패: ${(error as Error).message}`);
+      throw new InternalServerErrorException(
+        '알림 생성 중 오류가 발생했습니다.',
+      );
+    }
   }
 
   /**

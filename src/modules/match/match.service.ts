@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Match } from './entities/match.entity';
@@ -359,20 +364,45 @@ export class MatchService {
     selectedUserId: string,
     currentUserId: string,
   ): Promise<void> {
-    const match = await this.findOne(matchId);
-    if (!match) {
-      throw new NotFoundException('Match not found');
-    }
+    try {
+      this.logger.log(
+        `[sendSelectionNotification] 시작: matchId=${matchId}, selectedUserId=${selectedUserId}, currentUserId=${currentUserId}`,
+      );
 
-    // 선택된 사용자에게 알림 전송
-    await this.notificationService.create({
-      type: NotificationType.MATCH,
-      receiverId: selectedUserId,
-      data: {
-        matchId,
-        senderId: currentUserId,
-      },
-    });
+      const match = await this.findByMatchId(matchId);
+      if (!match) {
+        this.logger.error(
+          `[sendSelectionNotification] 매치를 찾을 수 없음: matchId=${matchId}`,
+        );
+        throw new NotFoundException('매치를 찾을 수 없습니다.');
+      }
+
+      const currentUser = await this.userService.findOne(currentUserId);
+      if (!currentUser) {
+        this.logger.error(
+          `[sendSelectionNotification] 현재 사용자를 찾을 수 없음: currentUserId=${currentUserId}`,
+        );
+        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+      }
+
+      await this.notificationService.create({
+        receiverId: selectedUserId,
+        type: NotificationType.MATCH,
+        content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
+        data: { matchId },
+      });
+
+      this.logger.log(
+        `[sendSelectionNotification] 알림 전송 성공: matchId=${matchId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[sendSelectionNotification] 알림 전송 실패: ${(error as Error).message}`,
+      );
+      throw new InternalServerErrorException(
+        '알림 전송 중 오류가 발생했습니다.',
+      );
+    }
   }
 
   /**
@@ -384,29 +414,54 @@ export class MatchService {
     matchId: string,
     currentUserId: string,
   ): Promise<void> {
-    const match = await this.findOne(matchId);
-    if (!match) {
-      throw new NotFoundException('Match not found');
+    try {
+      this.logger.log(
+        `[sendAllSelectionNotification] 시작: matchId=${matchId}, currentUserId=${currentUserId}`,
+      );
+
+      const match = await this.findByMatchId(matchId);
+      if (!match) {
+        this.logger.error(
+          `[sendAllSelectionNotification] 매치를 찾을 수 없음: matchId=${matchId}`,
+        );
+        throw new NotFoundException('매치를 찾을 수 없습니다.');
+      }
+
+      const currentUser = await this.userService.findOne(currentUserId);
+      if (!currentUser) {
+        this.logger.error(
+          `[sendAllSelectionNotification] 현재 사용자를 찾을 수 없음: currentUserId=${currentUserId}`,
+        );
+        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+      }
+
+      // 두 사용자에게 모두 알림 전송
+      await Promise.all([
+        this.notificationService.create({
+          receiverId: match.user1.id,
+          type: NotificationType.MATCH,
+          content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
+          data: { matchId },
+        }),
+        this.notificationService.create({
+          receiverId: match.user2.id,
+          type: NotificationType.MATCH,
+          content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
+          data: { matchId },
+        }),
+      ]);
+
+      this.logger.log(
+        `[sendAllSelectionNotification] 알림 전송 성공: matchId=${matchId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[sendAllSelectionNotification] 알림 전송 실패: ${(error as Error).message}`,
+      );
+      throw new InternalServerErrorException(
+        '알림 전송 중 오류가 발생했습니다.',
+      );
     }
-
-    // 두 명의 사용자에게 알림 전송
-    await this.notificationService.create({
-      type: NotificationType.MATCH,
-      receiverId: match.user1.id,
-      data: {
-        matchId,
-        senderId: currentUserId,
-      },
-    });
-
-    await this.notificationService.create({
-      type: NotificationType.MATCH,
-      receiverId: match.user2.id,
-      data: {
-        matchId,
-        senderId: currentUserId,
-      },
-    });
   }
 
   /**
@@ -418,25 +473,46 @@ export class MatchService {
     matchId: string,
     currentUserId: string,
   ): Promise<void> {
-    const match = await this.findOne(matchId);
-    if (!match) {
-      throw new NotFoundException('Match not found');
+    try {
+      this.logger.log(
+        `[sendChatRoomEntryNotification] 시작: matchId=${matchId}, currentUserId=${currentUserId}`,
+      );
+
+      const match = await this.findByMatchId(matchId);
+      if (!match) {
+        this.logger.error(
+          `[sendChatRoomEntryNotification] 매치를 찾을 수 없음: matchId=${matchId}`,
+        );
+        throw new NotFoundException('매치를 찾을 수 없습니다.');
+      }
+
+      const currentUser = await this.userService.findOne(currentUserId);
+      if (!currentUser) {
+        this.logger.error(
+          `[sendChatRoomEntryNotification] 현재 사용자를 찾을 수 없음: currentUserId=${currentUserId}`,
+        );
+        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+      }
+
+      const receiverId =
+        match.user1.id === currentUserId ? match.user2.id : match.user1.id;
+      await this.notificationService.create({
+        receiverId,
+        type: NotificationType.COFFEE_CHAT,
+        content: `${currentUser.nickname}님이 채팅방에 입장했습니다!`,
+        data: { matchId },
+      });
+
+      this.logger.log(
+        `[sendChatRoomEntryNotification] 알림 전송 성공: matchId=${matchId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[sendChatRoomEntryNotification] 알림 전송 실패: ${(error as Error).message}`,
+      );
+      throw new InternalServerErrorException(
+        '알림 전송 중 오류가 발생했습니다.',
+      );
     }
-
-    // 상대방 ID 찾기
-    const opponentId =
-      match.user1.id === currentUserId ? match.user2.id : match.user1.id;
-
-    // 상대방에게 채팅방 입장 알림 전송
-    await this.notificationService.create({
-      title: '채팅방 입장 알림',
-      content: '상대방이 채팅방에 입장했습니다. 대화를 시작해보세요!',
-      type: NotificationType.COFFEE_CHAT,
-      receiverId: opponentId,
-      data: {
-        matchId,
-        senderId: currentUserId,
-      },
-    });
   }
 }
