@@ -27,51 +27,51 @@ export class UserFilterService {
     return filter;
   }
 
-  async getFilteredUsers(userId?: string) {
-    this.logger.debug(`사용자 ${userId}의 필터링된 사용자 목록을 조회합니다.`);
-    if (!userId) {
-      this.logger.debug(
-        '로그인하지 않은 사용자를 위한 기본 필터링을 적용합니다.',
-      );
-      return this.userService.getUserList();
-    }
+  async getFilteredUsers() {
+    this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
+    // if (!userId) {
+    //   this.logger.debug(
+    //     '로그인하지 않은 사용자를 위한 기본 필터링을 적용합니다.',
+    //   );
+    //   return this.userService.getUserList();
+    // }
+    return this.userService.getUserList();
+    // const filter = await this.getUserFilter(userId);
+    // if (!filter) {
+    //   this.logger.debug('필터 설정이 없어 기본값을 사용합니다.');
+    //   const users = await this.userService.getFilteredUsers(userId, {
+    //     ageMin: 20,
+    //     ageMax: 60,
+    //     minLikes: 0,
+    //   });
+    //   return users.map((user) => ({
+    //     id: user.id,
+    //     nickname: user.nickname,
+    //     region: user.region,
+    //     likeCount: user.likeCount,
+    //   }));
+    // }
 
-    const filter = await this.getUserFilter(userId);
-    if (!filter) {
-      this.logger.debug('필터 설정이 없어 기본값을 사용합니다.');
-      const users = await this.userService.getFilteredUsers(userId, {
-        ageMin: 20,
-        ageMax: 60,
-        minLikes: 0,
-      });
-      return users.map((user) => ({
-        id: user.id,
-        nickname: user.nickname,
-        region: user.region,
-        likeCount: user.likeCount,
-      }));
-    }
+    // this.logger.debug(
+    //   `적용될 필터: ${JSON.stringify({
+    //     ageMin: filter.minAge ?? 20,
+    //     ageMax: filter.maxAge ?? 60,
+    //     minLikes: filter.minLikeCount ?? 0,
+    //   })}`,
+    // );
 
-    this.logger.debug(
-      `적용될 필터: ${JSON.stringify({
-        ageMin: filter.minAge ?? 20,
-        ageMax: filter.maxAge ?? 60,
-        minLikes: filter.minLikeCount ?? 0,
-      })}`,
-    );
+    // const users = await this.userService.getFilteredUsers(userId, {
+    //   ageMin: filter.minAge ?? 20,
+    //   ageMax: filter.maxAge ?? 60,
+    //   minLikes: filter.minLikeCount ?? 0,
+    // });
 
-    const users = await this.userService.getFilteredUsers(userId, {
-      ageMin: filter.minAge ?? 20,
-      ageMax: filter.maxAge ?? 60,
-      minLikes: filter.minLikeCount ?? 0,
-    });
-
-    return users.map((user) => ({
-      id: user.id,
-      nickname: user.nickname,
-      region: user.region,
-      likeCount: user.likeCount,
-    }));
+    // return users.map((user) => ({
+    //   id: user.id,
+    //   nickname: user.nickname,
+    //   region: user.region,
+    //   likeCount: user.likeCount,
+    // }));
   }
 
   async updateFilter(userId: string, dto: UserFilterDto) {
