@@ -10,7 +10,6 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserSocialDto } from './dto/create-user-social.dto';
-import { UserFilterService } from '../user-filter/user-filter.service';
 import { FilterService } from '../filter/filter.service';
 import { UserWithScore } from '../filter/types/user-with-score.type';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
@@ -22,7 +21,6 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly userFilterService: UserFilterService,
     private readonly filterService: FilterService,
   ) {}
 

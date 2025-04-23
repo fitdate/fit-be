@@ -5,15 +5,9 @@ import { User } from './entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserStatisticsService } from './services/user-statistics.service';
 import { LocationModule } from '../location/location.module';
-import { UserFilterModule } from '../user-filter/user-filter.module';
 import { FilterModule } from '../filter/filter.module';
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User]),
-    LocationModule,
-    UserFilterModule,
-    FilterModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User]), LocationModule, FilterModule],
   controllers: [UserController],
   providers: [UserService, UserStatisticsService],
   exports: [
