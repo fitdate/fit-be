@@ -8,7 +8,13 @@ import {
   Body,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
@@ -41,15 +47,15 @@ export class ChatController {
     return this.chatService.createMatchingRoom(body.user1Id, body.user2Id);
   }
 
-  @ApiOperation({ summary: '채팅 메시지 조회' })
+  @ApiOperation({
+    summary: '채팅 메시지 조회',
+    description:
+      '채팅방의 메시지를 최신순으로 조회합니다. 최신 50개의 메시지를 반환합니다.',
+  })
   @ApiResponse({ status: 200, description: '채팅 메시지 조회 성공' })
   @Get('messages')
-  async getMessages(
-    @Query('chatRoomId') chatRoomId: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 50,
-  ) {
-    return this.chatService.getMessages(chatRoomId, page, limit);
+  async getMessages(@Query('chatRoomId') chatRoomId: string) {
+    return this.chatService.getMessages(chatRoomId);
   }
 
   @ApiOperation({ summary: '채팅방 나가기' })

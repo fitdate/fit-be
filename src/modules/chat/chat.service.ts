@@ -165,19 +165,15 @@ export class ChatService {
   /**
    * 채팅 메시지를 조회합니다.
    * @param chatRoomId 특정 채팅방의 메시지만 조회할 경우 채팅방 ID
-   * @param page 페이지 번호 (1부터 시작)
-   * @param limit 페이지당 메시지 수
    * @returns 채팅 메시지 목록
    */
-  async getMessages(chatRoomId: string, page: number = 1, limit: number = 50) {
-    const skip = (page - 1) * limit;
-
+  async getMessages(chatRoomId: string) {
+    const limit = 50;
     const query = this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.user', 'user')
       .leftJoinAndSelect('message.chatRoom', 'chatRoom')
-      .orderBy('message.createdAt', 'ASC')
-      .skip(skip)
+      .orderBy('message.createdAt', 'DESC')
       .take(limit);
 
     if (chatRoomId) {
@@ -206,9 +202,7 @@ export class ChatService {
           : null,
       })),
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      hasMore: total > limit,
     };
   }
 
@@ -219,6 +213,13 @@ export class ChatService {
    * @returns 성공 여부
    */
   async exitRoom(chatRoomId: string, userId: string) {
+    // 사용자 존재 여부 확인
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new Error('사용자를 찾을 수 없습니다.');
+    }
+
+    // 채팅방 존재 여부 및 참여자 정보 확인
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id: chatRoomId },
       relations: ['users'],
@@ -228,9 +229,23 @@ export class ChatService {
       throw new Error('채팅방을 찾을 수 없습니다.');
     }
 
+    // 사용자가 채팅방에 참여하고 있는지 확인
+    const isUserInRoom = chatRoom.users.some((user) => user.id === userId);
+    if (!isUserInRoom) {
+      throw new Error('해당 채팅방에 참여하고 있지 않습니다.');
+    }
+
+    // 사용자를 채팅방에서 제거
     chatRoom.users = chatRoom.users.filter((user) => user.id !== userId);
     await this.chatRoomRepository.save(chatRoom);
-    return { success: true };
+
+    // 채팅방이 비어있는 경우 채팅방 삭제
+    if (chatRoom.users.length === 0) {
+      await this.chatRoomRepository.remove(chatRoom);
+      return { success: true, message: '채팅방이 삭제되었습니다.' };
+    }
+
+    return { success: true, message: '채팅방을 나갔습니다.' };
   }
 
   /**
