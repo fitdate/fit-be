@@ -8,6 +8,8 @@ import { LocationModule } from '../location/location.module';
 import { FilterModule } from '../filter/filter.module';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
 import { RedisModule } from '../redis/redis.module';
+import { HashService } from '../auth/hash/hash.service';
+import { BcryptService } from '../auth/hash/bcrypt.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
@@ -16,11 +18,12 @@ import { RedisModule } from '../redis/redis.module';
     RedisModule,
   ],
   controllers: [UserController],
-  providers: [UserService, UserStatisticsService, CursorPaginationUtil],
-  exports: [
+  providers: [
     UserService,
     UserStatisticsService,
-    TypeOrmModule.forFeature([User]),
+    CursorPaginationUtil,
+    { provide: HashService, useClass: BcryptService },
   ],
+  exports: [UserService, UserStatisticsService, HashService],
 })
 export class UserModule {}

@@ -131,6 +131,7 @@ import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
     UserFilterModule,
     FilterModule,
     CoffeeChatModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [

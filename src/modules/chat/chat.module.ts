@@ -7,10 +7,11 @@ import { ChatMessage } from './entities/chat-message.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { UserModule } from '../user/user.module';
 import { NotificationModule } from '../notification/notification.module';
+import { User } from '../user/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatMessage, ChatRoom]),
+    TypeOrmModule.forFeature([ChatMessage, ChatRoom, User]),
     UserModule,
     NotificationModule,
   ],
