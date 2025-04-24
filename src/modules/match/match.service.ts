@@ -188,20 +188,13 @@ export class MatchService {
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
     try {
-      this.logger.log('공개 매칭 시작');
-
       // 페이징 처리로 사용자 정보 가져오기 (10명씩)
       const { users: allUsers } =
         await this.userService.getAllUserInfoWithPagination(1, 10);
-      this.logger.log(`총 ${allUsers.length}명의 사용자 정보 로드 완료`);
 
       // 성별별로 사용자 분리
       const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
       const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
-
-      this.logger.log(
-        `남성 ${maleUsers.length}명, 여성 ${femaleUsers.length}명 분리 완료`,
-      );
 
       // 각 성별에서 랜덤으로 2명씩 선택
       const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
@@ -218,9 +211,10 @@ export class MatchService {
             selectedMaleUsers[1],
           );
           matches.push(match);
-          this.logger.log('남자-남자 매칭 생성 성공');
         } catch (error) {
-          this.logger.error('남자-남자 매칭 생성 실패:', error);
+          throw new InternalServerErrorException(
+            '남자-남자 매칭 생성 실패: ' + (error as Error).message,
+          );
         }
       }
 
@@ -232,18 +226,17 @@ export class MatchService {
             selectedFemaleUsers[1],
           );
           matches.push(match);
-          this.logger.log('여자-여자 매칭 생성 성공');
         } catch (error) {
-          this.logger.error('여자-여자 매칭 생성 실패:', error);
+          throw new InternalServerErrorException(
+            '여자-여자 매칭 생성 실패: ' + (error as Error).message,
+          );
         }
       }
 
-      this.logger.log(`총 ${matches.length}개의 매칭 생성 완료`);
       return { matches };
     } catch (error) {
-      this.logger.error('공개 매칭 생성 실패:', error);
       throw new InternalServerErrorException(
-        '매칭 생성 중 오류가 발생했습니다.',
+        '매칭 생성 중 오류가 발생했습니다: ' + (error as Error).message,
       );
     }
   }
@@ -270,7 +263,7 @@ export class MatchService {
       relations: ['user1', 'user2'],
     });
     if (!match) {
-      throw new NotFoundException('Match not found');
+      throw new NotFoundException('매치를 찾을 수 없습니다.');
     }
     return match;
   }
@@ -297,23 +290,29 @@ export class MatchService {
     selectedUserId: string,
     currentUserId: string,
   ): Promise<void> {
-    const match = await this.findByMatchId(matchId);
-    if (!match) {
-      throw new NotFoundException('매치를 찾을 수 없습니다.');
-    }
+    try {
+      const match = await this.findByMatchId(matchId);
+      if (!match) {
+        throw new NotFoundException('매치를 찾을 수 없습니다.');
+      }
 
-    const currentUser = await this.userService.findOne(currentUserId);
-    if (!currentUser) {
-      throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
-    }
+      const currentUser = await this.userService.findOne(currentUserId);
+      if (!currentUser) {
+        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+      }
 
-    await this.notificationService.create({
-      receiverId: selectedUserId,
-      type: NotificationType.MATCH,
-      title: '새로운 매칭 알림',
-      content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
-      data: { matchId },
-    });
+      await this.notificationService.create({
+        receiverId: selectedUserId,
+        type: NotificationType.MATCH,
+        title: '새로운 매칭 알림',
+        content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
+        data: { matchId },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        '알림 전송 중 오류가 발생했습니다: ' + (error as Error).message,
+      );
+    }
   }
 
   /**
@@ -355,9 +354,9 @@ export class MatchService {
           data: { matchId },
         }),
       ]);
-    } catch {
+    } catch (error) {
       throw new InternalServerErrorException(
-        '알림 전송 중 오류가 발생했습니다.',
+        '알림 전송 중 오류가 발생했습니다: ' + (error as Error).message,
       );
     }
   }
@@ -377,14 +376,10 @@ export class MatchService {
         throw new NotFoundException('매칭을 찾을 수 없습니다.');
       }
 
-      // 현재 사용자 정보 조회 (relations 포함)
       const currentUser = await this.userService.findOne(currentUserId);
       if (!currentUser) {
-        this.logger.error(`사용자 정보를 찾을 수 없음: ${currentUserId}`);
         throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
       }
-
-      this.logger.log(`현재 사용자 정보: ${JSON.stringify(currentUser)}`);
 
       // 상대방에게 알림 전송
       const receiverId =
@@ -397,9 +392,9 @@ export class MatchService {
         data: { matchId },
       });
     } catch (error) {
-      this.logger.error('채팅방 입장 알림 전송 실패:', error);
       throw new InternalServerErrorException(
-        '채팅방 입장 알림 전송 중 오류가 발생했습니다.',
+        '채팅방 입장 알림 전송 중 오류가 발생했습니다: ' +
+          (error as Error).message,
       );
     }
   }
