@@ -70,6 +70,17 @@ export class UserService {
     });
   }
 
+  async getCoffeeChatUserById(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['coffeeChats', 'coffeeChatsReceived'],
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
   async getUserInfo(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -186,7 +197,7 @@ export class UserService {
         'user.likeCount',
       ])
       .where('user.id != :userId', { userId: currentUserId })
-      .andWhere('user.gender != :gender', { gender: currentUser.gender })
+      .andWhere('user.gender != :gender', { gender: currentUser.gender });
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;

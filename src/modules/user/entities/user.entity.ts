@@ -17,6 +17,7 @@ import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ChatMessage } from '../../chat/entities/chat-message.entity';
 import { ChatRoom } from '../../chat/entities/chat-room.entity';
 import { UserFilter } from '../../user-filter/entities/user-filter.entity';
+import { CoffeeChat } from 'src/modules/coffee-chat/entities/coffee-chat.entity';
 @Entity('users')
 export class User extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
@@ -111,4 +112,10 @@ export class User extends BaseTable {
 
   @Column({ nullable: true })
   seed?: string;
+
+  @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.sender)
+  coffeeChats: CoffeeChat[];
+
+  @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.receiver)
+  coffeeChatsReceived: CoffeeChat[];
 }
