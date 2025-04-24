@@ -349,16 +349,6 @@ export class ChatService {
   }
 
   /**
-   * 알림 메시지의 채팅하기 버튼 클릭 시 채팅방을 생성합니다.
-   * @param userId 현재 사용자 ID
-   * @param opponentId 상대방 ID
-   * @returns 생성된 채팅방 정보
-   */
-  async createChatRoomFromNotification(userId: string, opponentId: string) {
-    return this.getOrCreateRoom(userId, opponentId);
-  }
-
-  /**
    * 채팅방 접근 권한을 확인합니다.
    * @param userId 사용자 ID
    * @param chatRoomId 채팅방 ID
