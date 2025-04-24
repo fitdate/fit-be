@@ -51,6 +51,9 @@ export class NotificationController implements OnModuleDestroy {
   })
   @Get()
   async findAll(@Req() req: RequestWithUser) {
+    if (!req.user || !req.user.id) {
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    }
     return this.notificationService.findAll(req.user.id.toString());
   }
 
