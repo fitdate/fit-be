@@ -189,8 +189,7 @@ export class MatchService {
   }> {
     try {
       // 페이징 처리로 사용자 정보 가져오기 (10명씩)
-      const { users: allUsers } =
-        await this.userService.getAllUserInfoWithPagination(1, 10);
+      const allUsers = await this.userService.getAllUserInfo();
 
       // 성별별로 사용자 분리
       const maleUsers = this.filterUsersByGender(allUsers, '남자', '');

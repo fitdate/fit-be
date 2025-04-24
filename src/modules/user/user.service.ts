@@ -370,25 +370,4 @@ export class UserService {
 
     return { users, nextCursor, totalCount };
   }
-
-  // 페이징 처리로 모든 사용자 정보 가져오기
-  async getAllUserInfoWithPagination(
-    page: number = 1,
-    pageSize: number = 100,
-  ): Promise<{ users: User[]; total: number }> {
-    const [users, total] = await this.userRepository.findAndCount({
-      relations: [
-        'profile',
-        'profile.mbti',
-        'profile.userIntroductions',
-        'profile.userFeedbacks',
-        'profile.interestCategory',
-        'profile.profileImage',
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
-
-    return { users, total };
-  }
 }

@@ -47,8 +47,8 @@ export class ChatController {
   })
   @ApiResponse({ status: 200, description: '채팅방 목록 조회 성공' })
   @Get('chatRooms')
-  async getRooms(@UserId() user: User) {
-    return this.chatService.getRooms(user.id);
+  async getRooms(@UserId() userId: string) {
+    return this.chatService.getRooms(userId);
   }
 
   @ApiOperation({
