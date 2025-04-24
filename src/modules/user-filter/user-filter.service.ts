@@ -29,17 +29,13 @@ export class UserFilterService {
     return filter;
   }
 
-  async getFilteredUsers(request: Request, response: Response) {
+  async getFilteredUsers() {
     this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
-    return this.userService.getUserList(
-      {
-        cursor: null,
-        order: ['seed_ASC'],
-        take: 6,
-      },
-      request,
-      response,
-    );
+    return this.userService.getUserList({
+      cursor: null,
+      order: ['createdAt_ASC'],
+      take: 6,
+    });
   }
 
   async updateFilter(userId: string, dto: UserFilterDto) {
