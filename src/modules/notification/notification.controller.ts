@@ -5,14 +5,12 @@ import {
   Body,
   Param,
   Delete,
-  Sse,
-  MessageEvent,
   Req,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { Observable } from 'rxjs';
-import { map, filter } from 'rxjs/operators';
+import { NotificationResponseDto } from './dto/notification-response.dto';
 import { RequestWithUser } from './types/notification.types';
 import {
   ApiTags,
@@ -26,7 +24,7 @@ import { Notification } from './entities/notification.entity';
 @ApiTags('Notification')
 @ApiBearerAuth()
 @Controller('notification')
-export class NotificationController {
+export class NotificationController implements OnModuleDestroy {
   constructor(private readonly notificationService: NotificationService) {}
 
   @ApiOperation({ summary: '알림 생성' })
@@ -37,52 +35,8 @@ export class NotificationController {
   })
   @ApiBody({
     type: CreateNotificationDto,
-    examples: {
-      match: {
-        summary: '매칭 알림',
-        value: {
-          type: 'MATCH',
-          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
-          title: '새로운 매칭',
-          content: '새로운 매칭이 생성되었습니다.',
-        },
-      },
-      like: {
-        summary: '좋아요 알림',
-        value: {
-          type: 'LIKE',
-          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
-          title: '새로운 좋아요',
-          content: '누군가가 당신의 프로필을 좋아합니다.',
-        },
-      },
-      coffeeChat: {
-        summary: '커피챗 알림',
-        value: {
-          type: 'COFFEE_CHAT',
-          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
-          title: '커피챗 요청',
-          content: '새로운 커피챗 요청이 있습니다.',
-          data: {
-            chatId: 123,
-            senderId: 456,
-          },
-        },
-      },
-      chat: {
-        summary: '채팅 알림',
-        value: {
-          type: 'CHAT',
-          receiverId: 'ad6aba82-e59b-4bc2-8f2f-1c47d818e930',
-          title: '대화방 입장',
-          content: '상대방이 대화방에 입장했습니다.',
-          data: {
-            chatRoomId: 789,
-            messageId: 123,
-          },
-        },
-      },
-    },
+    description:
+      '알림 생성에 필요한 데이터 (알림 생성은 다른 모듈에서 이루어집니다.)',
   })
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {
@@ -93,29 +47,18 @@ export class NotificationController {
   @ApiResponse({
     status: 200,
     description: '알림 목록을 반환합니다.',
-    type: [Notification],
+    type: [NotificationResponseDto],
   })
   @Get()
   async findAll(@Req() req: RequestWithUser) {
     return this.notificationService.findAll(req.user.id.toString());
   }
 
-  @ApiOperation({ summary: '알림 상세 조회' })
-  @ApiResponse({
-    status: 200,
-    description: '알림을 반환합니다.',
-    type: Notification,
-  })
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.notificationService.findOne(+id);
-  }
-
   @ApiOperation({ summary: '알림 읽음 표시' })
   @ApiResponse({
     status: 200,
     description: '알림이 읽음 처리되었습니다.',
-    type: Notification,
+    type: NotificationResponseDto,
   })
   @Post(':id/read')
   markAsRead(@Param('id') id: string) {
@@ -136,30 +79,7 @@ export class NotificationController {
     return this.notificationService.removeAll(req.user.id.toString());
   }
 
-  @ApiOperation({ summary: '실시간 알림 스트림' })
-  @ApiResponse({
-    status: 200,
-    description: 'SSE 연결이 성공적으로 설정되었습니다.',
-  })
-  @Sse('events')
-  streamNotifications(@Req() req: RequestWithUser): Observable<MessageEvent> {
-    return this.notificationService.getNotificationStream().pipe(
-      filter(
-        (notification) => notification.receiverId === req.user.id.toString(),
-      ),
-      map((notification) => ({
-        data: JSON.stringify(notification),
-      })),
-    );
-  }
-
-  @Get('events')
-  async getEvents(@Req() req: RequestWithUser) {
-    const notifications = await this.notificationService.findAll(
-      req.user.id.toString(),
-    );
-    return notifications.filter(
-      (notification) => notification.receiverId === req.user.id.toString(),
-    );
+  onModuleDestroy() {
+    this.notificationService.onModuleDestroy();
   }
 }

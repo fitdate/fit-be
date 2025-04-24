@@ -2,17 +2,18 @@ import {
   Injectable,
   Logger,
   InternalServerErrorException,
+  OnModuleDestroy,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { Subject, Observable } from 'rxjs';
+import { NotificationResponseDto } from './dto/notification-response.dto';
 
 @Injectable()
-export class NotificationService {
+export class NotificationService implements OnModuleDestroy {
   private readonly logger = new Logger(NotificationService.name);
-  private notificationSubject = new Subject<Notification>();
+  private isDestroyed = false;
 
   constructor(
     @InjectRepository(Notification)
@@ -20,17 +21,16 @@ export class NotificationService {
   ) {}
 
   /**
-   * 실시간 알림을 위한 SSE(Server-Sent Events) 스트림을 생성합니다.
-   * 클라이언트는 이 스트림을 구독하여 새로운 알림을 실시간으로 받을 수 있습니다.
+   * 서비스 종료 시 정리 작업을 수행합니다.
    */
-  getNotificationStream(): Observable<Notification> {
-    this.logger.log('알림 스트림 요청');
-    return this.notificationSubject.asObservable();
+  onModuleDestroy() {
+    this.logger.log('알림 서비스 정리 작업 시작');
+    this.isDestroyed = true;
+    this.logger.log('알림 서비스 정리 작업 완료');
   }
 
   /**
    * 새로운 알림을 생성하고 저장합니다.
-   * 알림이 생성되면 실시간 스트림을 통해 구독자들에게 전달됩니다.
    * @param createNotificationDto 알림 생성에 필요한 데이터
    * @returns 생성된 알림 객체
    */
@@ -54,16 +54,6 @@ export class NotificationService {
 
       this.logger.log(`알림 저장 성공: ID ${savedNotification.id}`);
 
-      try {
-        this.notificationSubject.next(savedNotification);
-        this.logger.log(`알림 스트림 전송 성공: ID ${savedNotification.id}`);
-      } catch (streamError: unknown) {
-        this.logger.error(
-          `알림 스트림 전송 실패: ${(streamError as Error).message}`,
-        );
-        // 스트림 전송 실패는 전체 프로세스를 실패시키지 않음
-      }
-
       return savedNotification;
     } catch (error) {
       this.logger.error(`알림 생성 실패: ${(error as Error).message}`);
@@ -79,22 +69,31 @@ export class NotificationService {
    * @param userId 알림을 조회할 사용자의 ID
    * @returns 사용자의 알림 목록
    */
-  async findAll(userId: string) {
+  async findAll(userId: string): Promise<NotificationResponseDto[]> {
     this.logger.log(`사용자 ${userId}의 알림 목록 조회`);
-    return this.notificationRepository.find({
+    const notifications = await this.notificationRepository.find({
       where: { receiverId: userId },
       order: { createdAt: 'DESC' },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        type: true,
+        isRead: true,
+        createdAt: true,
+        data: true,
+      },
     });
-  }
 
-  /**
-   * ID로 특정 알림을 조회합니다.
-   * @param id 조회할 알림의 ID
-   * @returns 조회된 알림 객체
-   */
-  async findOne(id: number) {
-    this.logger.log(`알림 조회: ID ${id}`);
-    return this.notificationRepository.findOne({ where: { id } });
+    return notifications.map((notification) => ({
+      id: notification.id.toString(),
+      title: notification.title,
+      content: notification.content,
+      type: notification.type,
+      isRead: notification.isRead,
+      createdAt: (notification.createdAt || new Date()).toISOString(),
+      data: notification.data,
+    }));
   }
 
   /**
@@ -104,7 +103,9 @@ export class NotificationService {
    */
   async markAsRead(id: number) {
     this.logger.log(`알림 읽음 처리: ID ${id}`);
-    const notification = await this.findOne(id);
+    const notification = await this.notificationRepository.findOne({
+      where: { id },
+    });
     if (notification) {
       notification.isRead = true;
       return this.notificationRepository.save(notification);
