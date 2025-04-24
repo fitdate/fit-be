@@ -11,8 +11,8 @@ import { NotificationType } from '../../../common/enum/notification.enum';
 
 @Entity()
 export class Notification extends BaseTable {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   title: string;

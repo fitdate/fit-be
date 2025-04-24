@@ -62,14 +62,14 @@ export class NotificationController implements OnModuleDestroy {
   })
   @Post(':id/read')
   markAsRead(@Param('id') id: string) {
-    return this.notificationService.markAsRead(+id);
+    return this.notificationService.markAsRead(id);
   }
 
   @ApiOperation({ summary: '알림 삭제' })
   @ApiResponse({ status: 200, description: '알림이 삭제되었습니다.' })
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.notificationService.remove(+id);
+    return this.notificationService.remove(id);
   }
 
   @ApiOperation({ summary: '전체 알림 삭제' })

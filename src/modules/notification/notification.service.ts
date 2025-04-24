@@ -120,7 +120,7 @@ export class NotificationService implements OnModuleDestroy {
    * @param id 읽음 처리할 알림의 ID
    * @returns 업데이트된 알림 객체 또는 null (알림을 찾을 수 없는 경우)
    */
-  async markAsRead(id: number) {
+  async markAsRead(id: string) {
     this.logger.log(`알림 읽음 처리: ID ${id}`);
     const notification = await this.notificationRepository.findOne({
       where: { id },
@@ -138,7 +138,7 @@ export class NotificationService implements OnModuleDestroy {
    * @param id 삭제할 알림의 ID
    * @returns 삭제 작업 결과
    */
-  async remove(id: number) {
+  async remove(id: string) {
     this.logger.log(`알림 삭제: ID ${id}`);
     return this.notificationRepository.delete(id);
   }

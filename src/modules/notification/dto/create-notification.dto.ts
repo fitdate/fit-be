@@ -19,7 +19,7 @@ export class CreateNotificationDto {
   @IsEnum(NotificationType)
   type: NotificationType;
 
-  @IsUUID('4')
+  @IsUUID()
   receiverId: string;
 
   @IsOptional()
