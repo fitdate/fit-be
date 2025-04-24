@@ -127,7 +127,7 @@ jobs:
           scp -r blue green ubuntu@${{ secrets.DB_HOST }}:/home/ubuntu/
           scp docker/docker-compose.yml ubuntu@${{ secrets.DB_HOST }}:/home/ubuntu/
 
-          # 새 환경 결정 (이미 EC2에서 실행 중인 환경 확인)
+          # 새 환경 결정
           echo "🔍 현재 실행 환경 확인 중..."
           CURRENT_ENV=$(ssh ubuntu@${{ secrets.DB_HOST }} "docker ps | grep -q 'fit-blue' && echo 'blue' || echo 'green'")
           echo "📌 현재 환경: $CURRENT_ENV"
@@ -155,30 +155,14 @@ jobs:
             echo 'DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' > /home/ubuntu/.env
             export $(cat /home/ubuntu/.env | xargs)
             
-            # 이전 컨테이너 정리
-            echo '🧹 이전 컨테이너 정리 중...'
-            docker-compose -f /home/ubuntu/docker-compose.yml down
-            docker stop $(docker ps -aq) || true
-            docker rm $(docker ps -aq) || true
-            docker network prune -f
-            docker system prune -f
-
-            # 사용 중인 포트 확인 및 해제
-            echo '🔍 포트 상태 확인 중...'
-            sudo fuser -k 6379/tcp || true
-            sudo fuser -k 6380/tcp || true
-            sudo fuser -k 3000/tcp || true
-            sudo fuser -k 3001/tcp || true
-            sudo fuser -k 80/tcp || true
-            sudo fuser -k 443/tcp || true
-            sleep 2  # 포트 해제 후 잠시 대기
-            
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f /home/ubuntu/docker-compose.yml pull
 
             echo '🚀 앱 컨테이너 시작 중...'
             # 데이터베이스와 Redis 먼저 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d postgres redis-$NEW_ENV
+            
+            timeout 3 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo "앱 대기 중..."; sleep 1; done'
             
             # 데이터베이스와 Redis가 준비될 때까지 대기
             echo '⏳ 데이터베이스와 Redis 대기 중...'
@@ -189,7 +173,7 @@ jobs:
             
             # 앱 상태 확인
             echo '🔍 앱 상태 확인 중...'
-            timeout 3 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 1; done'
+            timeout 15 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 2; done'
 
             # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'
@@ -200,7 +184,7 @@ jobs:
             # Nginx 컨테이너 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d nginx
 
-            # 이전 환경의 앱 컨테이너 중지
+            # 이전 환경 종료
             echo '🧹 이전 환경 정리 중...'
             if [ "$CURRENT_ENV" = "blue" ]; then
               docker-compose -f /home/ubuntu/docker-compose.yml stop app-blue redis-blue || true
@@ -211,4 +195,19 @@ jobs:
             # 시스템 상태 확인
             echo '🔍 전체 컨테이너 상태 확인 중...'
             docker-compose -f /home/ubuntu/docker-compose.yml ps
+          "
+
+      # 🧹 안전한 도커 리소스 정리
+      - name: 🧹 Clean up unused Docker resources
+        run: |
+          ssh ubuntu@${{ secrets.DB_HOST }} "
+            echo '✅ 배포 완료 후 도커 리소스 정리 시작'
+            # 12시간 이상된 이미지만 삭제
+            docker image prune -f --filter 'until=12h'
+            # 사용하지 않는 컨테이너만 삭제
+            docker container prune -f
+            # 사용하지 않는 볼륨만 삭제
+            docker volume prune -f
+            echo '📦 디스크 용량 상태:'
+            df -h
           "
