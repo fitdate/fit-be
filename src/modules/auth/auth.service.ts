@@ -165,6 +165,14 @@ export class AuthService {
       throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
     }
 
+    // 전화번호 중복 확인
+    const existingPhone = await this.userService.findUserByPhone(
+      registerDto.phone,
+    );
+    if (existingPhone) {
+      throw new UnauthorizedException('이미 존재하는 전화번호입니다.');
+    }
+
     // 비밀번호 확인
     if (registerDto.password !== registerDto.confirmPassword) {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
@@ -294,6 +302,16 @@ export class AuthService {
         log(`User interests saved successfully for user: ${user.id}`);
       }
 
+      // 8. 프로필 완성 상태 업데이트
+      await qr.manager.update(
+        User,
+        { id: user.id },
+        { isProfileComplete: true },
+      );
+      log(
+        `User profile complete status updated successfully for user: ${user.id}`,
+      );
+
       await qr.commitTransaction();
       log('Transaction committed successfully');
 
@@ -340,6 +358,19 @@ export class AuthService {
     if (user) {
       throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
+  }
+
+  async changePassword(
+    email: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) {
+    if (newPassword !== confirmPassword) {
+      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+    }
+    const hashedPassword = await this.hashService.hash(newPassword);
+    await this.userService.updateUserPassword(email, hashedPassword);
+    return { message: '비밀번호 변경 성공' };
   }
 
   async validate(email: string, password: string) {
@@ -597,7 +628,9 @@ export class AuthService {
 
   //쿠키
   createCookieOptions(maxAge: number, origin?: string): CookieOptions {
-    this.logger.debug(`Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`);
+    this.logger.debug(
+      `Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`,
+    );
     let domain: string | undefined;
 
     const configDomain = this.configService.get('app.host', {

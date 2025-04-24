@@ -10,6 +10,7 @@ import {
   Delete,
   UploadedFiles,
   UseInterceptors,
+  Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -20,12 +21,13 @@ import { Response, Request } from 'express';
 import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { RequestWithUser } from './types/request.types';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from 'src/modules/s3/types/multer.types';
+import { ChangePasswordDto } from './dto/change-password.dto';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -231,8 +233,24 @@ export class AuthController {
     }
   }
 
+  @ApiOperation({ summary: '회원 탈퇴' })
+  @ApiResponse({ status: 200, description: '회원 탈퇴 성공' })
   @Delete('delete-account')
   async deleteAccount(@UserId() userId: string) {
     return this.authService.deleteAccount(userId);
+  }
+
+  @Patch('change-password')
+  @ApiOperation({ summary: '비밀번호 변경' })
+  @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
+  @ApiParam({ name: 'email', description: '이메일' })
+  @ApiParam({ name: 'newPassword', description: '새로운 비밀번호' })
+  @ApiParam({ name: 'confirmPassword', description: '새로운 비밀번호 확인' })
+  async changePassword(@Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(
+      changePasswordDto.email,
+      changePasswordDto.newPassword,
+      changePasswordDto.confirmPassword,
+    );
   }
 }

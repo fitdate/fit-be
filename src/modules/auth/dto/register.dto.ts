@@ -74,8 +74,8 @@ export class RegisterDto {
     example: '010-1234-5678',
   })
   @IsString()
-  @IsOptional()
-  phone?: string;
+  @IsNotEmpty()
+  phone: string;
 
   @ApiProperty({
     description: '지역',

@@ -25,7 +25,9 @@ export class TokenService {
     refreshToken: string;
     tokenId: string;
   }> {
-    this.logger.debug(`Generating tokens for user: ${userId}, role: ${userRole}`);
+    this.logger.debug(
+      `Generating tokens for user: ${userId}, role: ${userRole}`,
+    );
     // 토큰 ID 생성 (UUID)
     const tokenId = uuidv4();
     this.logger.debug(`Generated tokenId: ${tokenId}`);
@@ -86,7 +88,9 @@ export class TokenService {
     userId: string,
     tokenId: string,
   ): Promise<string> {
-    this.logger.debug(`Generating refresh token for user: ${userId}, tokenId: ${tokenId}`);
+    this.logger.debug(
+      `Generating refresh token for user: ${userId}, tokenId: ${tokenId}`,
+    );
     const refreshTokenSecret = this.configService.getOrThrow(
       'jwt.refreshTokenSecret',
       {
@@ -137,10 +141,12 @@ export class TokenService {
     userId: string,
     tokenId: string,
   ): Promise<boolean> {
-    this.logger.debug(`Validating refresh token for user: ${userId}, tokenId: ${tokenId}`);
+    this.logger.debug(
+      `Validating refresh token for user: ${userId}, tokenId: ${tokenId}`,
+    );
     const redisKey = `refresh:${userId}:${tokenId}`;
     const storedTokenId = await this.redisService.get(redisKey);
-    
+
     const isValid = storedTokenId === tokenId;
     this.logger.debug(`Refresh token validation result:`, {
       isValid,
@@ -152,7 +158,9 @@ export class TokenService {
   }
 
   async revokeRefreshToken(userId: string, tokenId: string): Promise<void> {
-    this.logger.debug(`Revoking refresh token for user: ${userId}, tokenId: ${tokenId}`);
+    this.logger.debug(
+      `Revoking refresh token for user: ${userId}, tokenId: ${tokenId}`,
+    );
     const redisKey = `refresh:${userId}:${tokenId}`;
     await this.redisService.del(redisKey);
     this.logger.debug(`Successfully revoked refresh token`);
@@ -162,11 +170,15 @@ export class TokenService {
     userId: string,
     oldTokenId: string,
   ): Promise<{ accessToken: string; refreshToken: string; tokenId: string }> {
-    this.logger.debug(`Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`);
+    this.logger.debug(
+      `Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`,
+    );
     // 이전 토큰 유효성 검사
     const isValid = await this.validateRefreshToken(userId, oldTokenId);
     if (!isValid) {
-      this.logger.warn(`Invalid refresh token during rotation for user: ${userId}`);
+      this.logger.warn(
+        `Invalid refresh token during rotation for user: ${userId}`,
+      );
       throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
     }
 
@@ -177,7 +189,7 @@ export class TokenService {
     // 새로운 토큰 발급
     const newTokens = await this.generateTokens(userId, UserRole.USER);
     this.logger.debug(`Successfully generated new tokens for user: ${userId}`);
-    
+
     return newTokens;
   }
 }

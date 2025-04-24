@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CoffeeChat } from './entities/coffee-chat.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserService } from '../user/user.service';
 import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
 import { CoffeeChatStatus } from './enum/coffee-chat-statue.enum';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CoffeeChatService {
@@ -12,25 +13,37 @@ export class CoffeeChatService {
     @InjectRepository(CoffeeChat)
     private coffeeChatRepository: Repository<CoffeeChat>,
     private readonly userService: UserService,
+    private readonly dataSource: DataSource,
   ) {}
   async sendCoffeeChat(
     userId: string,
     sendCoffeeChatDto: SendCoffeeChatDto,
   ): Promise<CoffeeChat> {
-    const sender = await this.userService.getCoffeeChatUserById(userId);
-    const receiver = await this.userService.getCoffeeChatUserById(
-      sendCoffeeChatDto.receiverId,
-    );
+    return this.dataSource.transaction(async (manager) => {
+      const sender = await this.userService.getCoffeeChatUserById(userId);
+      const receiver = await this.userService.getCoffeeChatUserById(
+        sendCoffeeChatDto.receiverId,
+      );
 
-    const coffeeChat = this.coffeeChatRepository.create({
-      sender,
-      receiver: receiver,
-      status: CoffeeChatStatus.PENDING,
+      if (sender.coffee < 10) {
+        throw new BadRequestException('커피가 부족합니다.');
+      }
+
+      sender.coffee -= 10;
+      await manager.save(sender);
+
+      const coffeeChat = manager.create(CoffeeChat, {
+        sender,
+        receiver: receiver,
+        status: CoffeeChatStatus.PENDING,
+      });
+
+      const savedCoffeeChat = await manager.save(coffeeChat);
+
+      //send message to receiver
+
+      return savedCoffeeChat;
     });
-
-    //send message to receiver
-
-    return await this.coffeeChatRepository.save(coffeeChat);
   }
 
   async acceptCoffeeChat(userId: string, senderId: string) {

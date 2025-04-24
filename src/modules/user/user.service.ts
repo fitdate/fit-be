@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
@@ -15,6 +16,7 @@ import { FilteredUsersDto } from './dto/filtered-user.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
 import { RedisService } from '../redis/redis.service';
+import { HashService } from '../auth/hash/hash.service';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -25,6 +27,7 @@ export class UserService {
     private readonly filterService: FilterService,
     private readonly cursorPaginationUtil: CursorPaginationUtil,
     private readonly redisService: RedisService,
+    private readonly hashService: HashService,
   ) {}
 
   createUser(createUserDto: CreateUserDto) {
@@ -40,6 +43,29 @@ export class UserService {
     };
 
     return this.userRepository.update({ id }, data);
+  }
+
+  updateUserPassword(id: string, password: string) {
+    return this.userRepository.update({ id }, { password });
+  }
+
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.findOne(userId);
+
+    const isPasswordValid = await this.hashService.compare(
+      oldPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+    }
+    user.password = newPassword;
+    await this.updateUserPassword(user.id, newPassword);
+    return { message: '비밀번호 변경 성공' };
   }
 
   private isProfileDataComplete(data: UpdateUserDto): boolean {
@@ -68,6 +94,20 @@ export class UserService {
         'profile.profileImage',
       ],
     });
+  }
+
+  async getCoffeById(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user.coffee;
+  }
+
+  async updateCoffee(userId: string, coffee: number) {
+    return this.userRepository.update({ id: userId }, { coffee });
   }
 
   async getCoffeeChatUserById(userId: string) {
@@ -134,19 +174,35 @@ export class UserService {
     return this.findOne(id);
   }
 
-  findUserByEmail(email: string) {
-    return this.userRepository.findOne({
+  async findUserByEmail(email: string) {
+    const user = await this.userRepository.findOne({
       where: { email },
       relations: ['profile'],
     });
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 이메일입니다.');
+    }
+    return user;
   }
 
-  findUserByNickname(nickname: string) {
-    return this.userRepository.findOne({ where: { nickname } });
+  async findUserByNickname(nickname: string) {
+    const user = await this.userRepository.findOne({ where: { nickname } });
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 닉네임입니다.');
+    }
+    return user;
+  }
+
+  async findUserByPhone(phone: string) {
+    const user = await this.userRepository.findOne({ where: { phone } });
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 전화번호입니다.');
+    }
+    return user;
   }
 
   async findOne(id: string) {
-    return this.userRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { id },
       relations: [
         'profile',
@@ -157,6 +213,10 @@ export class UserService {
         'profile.profileImage',
       ],
     });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
   async saveUser(userName: string, socketId: string) {

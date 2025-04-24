@@ -12,9 +12,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SkipProfileComplete } from '../auth/guard/profile-complete.guard';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
+import { ChangePasswordDto } from './dto/change-password-dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -111,6 +112,34 @@ export class UserController {
       userId,
       filteredUsersDto,
       cursorPaginationDto,
+    );
+  }
+
+  @ApiOperation({
+    summary: '비밀번호 변경',
+    description: '현재 로그인한 사용자의 비밀번호를 변경합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '비밀번호가 성공적으로 변경되었습니다.',
+  })
+  @ApiParam({
+    name: 'oldPassword',
+    description: '기존 비밀번호',
+  })
+  @ApiParam({
+    name: 'newPassword',
+    description: '새로운 비밀번호',
+  })
+  @Patch('change-password')
+  changePassword(
+    @UserId() userId: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.userService.changePassword(
+      userId,
+      changePasswordDto.oldPassword,
+      changePasswordDto.newPassword,
     );
   }
 }
