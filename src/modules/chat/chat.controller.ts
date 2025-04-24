@@ -51,11 +51,11 @@ export class ChatController {
   @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
   @ApiBody({
     type: FindOrCreateChatRoomDto,
-    description: '상대방 사용자 ID',
+    description: '채팅방 상대방 사용자 ID',
     examples: {
       example1: {
         value: {
-          opponentId: 'user-uuid',
+          partnerId: 'user-uuid',
         },
       },
     },
@@ -65,7 +65,7 @@ export class ChatController {
     @UserId() user: User,
     @Body() body: FindOrCreateChatRoomDto,
   ) {
-    return this.chatService.findOrCreateChatRoom(user.id, body.opponentId);
+    return this.chatService.findOrCreateChatRoom(user.id, body.partnerId);
   }
 
   @ApiOperation({
