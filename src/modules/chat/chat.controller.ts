@@ -69,6 +69,16 @@ export class ChatController {
   }
 
   @ApiOperation({
+    summary: '채팅방 목록 조회',
+    description: '사용자의 채팅방 목록을 조회합니다.',
+  })
+  @ApiResponse({ status: 200, description: '채팅방 목록 조회 성공' })
+  @Get('chatRooms')
+  async getRooms(@UserId() user: User) {
+    return this.chatService.getRooms(user.id);
+  }
+
+  @ApiOperation({
     summary: '채팅 메시지 조회',
     description:
       '채팅방의 메시지를 최신순으로 조회합니다. 최신 50개의 메시지를 반환합니다.',

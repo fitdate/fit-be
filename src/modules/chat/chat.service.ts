@@ -120,7 +120,7 @@ export class ChatService {
         partner: partner
           ? {
               id: partner.id,
-              nickname: partner.nickname,
+              name: partner.name,
               age: this.calculateAge(partner.birthday),
               height: partner.height,
             }
