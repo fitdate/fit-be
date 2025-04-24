@@ -51,7 +51,11 @@ export class NotificationController implements OnModuleDestroy {
   })
   @Get()
   async findAll(@Req() req: RequestWithUser) {
-    return this.notificationService.findAll(req.user.id.toString());
+    const userId = req.user?.sub || req.user?.id;
+    if (!userId) {
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    }
+    return this.notificationService.findAll(userId.toString());
   }
 
   @ApiOperation({ summary: '알림 읽음 표시' })
@@ -62,21 +66,25 @@ export class NotificationController implements OnModuleDestroy {
   })
   @Post(':id/read')
   markAsRead(@Param('id') id: string) {
-    return this.notificationService.markAsRead(+id);
+    return this.notificationService.markAsRead(id);
   }
 
   @ApiOperation({ summary: '알림 삭제' })
   @ApiResponse({ status: 200, description: '알림이 삭제되었습니다.' })
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.notificationService.remove(+id);
+    return this.notificationService.remove(id);
   }
 
   @ApiOperation({ summary: '전체 알림 삭제' })
   @ApiResponse({ status: 200, description: '모든 알림이 삭제되었습니다.' })
   @Delete()
   async removeAll(@Req() req: RequestWithUser) {
-    return this.notificationService.removeAll(req.user.id.toString());
+    const userId = req.user?.sub || req.user?.id;
+    if (!userId) {
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    }
+    return this.notificationService.removeAll(userId.toString());
   }
 
   onModuleDestroy() {

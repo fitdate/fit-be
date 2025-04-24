@@ -315,8 +315,10 @@ export class UserService {
       relations: [
         'profile',
         'profile.mbti',
+        'profile.userIntroductions',
+        'profile.userFeedbacks',
         'profile.interestCategory',
-        'profile.interestCategory.interestCategory',
+        'profile.profileImage',
       ],
       skip: (page - 1) * pageSize,
       take: pageSize,
