@@ -363,7 +363,7 @@ export class MatchService {
   }
 
   /**
-   * 매칭 결과 페이지에서 대화하러 가기 버튼을 누를 때 상대방에게 채팅방 입장 알림을 보냅니다.
+   * 채팅방 입장 알림을 전송합니다.
    * @param matchId 매칭 ID
    * @param currentUserId 현재 사용자 ID
    */
@@ -374,26 +374,28 @@ export class MatchService {
     try {
       const match = await this.findByMatchId(matchId);
       if (!match) {
-        throw new NotFoundException('매치를 찾을 수 없습니다.');
+        throw new NotFoundException('매칭을 찾을 수 없습니다.');
       }
 
       const currentUser = await this.userService.findOne(currentUserId);
       if (!currentUser) {
-        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+        throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
       }
 
+      // 상대방에게 알림 전송
       const receiverId =
         match.user1.id === currentUserId ? match.user2.id : match.user1.id;
       await this.notificationService.create({
-        receiverId,
         type: NotificationType.COFFEE_CHAT,
+        receiverId,
         title: '새로운 채팅 알림',
         content: `${currentUser.nickname}님이 채팅방에 입장했습니다!`,
         data: { matchId },
       });
-    } catch {
+    } catch (error) {
+      this.logger.error('채팅방 입장 알림 전송 실패:', error);
       throw new InternalServerErrorException(
-        '알림 전송 중 오류가 발생했습니다.!',
+        '채팅방 입장 알림 전송 중 오류가 발생했습니다.',
       );
     }
   }
