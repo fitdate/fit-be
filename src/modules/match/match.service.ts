@@ -401,7 +401,14 @@ export class MatchService {
   async getUserMatchList(userId: string) {
     const matchList = await this.matchRepository.find({
       where: [{ user1: { id: userId } }, { user2: { id: userId } }],
-      relations: ['user1', 'user2'],
+      relations: [
+        'user1',
+        'user1.profile',
+        'user1.profile.profileImage',
+        'user2',
+        'user2.profile',
+        'user2.profile.profileImage',
+      ],
     });
     return matchList;
   }

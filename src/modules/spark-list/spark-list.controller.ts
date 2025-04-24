@@ -8,10 +8,10 @@ import { ApiOperation } from '@nestjs/swagger';
 export class SparkListController {
   constructor(private readonly sparkListService: SparkListService) {}
 
-  @ApiOperation({ summary: '스파크 리스트 조회' })
+  @ApiOperation({ summary: '호감 리스트 조회' })
   @ApiResponse({
     status: 200,
-    description: '스파크 리스트 조회 성공',
+    description: '호감 리스트 조회 성공',
   })
   @Get()
   getSparkList(@UserId() userId: string) {

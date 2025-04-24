@@ -89,6 +89,7 @@ export class LikeService {
       where: {
         user: { id: userId },
       },
+      relations: ['likedUser.profile.profileImages'],
     });
     return likeList;
   }

@@ -12,18 +12,54 @@ export class SparkListService {
 
   async getLikeList(userId: string) {
     const likeList = await this.likeService.getLikeList(userId);
-    return likeList;
+    const filteredLikeList = likeList.map((like) => ({
+      likedUserId: like.likedUser.id,
+      nickname: like.likedUser.nickname,
+      likes: like.likedUser.likeCount,
+      age: like.likedUser.age,
+      region: like.likedUser.region,
+      profileImage: like.likedUser.profile.profileImage?.[0]?.imageUrl ?? null,
+    }));
+    return filteredLikeList;
   }
 
   async getCoffeeChatList(userId: string) {
     const coffeeChatList =
       await this.coffeeChatService.getCoffeeChatList(userId);
-    return coffeeChatList;
+    const filteredCoffeeChatList = coffeeChatList.map((coffeeChat) => ({
+      coffeeChatId: coffeeChat.id,
+      senderId: coffeeChat.sender.id,
+      senderNickname: coffeeChat.sender.nickname,
+      senderProfileImage:
+        coffeeChat.sender.profile.profileImage?.[0]?.imageUrl ?? null,
+      senderAge: coffeeChat.sender.age,
+      senderRegion: coffeeChat.sender.region,
+      receiverId: coffeeChat.receiver.id,
+      receiverNickname: coffeeChat.receiver.nickname,
+      receiverProfileImage:
+        coffeeChat.receiver.profile.profileImage?.[0]?.imageUrl ?? null,
+      receiverAge: coffeeChat.receiver.age,
+      receiverRegion: coffeeChat.receiver.region,
+    }));
+    return filteredCoffeeChatList;
   }
 
   async getMatchList(userId: string) {
     const matchList = await this.matchService.getUserMatchList(userId);
-    return matchList;
+    const filteredMatchList = matchList.map((match) => {
+      const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
+
+      return {
+        matchId: match.id,
+        matchedUserId: matchedUser.id,
+        matchedNickname: matchedUser.nickname,
+        matchedProfileImage:
+          matchedUser.profile.profileImage?.[0]?.imageUrl ?? null,
+        matchedAge: matchedUser.age,
+        matchedRegion: matchedUser.region,
+      };
+    });
+    return filteredMatchList;
   }
 
   async getSparkList(userId: string) {
