@@ -32,6 +32,6 @@ export class ChatRoom extends BaseTable {
   })
   users: User[];
 
-  @OneToMany(() => ChatMessage, (message) => message.chatRoom)
+  @OneToMany(() => ChatMessage, (message) => message.chatRoomId)
   messages: ChatMessage[];
 }
