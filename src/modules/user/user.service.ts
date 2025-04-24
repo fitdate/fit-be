@@ -183,31 +183,10 @@ export class UserService {
         'user.nickname',
         'user.birthday',
         'user.gender',
-        'user.region',
-        'user.job',
         'user.likeCount',
-        'profile.id',
-        'mbti.mbti',
-        'profileImages.imageUrl',
-        'profileImages.isMain',
-        'userIntroductions.id',
-        'userIntroductions.introduction',
-        'userFeedbacks.id',
-        'userFeedbacks.feedback',
-        'interestCategory.id',
-        'interestCategory.category',
       ])
-      .leftJoin('user.profile', 'profile')
-      .leftJoin('profile.mbti', 'mbti')
-      .leftJoin('profile.userIntroductions', 'userIntroductions')
-      .leftJoin('userIntroductions.introduction', 'introduction')
-      .leftJoin('profile.userFeedbacks', 'userFeedbacks')
-      .leftJoin('userFeedbacks.feedback', 'feedback')
-      .leftJoin('profile.interestCategory', 'interestCategory')
-      .leftJoin('interestCategory.category', 'category')
       .where('user.id != :userId', { userId: currentUserId })
       .andWhere('user.gender != :gender', { gender: currentUser.gender })
-      .andWhere('user.isProfileComplete = :isComplete', { isComplete: true });
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;

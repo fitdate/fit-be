@@ -2,6 +2,7 @@ import { Injectable, ExecutionContext, Logger } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { PUBLIC_KEY } from '../../../common/decorator/public.decorator';
+import { OPTIONAL_KEY } from '../../../common/decorator/optional-user.decorator';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -17,9 +18,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getClass(),
     ]);
 
-    this.logger.debug(`Route is public: ${isPublic}`);
+    const isOptional = this.reflector.getAllAndOverride<boolean>(OPTIONAL_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
-    if (isPublic) {
+    this.logger.debug(`Route is public: ${isPublic}`);
+    this.logger.debug(`Route is optional: ${isOptional}`);
+
+    if (isPublic || isOptional) {
       return true;
     }
 
@@ -35,10 +42,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(`Auth user: ${JSON.stringify(user)}`);
     this.logger.debug(`Auth info: ${info}`);
 
-    if (err || !user) {
-      this.logger.error(`Authentication failed: ${err || 'No user'}`);
-      throw err || new Error('No user');
+    if (err) {
+      this.logger.error(`Authentication failed: ${err}`);
+      throw err;
     }
+
     return user;
   }
 }

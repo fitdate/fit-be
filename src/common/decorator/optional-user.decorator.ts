@@ -1,5 +1,7 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext, SetMetadata } from '@nestjs/common';
 import { UserRole } from 'src/common/enum/user-role.enum';
+
+export const OPTIONAL_KEY = 'isOptional';
 
 interface RequestWithUser extends Request {
   user?: {
@@ -15,3 +17,5 @@ export const OptionalUserId = createParamDecorator(
     return request.user?.sub ?? undefined;
   },
 );
+
+export const Optional = () => SetMetadata(OPTIONAL_KEY, true);
