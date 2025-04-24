@@ -18,8 +18,8 @@ export class UserFilterController {
 
   @Get('filtered-users')
   @Public()
-  getFilteredUsers(@Request() request, @Response() response) {
-    return this.userFilterService.getFilteredUsers(request, response);
+  getFilteredUsers() {
+    return this.userFilterService.getFilteredUsers();
   }
 
   @Get('user-filter')
