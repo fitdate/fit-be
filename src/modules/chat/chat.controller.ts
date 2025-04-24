@@ -30,8 +30,8 @@ export class ChatController {
     examples: {
       example1: {
         value: {
-          user1Id: 'user1-uuid',
-          user2Id: 'user2-uuid',
+          user1Id: '',
+          user2Id: '',
         },
       },
     },
