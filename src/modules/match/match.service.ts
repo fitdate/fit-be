@@ -377,10 +377,14 @@ export class MatchService {
         throw new NotFoundException('매칭을 찾을 수 없습니다.');
       }
 
+      // 현재 사용자 정보 조회 (relations 포함)
       const currentUser = await this.userService.findOne(currentUserId);
       if (!currentUser) {
+        this.logger.error(`사용자 정보를 찾을 수 없음: ${currentUserId}`);
         throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
       }
+
+      this.logger.log(`현재 사용자 정보: ${JSON.stringify(currentUser)}`);
 
       // 상대방에게 알림 전송
       const receiverId =
