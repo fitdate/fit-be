@@ -14,6 +14,7 @@ import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SkipProfileComplete } from '../auth/guard/profile-complete.guard';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
+import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -104,7 +105,12 @@ export class UserController {
   getFilteredUsers(
     @UserId() userId: string,
     @Query() filteredUsersDto: FilteredUsersDto,
+    @Query() cursorPaginationDto: CursorPaginationDto,
   ) {
-    return this.userService.getFilteredUsers(userId, filteredUsersDto);
+    return this.userService.getFilteredUsers(
+      userId,
+      filteredUsersDto,
+      cursorPaginationDto,
+    );
   }
 }
