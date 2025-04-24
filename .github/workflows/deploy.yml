@@ -155,24 +155,6 @@ jobs:
             echo 'DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' > /home/ubuntu/.env
             export $(cat /home/ubuntu/.env | xargs)
             
-            # 이전 컨테이너 정리
-            echo '🧹 이전 컨테이너 정리 중...'
-            docker-compose -f /home/ubuntu/docker-compose.yml down
-            docker stop $(docker ps -aq) || true
-            docker rm $(docker ps -aq) || true
-            docker network prune -f
-            docker system prune -f
-
-            # 사용 중인 포트 확인 및 해제
-            echo '🔍 포트 상태 확인 중...'
-            sudo fuser -k 6379/tcp || true
-            sudo fuser -k 6380/tcp || true
-            sudo fuser -k 3000/tcp || true
-            sudo fuser -k 3001/tcp || true
-            sudo fuser -k 80/tcp || true
-            sudo fuser -k 443/tcp || true
-            sleep 2  # 포트 해제 후 잠시 대기
-            
             echo '🔄 이미지 다운로드 중...'
             docker-compose -f /home/ubuntu/docker-compose.yml pull
 
@@ -199,6 +181,28 @@ jobs:
             
             # Nginx 컨테이너 시작
             docker-compose -f /home/ubuntu/docker-compose.yml up -d nginx
+                        
+            # 이전 컨테이너 정리
+            echo '🧹 이전 컨테이너 정리 중...'
+            if [ "$CURRENT_ENV" = "blue" ]; then
+              docker-compose -f /home/ubuntu/docker-compose.yml stop app-blue redis-blue
+              docker rm -f app-blue redis-blue
+            else
+              docker-compose -f /home/ubuntu/docker-compose.yml stop app-green redis-green
+              docker rm -f app-green redis-green
+            fi
+            docker network prune -f
+            docker system prune -f
+
+            # 사용 중인 포트 확인 및 해제
+            echo '🔍 포트 상태 확인 중...'
+            sudo fuser -k 6379/tcp || true
+            sudo fuser -k 6380/tcp || true
+            sudo fuser -k 3000/tcp || true
+            sudo fuser -k 3001/tcp || true
+            sudo fuser -k 80/tcp || true
+            sudo fuser -k 443/tcp || true
+            sleep 2  # 포트 해제 후 잠시 대기
 
             # 이전 환경의 앱 컨테이너 중지
             echo '🧹 이전 환경 정리 중...'
