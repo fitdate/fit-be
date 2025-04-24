@@ -66,6 +66,14 @@ export class CoffeeChatService {
   async getCoffeeChatList(userId: string) {
     const coffeeChatList = await this.coffeeChatRepository.find({
       where: { receiver: { id: userId } },
+      relations: [
+        'sender',
+        'sender.profile',
+        'sender.profile.profileImage',
+        'receiver',
+        'receiver.profile',
+        'receiver.profile.profileImage',
+      ],
     });
     return coffeeChatList;
   }
