@@ -62,4 +62,11 @@ export class CoffeeChatService {
     chat.status = CoffeeChatStatus.ACCEPTED;
     await this.coffeeChatRepository.save(chat);
   }
+
+  async getCoffeeChatList(userId: string) {
+    const coffeeChatList = await this.coffeeChatRepository.find({
+      where: { receiver: { id: userId } },
+    });
+    return coffeeChatList;
+  }
 }
