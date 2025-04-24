@@ -28,12 +28,23 @@ export class ChatService {
    * @returns 생성된 채팅방 정보
    */
   async createMatchingRoom(user1Id: string, user2Id: string) {
+    this.logger.log(
+      `채팅방 생성 시작 - 사용자1 ID: ${user1Id}, 사용자2 ID: ${user2Id}`,
+    );
+
     const user1 = await this.userRepository.findOne({ where: { id: user1Id } });
     const user2 = await this.userRepository.findOne({ where: { id: user2Id } });
 
     if (!user1 || !user2) {
+      this.logger.error(
+        `사용자를 찾을 수 없습니다. - 사용자1: ${user1Id}, 사용자2: ${user2Id}`,
+      );
       throw new Error('사용자를 찾을 수 없습니다.');
     }
+
+    this.logger.log(
+      `사용자 정보 조회 성공 - 사용자1: ${user1.nickname}, 사용자2: ${user2.nickname}`,
+    );
 
     // 기존 채팅방 확인
     const existingRoom = await this.chatRoomRepository
@@ -47,12 +58,14 @@ export class ChatService {
       return existingRoom;
     }
 
+    this.logger.log('새로운 채팅방 생성 시작');
     const chatRoom = this.chatRoomRepository.create({
       name: `${user1.nickname}님과 ${user2.nickname}님의 채팅방`,
       users: [user1, user2],
     });
 
     const savedRoom = await this.chatRoomRepository.save(chatRoom);
+    this.logger.log(`채팅방 생성 완료 - ID: ${savedRoom.id}`);
 
     await this.sendChatRoomEntryNotification(savedRoom.id, user1Id, user2Id);
     await this.sendChatRoomEntryNotification(savedRoom.id, user2Id, user1Id);
@@ -103,12 +116,29 @@ export class ChatService {
    * @returns 채팅방 목록 (참여자 정보 포함)
    */
   async getRooms(userId: string) {
+    this.logger.log(`채팅방 목록 조회 시작 - 사용자 ID: ${userId}`);
+
     const rooms = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .innerJoinAndSelect('chatRoom.users', 'users')
+      .leftJoinAndSelect('chatRoom.users', 'users')
       .where('users.id = :userId', { userId })
       .orderBy('chatRoom.updatedAt', 'DESC')
       .getMany();
+
+    this.logger.log(`조회된 채팅방 수: ${rooms.length}`);
+    rooms.forEach((room, index) => {
+      this.logger.log(`채팅방 ${index + 1}:`);
+      this.logger.log(`- ID: ${room.id}`);
+      this.logger.log(`- 이름: ${room.name}`);
+      this.logger.log(`- 참여자 수: ${room.users.length}`);
+      room.users.forEach((user, userIndex) => {
+        this.logger.log(`  - 사용자 ${userIndex + 1}:`);
+        this.logger.log(`    - ID: ${user.id}`);
+        this.logger.log(`    - 이름: ${user.name}`);
+        this.logger.log(`    - 생년월일: ${user.birthday}`);
+        this.logger.log(`    - 키: ${user.height}`);
+      });
+    });
 
     return rooms.map((room) => {
       const partner = room.users.find((user) => user.id !== userId);
