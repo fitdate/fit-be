@@ -29,15 +29,22 @@ export class UserFilterService {
     return filter;
   }
 
-  async getFilteredUsers() {
-    this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
-    return this.userService.getUserList({
-      cursor: null,
-      order: ['createdAt_ASC'],
-      take: 6,
-    });
+  async getFilteredUsers(userId: string) {
+    if (!userId) {
+      this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
+      return this.userService.getUserList({
+        cursor: null,
+        order: ['createdAt_ASC'],
+        take: 6,
+      });
+    } else {
+      return this.userService.getUserList({
+        cursor: null,
+        order: ['createdAt_ASC'],
+        take: 6,
+      });
+    }
   }
-
   async updateFilter(userId: string, dto: UserFilterDto) {
     this.logger.debug(
       `사용자 ${userId}의 필터 설정을 업데이트합니다: ${JSON.stringify(dto)}`,

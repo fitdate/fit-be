@@ -11,15 +11,15 @@ import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { Public } from 'src/common/decorator/public.decorator';
+import { OptionalUserId } from 'src/common/decorator/optional-user.decorator';
 @ApiTags('User Filter')
 @Controller('user-filter')
 export class UserFilterController {
   constructor(private readonly userFilterService: UserFilterService) {}
 
   @Get('filtered-users')
-  @Public()
-  getFilteredUsers() {
-    return this.userFilterService.getFilteredUsers();
+  getFilteredUsers(@OptionalUserId() userId: string) {
+    return this.userFilterService.getFilteredUsers(userId);
   }
 
   @Get('user-filter')
