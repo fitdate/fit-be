@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
+import { FindOrCreateChatRoomDto } from './dto/find-or-create-chat-room.dto';
 
 @ApiTags('Chat')
 @Controller('chat')
@@ -48,10 +49,21 @@ export class ChatController {
       '채팅 페이지에서 대화방 버튼을 클릭하면 호출됩니다. 기존 채팅방이 있으면 해당 채팅방을 반환하고, 없으면 새로 생성합니다.',
   })
   @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
+  @ApiBody({
+    type: FindOrCreateChatRoomDto,
+    description: '상대방 사용자 ID',
+    examples: {
+      example1: {
+        value: {
+          opponentId: 'user-uuid',
+        },
+      },
+    },
+  })
   @Post('chatRooms/findOrCreate')
   async findOrCreateChatRoom(
     @UserId() user: User,
-    @Body() body: { opponentId: string },
+    @Body() body: FindOrCreateChatRoomDto,
   ) {
     return this.chatService.findOrCreateChatRoom(user.id, body.opponentId);
   }

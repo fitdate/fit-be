@@ -89,7 +89,12 @@ export class ChatService {
    * @returns 채팅방 정보
    */
   async findOrCreateChatRoom(user1Id: string, user2Id: string) {
-    return this.getOrCreateRoom(user1Id, user2Id);
+    const chatRoom = await this.getOrCreateRoom(user1Id, user2Id);
+
+    // 채팅방 입장 알림 전송
+    await this.sendChatRoomEntryNotification(chatRoom.id, user1Id, user2Id);
+
+    return chatRoom;
   }
 
   /**
