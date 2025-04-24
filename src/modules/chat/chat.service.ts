@@ -148,6 +148,21 @@ export class ChatService {
   }
 
   /**
+   * 날짜를 "오전/오후 HH:mm" 형식으로 변환합니다.
+   * @param date 변환할 날짜
+   * @returns 변환된 시간 문자열
+   */
+  private formatTime(date: Date | undefined): string {
+    if (!date) return '';
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours < 12 ? '오전' : '오후';
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    return `${ampm} ${formattedHours}:${formattedMinutes}`;
+  }
+
+  /**
    * 채팅 메시지를 조회합니다.
    * @param chatRoomId 특정 채팅방의 메시지만 조회할 경우 채팅방 ID
    * @param page 페이지 번호 (1부터 시작)
@@ -176,7 +191,7 @@ export class ChatService {
         id: message.id,
         content: message.content,
         isSystem: message.isSystem,
-        createdAt: message.createdAt,
+        createdAt: this.formatTime(message.createdAt),
         user: message.user
           ? {
               id: message.user.id,
