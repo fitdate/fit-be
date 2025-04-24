@@ -60,6 +60,7 @@ import { ActivityMiddleware } from './modules/auth/middleware/activity.middlewar
 import { FilterModule } from './modules/filter/filter.module';
 import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
 import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
+import { DatingPreferenceModule } from './modules/dating-preference/dating-preference.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -132,6 +133,7 @@ import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
     FilterModule,
     CoffeeChatModule,
     ChatModule,
+    DatingPreferenceModule,
   ],
   controllers: [AppController],
   providers: [

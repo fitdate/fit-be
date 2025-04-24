@@ -17,6 +17,7 @@ import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
 import { RedisService } from '../redis/redis.service';
 import { HashService } from '../auth/hash/hash.service';
+import { UpdateDatingPreferenceDto } from '../dating-preference/dto/update-dating-preference.dto';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -226,6 +227,73 @@ export class UserService {
     });
     return this.userRepository.save(user);
   }
+  async getDatingPreference(
+    currentUserId: string,
+    datingPreferenceDto: UpdateDatingPreferenceDto,
+    cursorPaginationDto: CursorPaginationDto,
+  ): Promise<{ users: User[]; nextCursor: string | null }> {
+    this.logger.debug(
+      `데이팅 프리퍼런스 조회 시작 - 현재 사용자: ${currentUserId}, 데이팅 프리퍼런스: ${JSON.stringify(
+        datingPreferenceDto,
+      )}`,
+    );
+    const currentUser = await this.findOne(currentUserId);
+    const { ageMin, ageMax, heightMin, heightMax, region } =
+      datingPreferenceDto;
+    const today = new Date();
+
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.age',
+        'user.height',
+        'user.region',
+        'user.gender',
+      ])
+      .where('user.id != :userId', { userId: currentUserId })
+      .andWhere('user.deletedAt IS NULL')
+      .andWhere('user.gender != :gender', { gender: currentUser.gender });
+
+    if (ageMin) {
+      const maxBirthYear = today.getFullYear() - ageMin;
+      qb.andWhere(
+        'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) <= :maxBirthYear',
+        { maxBirthYear },
+      );
+    }
+
+    if (ageMax) {
+      const minBirthYear = today.getFullYear() - ageMax;
+      qb.andWhere(
+        'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) >= :minBirthYear',
+        { minBirthYear },
+      );
+    }
+
+    if (heightMin) {
+      qb.andWhere('user.height >= :heightMin', { heightMin });
+    }
+
+    if (heightMax) {
+      qb.andWhere('user.height <= :heightMax', { heightMax });
+    }
+
+    if (region) {
+      qb.andWhere('user.region = :region', { region });
+    }
+
+    const { nextCursor } =
+      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, {
+        cursor: cursorPaginationDto.cursor,
+        order: cursorPaginationDto.order,
+        take: cursorPaginationDto.take,
+      });
+
+    const users = await qb.getMany();
+
+    return { users, nextCursor };
+  }
 
   async getFilteredUsers(
     currentUserId: string,
@@ -242,10 +310,6 @@ export class UserService {
     const today = new Date();
 
     const currentUser = await this.findOne(currentUserId);
-    if (!currentUser) {
-      this.logger.error(`현재 사용자를 찾을 수 없음: ${currentUserId}`);
-      throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
-    }
 
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -257,6 +321,7 @@ export class UserService {
         'user.likeCount',
       ])
       .where('user.id != :userId', { userId: currentUserId })
+      .andWhere('user.deletedAt IS NULL')
       .andWhere('user.gender != :gender', { gender: currentUser.gender });
 
     if (ageMin) {
