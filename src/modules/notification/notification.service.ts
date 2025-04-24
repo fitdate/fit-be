@@ -70,30 +70,49 @@ export class NotificationService implements OnModuleDestroy {
    * @returns 사용자의 알림 목록
    */
   async findAll(userId: string): Promise<NotificationResponseDto[]> {
-    this.logger.log(`사용자 ${userId}의 알림 목록 조회`);
-    const notifications = await this.notificationRepository.find({
-      where: { receiverId: userId },
-      order: { createdAt: 'DESC' },
-      select: {
-        id: true,
-        title: true,
-        content: true,
-        type: true,
-        isRead: true,
-        createdAt: true,
-        data: true,
-      },
-    });
+    try {
+      this.logger.log(`사용자 ${userId}의 알림 목록 조회 시작`);
 
-    return notifications.map((notification) => ({
-      id: notification.id.toString(),
-      title: notification.title,
-      content: notification.content,
-      type: notification.type,
-      isRead: notification.isRead,
-      createdAt: (notification.createdAt || new Date()).toISOString(),
-      data: notification.data,
-    }));
+      const notifications = await this.notificationRepository.find({
+        where: { receiverId: userId },
+        order: { createdAt: 'DESC' },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          type: true,
+          isRead: true,
+          createdAt: true,
+          data: true,
+        },
+      });
+
+      this.logger.log(
+        `사용자 ${userId}의 알림 ${notifications.length}개 조회 완료`,
+      );
+
+      notifications.forEach((notification) => {
+        this.logger.debug(
+          `알림 상세: ID=${notification.id}, 제목=${notification.title}, 타입=${notification.type}, 읽음=${notification.isRead}`,
+        );
+      });
+
+      return notifications.map((notification) => ({
+        id: notification.id?.toString() || '',
+        title: notification.title || '',
+        content: notification.content || '',
+        type: notification.type,
+        isRead: notification.isRead || false,
+        createdAt:
+          notification.createdAt?.toISOString() || new Date().toISOString(),
+        data: notification.data || {},
+      }));
+    } catch (error) {
+      this.logger.error(`알림 조회 실패: ${(error as Error).message}`);
+      throw new InternalServerErrorException(
+        '알림 조회 중 오류가 발생했습니다.',
+      );
+    }
   }
 
   /**
