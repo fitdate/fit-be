@@ -110,7 +110,7 @@ export class MatchController {
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
   @Post('enter-chat')
   async enterChat(
-    @UserId() user: User,
+    @UserId() userId: string,
     @Body() selectMatchDto: SelectMatchDto,
   ) {
     if (!selectMatchDto || !selectMatchDto.matchId) {
@@ -118,7 +118,7 @@ export class MatchController {
     }
     return this.matchService.sendChatRoomEntryNotification(
       selectMatchDto.matchId,
-      user.id,
+      userId,
     );
   }
 }
