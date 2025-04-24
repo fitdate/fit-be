@@ -98,14 +98,14 @@ export class NotificationService implements OnModuleDestroy {
       });
 
       return notifications.map((notification) => ({
-        id: notification.id?.toString() || '',
-        title: notification.title || '',
-        content: notification.content || '',
-        type: notification.type,
-        isRead: notification.isRead || false,
+        id: notification?.id?.toString() ?? '',
+        title: notification?.title ?? '',
+        content: notification?.content ?? '',
+        type: notification?.type ?? '',
+        isRead: notification?.isRead ?? false,
         createdAt:
-          notification.createdAt?.toISOString() || new Date().toISOString(),
-        data: notification.data || {},
+          notification?.createdAt?.toISOString() ?? new Date().toISOString(),
+        data: notification?.data ?? {},
       }));
     } catch (error) {
       this.logger.error(`알림 조회 실패: ${(error as Error).message}`);
