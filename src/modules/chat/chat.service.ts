@@ -226,14 +226,25 @@ export class ChatService {
     currentUserId: string,
     opponentId: string,
   ): Promise<void> {
-    await this.notificationService.create({
+    const currentUser = await this.userRepository.findOne({
+      where: { id: currentUserId },
+    });
+    if (!currentUser) {
+      throw new Error('사용자를 찾을 수 없습니다.');
+    }
+
+    const notification = {
       type: NotificationType.CHAT,
       receiverId: opponentId,
+      title: '새로운 채팅방',
+      content: `${currentUser.name}님이 채팅방에 입장했습니다.`,
       data: {
         chatRoomId,
         senderId: currentUserId,
       },
-    });
+    };
+
+    await this.notificationService.create(notification);
   }
 
   /**
