@@ -61,6 +61,7 @@ import { FilterModule } from './modules/filter/filter.module';
 import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
 import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
 import { DatingPreferenceModule } from './modules/dating-preference/dating-preference.module';
+import { SparkListModule } from './modules/spark-list/spark-list.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -134,6 +135,7 @@ import { DatingPreferenceModule } from './modules/dating-preference/dating-prefe
     CoffeeChatModule,
     ChatModule,
     DatingPreferenceModule,
+    SparkListModule,
   ],
   controllers: [AppController],
   providers: [
