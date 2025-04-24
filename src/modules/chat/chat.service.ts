@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -9,6 +9,8 @@ import { NotificationType } from '../../common/enum/notification.enum';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
@@ -33,8 +35,20 @@ export class ChatService {
       throw new Error('사용자를 찾을 수 없습니다.');
     }
 
+    // 기존 채팅방 확인
+    const existingRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .innerJoin('chatRoom.users', 'user1', 'user1.id = :user1Id', { user1Id })
+      .innerJoin('chatRoom.users', 'user2', 'user2.id = :user2Id', { user2Id })
+      .getOne();
+
+    if (existingRoom) {
+      this.logger.log(`기존 채팅방이 존재합니다: ${existingRoom.id}`);
+      return existingRoom;
+    }
+
     const chatRoom = this.chatRoomRepository.create({
-      name: `${user1.name}님과 ${user2.name}님의 채팅방`,
+      name: `${user1.nickname}님과 ${user2.nickname}님의 채팅방`,
       users: [user1, user2],
     });
 
