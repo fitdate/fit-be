@@ -33,14 +33,14 @@ export class CoffeeChatService {
     return await this.coffeeChatRepository.save(coffeeChat);
   }
 
-  async acceptCoffeeChat(id: string, userId: string) {
+  async acceptCoffeeChat(userId: string, senderId: string) {
     const chat = await this.coffeeChatRepository.findOne({
-      where: { id },
+      where: { id: senderId },
       relations: ['receiver'],
     });
 
     if (!chat || chat.receiver.id !== userId) {
-      throw new Error('상대가 커피챗을 수락하지 않았습니다.');
+      throw new Error('상대가 커피챗을 수락하지 않았거나 존재하지 않않습니다.');
     }
 
     //send message to sender
