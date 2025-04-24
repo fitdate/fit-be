@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { MatchService } from './match.service';
 import { UserId } from '../../common/decorator/get-user.decorator';
-import { User } from '../user/entities/user.entity';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorator/public.decorator';
 import { SelectMatchDto } from './dto/select-match.dto';
@@ -60,10 +59,10 @@ export class MatchController {
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
   @Post('select')
   async selectMatch(
-    @UserId() user: User,
+    @UserId() userId: string,
     @Body() selectMatchDto: SelectMatchDto,
   ) {
-    if (!user) {
+    if (!userId) {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
     }
     if (!selectMatchDto.selectedUserId) {
@@ -75,7 +74,7 @@ export class MatchController {
     return this.matchService.sendSelectionNotification(
       selectMatchDto.matchId,
       selectMatchDto.selectedUserId,
-      user.id,
+      userId,
     );
   }
 
@@ -89,12 +88,15 @@ export class MatchController {
   @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
   @Post('select-all')
   async selectAllMatch(
-    @UserId() user: User,
+    @UserId() userId: string,
     @Body() selectAllMatchDto: SelectAllMatchDto,
   ) {
+    if (!userId) {
+      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+    }
     return this.matchService.sendAllSelectionNotification(
       selectAllMatchDto.matchId,
-      user.id,
+      userId,
       selectAllMatchDto.firstSelectedUserId,
       selectAllMatchDto.secondSelectedUserId,
     );
