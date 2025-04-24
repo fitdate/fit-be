@@ -12,6 +12,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorator/public.decorator';
 import { SelectMatchDto } from './dto/select-match.dto';
 import { Logger } from '@nestjs/common';
+import { SelectAllMatchDto } from './dto/select-all-match.dto';
 
 @ApiTags('Matching')
 @Controller('match')
@@ -89,11 +90,13 @@ export class MatchController {
   @Post('select-all')
   async selectAllMatch(
     @UserId() user: User,
-    @Body() selectMatchDto: SelectMatchDto,
+    @Body() selectAllMatchDto: SelectAllMatchDto,
   ) {
     return this.matchService.sendAllSelectionNotification(
-      selectMatchDto.matchId,
+      selectAllMatchDto.matchId,
       user.id,
+      selectAllMatchDto.firstSelectedUserId,
+      selectAllMatchDto.secondSelectedUserId,
     );
   }
 

@@ -297,50 +297,23 @@ export class MatchService {
     selectedUserId: string,
     currentUserId: string,
   ): Promise<void> {
-    try {
-      console.log(
-        `[sendSelectionNotification] 시작 - matchId: ${matchId}, selectedUserId: ${selectedUserId}, currentUserId: ${currentUserId}`,
-      );
-
-      const match = await this.findByMatchId(matchId);
-      if (!match) {
-        console.log(
-          `[sendSelectionNotification] 매치를 찾을 수 없음 - matchId: ${matchId}`,
-        );
-        throw new NotFoundException('매치를 찾을 수 없습니다.');
-      }
-
-      const currentUser = await this.userService.findOne(currentUserId);
-      if (!currentUser) {
-        console.log(
-          `[sendSelectionNotification] 현재 사용자를 찾을 수 없음 - currentUserId: ${currentUserId}`,
-        );
-        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
-      }
-
-      console.log(
-        `[sendSelectionNotification] 알림 생성 시도 - receiverId: ${selectedUserId}, type: ${NotificationType.MATCH}`,
-      );
-
-      await this.notificationService.create({
-        receiverId: selectedUserId,
-        type: NotificationType.MATCH,
-        title: '새로운 매칭 알림',
-        content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
-        data: { matchId },
-      });
-
-      console.log(
-        `[sendSelectionNotification] 알림 생성 성공 - receiverId: ${selectedUserId}`,
-      );
-    } catch (error) {
-      console.error(
-        `[sendSelectionNotification] 알림 전송 실패: ${(error as Error).message}`,
-      );
-      throw new InternalServerErrorException(
-        '알림 전송 중 오류가 발생했습니다.',
-      );
+    const match = await this.findByMatchId(matchId);
+    if (!match) {
+      throw new NotFoundException('매치를 찾을 수 없습니다.');
     }
+
+    const currentUser = await this.userService.findOne(currentUserId);
+    if (!currentUser) {
+      throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+    }
+
+    await this.notificationService.create({
+      receiverId: selectedUserId,
+      type: NotificationType.MATCH,
+      title: '새로운 매칭 알림',
+      content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
+      data: { matchId },
+    });
   }
 
   /**
@@ -351,6 +324,8 @@ export class MatchService {
   async sendAllSelectionNotification(
     matchId: string,
     currentUserId: string,
+    firstSelectedUserId: string,
+    secondSelectedUserId: string,
   ): Promise<void> {
     try {
       const match = await this.findByMatchId(matchId);
@@ -360,33 +335,27 @@ export class MatchService {
 
       const currentUser = await this.userService.findOne(currentUserId);
       if (!currentUser) {
-        console.error(
-          `[sendAllSelectionNotification] 현재 사용자를 찾을 수 없음: currentUserId=${currentUserId}`,
-        );
         throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
       }
 
       // 두 사용자에게 모두 알림 전송
       await Promise.all([
         this.notificationService.create({
-          receiverId: match.user1.id,
+          receiverId: firstSelectedUserId,
           type: NotificationType.MATCH,
           title: '새로운 매칭 알림',
           content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
           data: { matchId },
         }),
         this.notificationService.create({
-          receiverId: match.user2.id,
+          receiverId: secondSelectedUserId,
           type: NotificationType.MATCH,
           title: '새로운 매칭 알림',
           content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
           data: { matchId },
         }),
       ]);
-    } catch (error) {
-      console.error(
-        `[sendAllSelectionNotification] 알림 전송 실패: ${(error as Error).message}`,
-      );
+    } catch {
       throw new InternalServerErrorException(
         '알림 전송 중 오류가 발생했습니다.',
       );
@@ -410,9 +379,6 @@ export class MatchService {
 
       const currentUser = await this.userService.findOne(currentUserId);
       if (!currentUser) {
-        console.error(
-          `[sendChatRoomEntryNotification] 현재 사용자를 찾을 수 없음: currentUserId=${currentUserId}`,
-        );
         throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
       }
 
@@ -425,10 +391,7 @@ export class MatchService {
         content: `${currentUser.nickname}님이 채팅방에 입장했습니다!`,
         data: { matchId },
       });
-    } catch (error) {
-      console.error(
-        `[sendChatRoomEntryNotification] 알림 전송 실패: ${(error as Error).message}`,
-      );
+    } catch {
       throw new InternalServerErrorException(
         '알림 전송 중 오류가 발생했습니다.!',
       );
