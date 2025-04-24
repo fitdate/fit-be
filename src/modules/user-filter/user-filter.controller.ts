@@ -10,7 +10,6 @@ import { UserFilterService } from './user-filter.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
-import { Public } from 'src/common/decorator/public.decorator';
 import { OptionalUserId } from 'src/common/decorator/optional-user.decorator';
 @ApiTags('User Filter')
 @Controller('user-filter')

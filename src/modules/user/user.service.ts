@@ -11,7 +11,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserSocialDto } from './dto/create-user-social.dto';
 import { FilterService } from '../filter/filter.service';
-import { UserWithScore } from '../filter/types/user-with-score.type';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
@@ -160,7 +159,8 @@ export class UserService {
   async getFilteredUsers(
     currentUserId: string,
     filteredUsersDto: FilteredUsersDto,
-  ): Promise<UserWithScore[]> {
+    cursorPaginationDto: CursorPaginationDto,
+  ): Promise<{ users: User[]; nextCursor: string | null }> {
     this.logger.debug(
       `필터링된 사용자 조회 시작 - 현재 사용자: ${currentUserId}, 필터: ${JSON.stringify(
         filteredUsersDto,
@@ -176,7 +176,7 @@ export class UserService {
       throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
     }
 
-    const query = this.userRepository
+    const qb = this.userRepository
       .createQueryBuilder('user')
       .select([
         'user.id',
@@ -211,8 +211,7 @@ export class UserService {
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;
-      this.logger.debug(`최대 출생연도 필터 적용: ${maxBirthYear}`);
-      query.andWhere(
+      qb.andWhere(
         'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) <= :maxBirthYear',
         { maxBirthYear },
       );
@@ -220,35 +219,34 @@ export class UserService {
 
     if (ageMax) {
       const minBirthYear = today.getFullYear() - ageMax;
-      this.logger.debug(`최소 출생연도 필터 적용: ${minBirthYear}`);
-      query.andWhere(
+      qb.andWhere(
         'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) >= :minBirthYear',
         { minBirthYear },
       );
     }
 
     if (minLikes) {
-      this.logger.debug(`최소 좋아요 수 필터 적용: ${minLikes}`);
-      query.andWhere('user.likeCount >= :minLikes', { minLikes });
+      qb.andWhere('user.likeCount >= :minLikes', { minLikes });
     }
 
-    const users = await query.getMany();
-    this.logger.debug(`필터링된 사용자 수: ${users.length}`);
+    const { nextCursor } =
+      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, {
+        cursor: cursorPaginationDto.cursor,
+        order: cursorPaginationDto.order,
+        take: cursorPaginationDto.take,
+      });
 
-    const usersWithScores = this.filterService.addCompatibilityScores(
-      users,
-      currentUser,
-    );
-    this.logger.debug(`호환성 점수 계산 완료`);
+    const users = await qb.getMany();
 
-    return usersWithScores;
+    return { users, nextCursor };
   }
 
   //회원목록 유저 찾기
   async getUserList(dto: CursorPaginationDto) {
     const qb = this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount']);
+      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount'])
+      .where('user.deletedAt IS NULL');
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);

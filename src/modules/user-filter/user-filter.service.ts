@@ -32,19 +32,53 @@ export class UserFilterService {
   async getFilteredUsers(userId: string) {
     if (!userId) {
       this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
-      return this.userService.getUserList({
+      const { users, nextCursor } = await this.userService.getUserList({
         cursor: null,
         order: ['createdAt_ASC'],
         take: 6,
       });
-    } else {
-      return this.userService.getUserList({
-        cursor: null,
-        order: ['createdAt_ASC'],
-        take: 6,
-      });
+
+      return {
+        users: users.map((user) => ({
+          id: user.id,
+          nickname: user.nickname,
+          region: user.region,
+          likeCount: user.likeCount,
+        })),
+        nextCursor,
+      };
     }
+
+    const filter = await this.getUserFilter(userId);
+    const filterDto = {
+      ageMin: filter?.minAge ?? 20,
+      ageMax: filter?.maxAge ?? 60,
+      minLikes: filter?.minLikeCount ?? 0,
+    };
+
+    this.logger.debug(`적용될 필터: ${JSON.stringify(filterDto)}`);
+
+    const { users, nextCursor } = await this.userService.getFilteredUsers(
+      userId,
+      filterDto,
+      {
+        cursor: null,
+        order: ['createdAt_ASC'],
+        take: 6,
+      },
+    );
+
+    return {
+      users: users.map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+        region: user.region,
+        likeCount: user.likeCount,
+      })),
+      nextCursor,
+    };
   }
+
   async updateFilter(userId: string, dto: UserFilterDto) {
     this.logger.debug(
       `사용자 ${userId}의 필터 설정을 업데이트합니다: ${JSON.stringify(dto)}`,
