@@ -47,7 +47,7 @@ export class NotificationService implements OnModuleDestroy {
 
       const notification = this.notificationRepository.create({
         ...createNotificationDto,
-        receiver: { id: createNotificationDto.receiverId },
+        receiverId: createNotificationDto.receiverId,
       });
       const savedNotification =
         await this.notificationRepository.save(notification);
