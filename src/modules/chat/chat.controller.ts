@@ -8,9 +8,10 @@ import {
   Body,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { User } from '../user/entities/user.entity';
+import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
 
 @ApiTags('Chat')
 @Controller('chat')
@@ -20,11 +21,23 @@ export class ChatController {
   @ApiOperation({
     summary: '매칭 채팅방 생성',
     description:
-      '매칭 결과 페이지에서 매칭 성공 시 자동으로 호출되어 채팅방을 생성합니다. 매칭된 두 사용자가 자동으로 참여자로 추가되고, 양쪽 사용자에게 채팅방 입장 알림이 전송됩니다.',
+      '매칭 결과 페이지 👉 결과보기 👉 "대화하러 가기" 클릭 시 호출됩니다.',
   })
   @ApiResponse({ status: 201, description: '매칭 채팅방이 성공적으로 생성됨' })
+  @ApiBody({
+    type: CreateMatchingRoomDto,
+    description: '매칭된 두 사용자의 ID',
+    examples: {
+      example1: {
+        value: {
+          user1Id: 'user1-uuid',
+          user2Id: 'user2-uuid',
+        },
+      },
+    },
+  })
   @Post('matchingRooms')
-  async createMatchingRoom(@Body() body: { user1Id: string; user2Id: string }) {
+  async createMatchingRoom(@Body() body: CreateMatchingRoomDto) {
     return this.chatService.createMatchingRoom(body.user1Id, body.user2Id);
   }
 
