@@ -83,4 +83,13 @@ export class LikeService {
     });
     return !!like;
   }
+
+  async getLikeList(userId: string) {
+    const likeList = await this.likeRepository.find({
+      where: {
+        user: { id: userId },
+      },
+    });
+    return likeList;
+  }
 }

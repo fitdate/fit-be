@@ -59,6 +59,7 @@ import { Reflector } from '@nestjs/core';
 import { ActivityMiddleware } from './modules/auth/middleware/activity.middleware';
 import { FilterModule } from './modules/filter/filter.module';
 import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
+import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -129,6 +130,7 @@ import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
     ChatModule,
     UserFilterModule,
     FilterModule,
+    CoffeeChatModule,
   ],
   controllers: [AppController],
   providers: [

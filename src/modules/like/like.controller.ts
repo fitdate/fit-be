@@ -36,4 +36,12 @@ export class LikeController {
   ): Promise<boolean> {
     return this.likeService.checkLikeStatus(userId, likedUserId);
   }
+
+  @Get(':likedUserId/list')
+  @ApiOperation({ summary: '좋아요 목록 조회' })
+  @ApiResponse({ status: 200, description: '좋아요 목록 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async getLikeList(@UserId('id') userId: string) {
+    return this.likeService.getLikeList(userId);
+  }
 }
