@@ -1,6 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
+import { ChatRoom } from './chat-room.entity';
 
 @Entity()
 export class ChatMessage extends BaseTable {
@@ -14,7 +21,12 @@ export class ChatMessage extends BaseTable {
   isSystem: boolean;
 
   @ManyToOne(() => User)
+  @JoinColumn()
   user: User;
+
+  @ManyToOne(() => ChatRoom)
+  @JoinColumn()
+  chatRoom: ChatRoom;
 
   @Column({ nullable: true })
   chatRoomId: string;

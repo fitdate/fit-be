@@ -41,38 +41,15 @@ export class ChatController {
     return this.chatService.createMatchingRoom(body.user1Id, body.user2Id);
   }
 
-  @ApiOperation({
-    summary: '채팅방 목록 조회',
-    description: '사용자가 참여한 채팅방 목록을 조회합니다.',
-  })
-  @ApiResponse({ status: 200, description: '채팅방 목록 조회 성공' })
-  @Get('chatRooms')
-  async getRooms(@UserId() userId: string) {
-    return this.chatService.getRooms(userId);
-  }
-
-  @ApiOperation({
-    summary: '채팅방 상세 정보 조회',
-    description: '특정 채팅방의 상세 정보를 조회합니다.',
-  })
-  @ApiResponse({ status: 200, description: '채팅방 상세 정보 조회 성공' })
-  @Get('chatRooms/:chatRoomId')
-  async getRoom(@Param('chatRoomId') chatRoomId: string) {
-    return this.chatService.getRoom(chatRoomId);
-  }
-
-  @ApiOperation({ summary: '채팅방 참여자 목록 조회' })
-  @ApiResponse({ status: 200, description: '채팅방 참여자 목록 조회 성공' })
-  @Get('chatRooms/:chatRoomId/users')
-  async getRoomUsers(@Param('chatRoomId') chatRoomId: string) {
-    return this.chatService.getRoomUsers(chatRoomId);
-  }
-
   @ApiOperation({ summary: '채팅 메시지 조회' })
   @ApiResponse({ status: 200, description: '채팅 메시지 조회 성공' })
   @Get('messages')
-  async getMessages(@Query('chatRoomId') chatRoomId?: string) {
-    return this.chatService.getMessages(chatRoomId);
+  async getMessages(
+    @Query('chatRoomId') chatRoomId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 50,
+  ) {
+    return this.chatService.getMessages(chatRoomId, page, limit);
   }
 
   @ApiOperation({ summary: '채팅방 나가기' })

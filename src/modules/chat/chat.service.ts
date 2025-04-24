@@ -148,43 +148,53 @@ export class ChatService {
   }
 
   /**
-   * 특정 채팅방의 상세 정보를 조회합니다.
-   * @param chatRoomId 조회할 채팅방 ID
-   * @returns 채팅방 정보
-   */
-  async getRoom(chatRoomId: string) {
-    return await this.chatRoomRepository.findOne({ where: { id: chatRoomId } });
-  }
-
-  /**
-   * 특정 채팅방의 참여자 목록을 조회합니다.
-   * @param chatRoomId 조회할 채팅방 ID
-   * @returns 채팅방 참여자 목록
-   */
-  async getRoomUsers(chatRoomId: string) {
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatRoomId },
-      relations: ['users'],
-    });
-    return chatRoom?.users || [];
-  }
-
-  /**
    * 채팅 메시지를 조회합니다.
    * @param chatRoomId 특정 채팅방의 메시지만 조회할 경우 채팅방 ID
+   * @param page 페이지 번호 (1부터 시작)
+   * @param limit 페이지당 메시지 수
    * @returns 채팅 메시지 목록
    */
-  async getMessages(chatRoomId?: string) {
+  async getMessages(chatRoomId: string, page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+
     const query = this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.user', 'user')
-      .orderBy('message.createdAt', 'DESC');
+      .leftJoinAndSelect('message.chatRoom', 'chatRoom')
+      .orderBy('message.createdAt', 'ASC')
+      .skip(skip)
+      .take(limit);
 
     if (chatRoomId) {
       query.where('message.chatRoomId = :chatRoomId', { chatRoomId });
     }
 
-    return await query.getMany();
+    const [messages, total] = await query.getManyAndCount();
+
+    return {
+      messages: messages.map((message) => ({
+        id: message.id,
+        content: message.content,
+        isSystem: message.isSystem,
+        createdAt: message.createdAt,
+        user: message.user
+          ? {
+              id: message.user.id,
+              nickname: message.user.nickname,
+            }
+          : null,
+        chatRoom: message.chatRoom
+          ? {
+              id: message.chatRoom.id,
+              name: message.chatRoom.name,
+            }
+          : null,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**
