@@ -124,5 +124,6 @@ export class User extends BaseTable {
   coffeeChatsReceived: CoffeeChat[];
 
   @OneToOne(() => DatingPreference, (datingPreference) => datingPreference.user)
+  @JoinColumn()
   datingPreference: DatingPreference;
 }
