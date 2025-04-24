@@ -100,22 +100,24 @@ export class ChatService {
   async getRooms(userId: string) {
     const rooms = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .leftJoinAndSelect('chatRoom.users', 'users')
+      .innerJoinAndSelect('chatRoom.users', 'users')
       .where('users.id = :userId', { userId })
       .orderBy('chatRoom.updatedAt', 'DESC')
       .getMany();
 
     return rooms.map((room) => {
-      const opponent = room.users.find((user) => user.id !== userId);
+      const partner = room.users.find((user) => user.id !== userId);
       return {
         id: room.id,
         name: room.name,
-        opponent: opponent
+        user1Id: userId,
+        user2Id: partner?.id || null,
+        partner: partner
           ? {
-              id: opponent.id,
-              nickname: opponent.nickname,
-              age: this.calculateAge(opponent.birthday),
-              height: opponent.height,
+              id: partner.id,
+              nickname: partner.nickname,
+              age: this.calculateAge(partner.birthday),
+              height: partner.height,
             }
           : null,
         createdAt: room.createdAt,
