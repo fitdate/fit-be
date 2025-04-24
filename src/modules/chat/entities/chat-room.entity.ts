@@ -4,9 +4,11 @@ import {
   Column,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
+import { ChatMessage } from './chat-message.entity';
 
 @Entity()
 export class ChatRoom extends BaseTable {
@@ -29,4 +31,7 @@ export class ChatRoom extends BaseTable {
     },
   })
   users: User[];
+
+  @OneToMany(() => ChatMessage, (message) => message.chatRoom)
+  messages: ChatMessage[];
 }

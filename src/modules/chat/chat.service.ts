@@ -93,11 +93,56 @@ export class ChatService {
   }
 
   /**
-   * 모든 채팅방 목록을 조회합니다.
-   * @returns 채팅방 목록
+   * 사용자의 채팅방 목록을 조회합니다.
+   * @param userId 조회할 사용자 ID
+   * @returns 채팅방 목록 (참여자 정보 포함)
    */
-  async getRooms() {
-    return await this.chatRoomRepository.find();
+  async getRooms(userId: string) {
+    const rooms = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .leftJoinAndSelect('chatRoom.users', 'users')
+      .where('users.id = :userId', { userId })
+      .orderBy('chatRoom.updatedAt', 'DESC')
+      .getMany();
+
+    return rooms.map((room) => {
+      const opponent = room.users.find((user) => user.id !== userId);
+      return {
+        id: room.id,
+        name: room.name,
+        opponent: opponent
+          ? {
+              id: opponent.id,
+              nickname: opponent.nickname,
+              age: this.calculateAge(opponent.birthday),
+              height: opponent.height,
+            }
+          : null,
+        createdAt: room.createdAt,
+        updatedAt: room.updatedAt,
+      };
+    });
+  }
+
+  /**
+   * 생년월일로 나이를 계산합니다.
+   * @param birthday 생년월일 (YYYY-MM-DD)
+   * @returns 나이
+   */
+  private calculateAge(birthday: string): number {
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
   }
 
   /**
