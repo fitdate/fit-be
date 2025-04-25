@@ -56,7 +56,7 @@ export class FestivalService {
           'https://apis.data.go.kr/B551011/KorService1/searchFestival1',
           {
             params: {
-              serviceKey: this.configService.getOrThrow<AllConfig>(
+              serviceKey: this.configService.getOrThrow(
                 'publicApi.festivalApiKey',
                 { infer: true },
               ),
