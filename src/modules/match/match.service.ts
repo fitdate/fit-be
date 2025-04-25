@@ -377,15 +377,25 @@ export class MatchService {
       .where('match.user1_id = :userId OR match.user2_id = :userId', { userId })
       .getMany();
 
-    this.logger.debug(`[getUserMatchList] 매치 리스트 개수: ${matchList.length}`);
+    this.logger.debug(
+      `[getUserMatchList] 매치 리스트 개수: ${matchList.length}`,
+    );
 
     matchList.forEach((match, index) => {
       this.logger.debug(`[getUserMatchList] 매치 ${index + 1} 정보:`);
       this.logger.debug(`- 매치 ID: ${match.id}`);
-      this.logger.debug(`- user1 ID: ${match.user1.id}, 프로필 존재: ${!!match.user1.profile}`);
-      this.logger.debug(`- user1 프로필 이미지 개수: ${match.user1.profile?.profileImage?.length ?? 0}`);
-      this.logger.debug(`- user2 ID: ${match.user2.id}, 프로필 존재: ${!!match.user2.profile}`);
-      this.logger.debug(`- user2 프로필 이미지 개수: ${match.user2.profile?.profileImage?.length ?? 0}`);
+      this.logger.debug(
+        `- user1 ID: ${match.user1.id}, 프로필 존재: ${!!match.user1.profile}`,
+      );
+      this.logger.debug(
+        `- user1 프로필 이미지 개수: ${match.user1.profile?.profileImage?.length ?? 0}`,
+      );
+      this.logger.debug(
+        `- user2 ID: ${match.user2.id}, 프로필 존재: ${!!match.user2.profile}`,
+      );
+      this.logger.debug(
+        `- user2 프로필 이미지 개수: ${match.user2.profile?.profileImage?.length ?? 0}`,
+      );
     });
 
     return matchList;

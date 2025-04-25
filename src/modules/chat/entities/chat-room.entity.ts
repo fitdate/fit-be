@@ -18,7 +18,7 @@ export class ChatRoom extends BaseTable {
   @Column()
   name: string;
 
-  @ManyToMany(() => User)
+  @ManyToMany(() => User, { eager: true })
   @JoinTable({
     name: 'chat_room_users',
     joinColumn: {
