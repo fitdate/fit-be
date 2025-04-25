@@ -4,7 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { firstValueFrom } from 'rxjs';
-import dayjs from 'dayjs';
+import * as dayjs from 'dayjs';
 import { AxiosError } from 'axios';
 import { FestivalDto } from './dto/festival.dto';
 

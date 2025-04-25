@@ -8,7 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
 
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';

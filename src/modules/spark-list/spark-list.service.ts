@@ -48,12 +48,12 @@ export class SparkListService {
     const matchList = await this.matchService.getUserMatchList(userId);
     const filteredMatchList = matchList.map((match) => {
       const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
+      const profileImage = matchedUser.profile?.profileImage?.[0];
       return {
         matchId: match.id,
         matchedUserId: matchedUser.id,
         matchedNickname: matchedUser.nickname,
-        matchedProfileImage:
-          matchedUser.profile?.profileImage?.[0]?.imageUrl ?? null,
+        matchedProfileImage: profileImage ? profileImage.imageUrl : null,
         matchedAge: matchedUser.age,
         matchedRegion: matchedUser.region,
         matchedLikeCount: matchedUser.likeCount,
