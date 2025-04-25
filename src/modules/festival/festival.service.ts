@@ -6,6 +6,7 @@ import { AllConfig } from 'src/common/config/config.types';
 import { firstValueFrom } from 'rxjs';
 import dayjs from 'dayjs';
 import { AxiosError } from 'axios';
+import { FestivalDto } from './dto/festival.dto';
 
 interface FestivalResponse {
   body: {
@@ -22,15 +23,6 @@ interface FestivalItem {
   addr1: string;
   areacode: string;
   firstimage: string;
-}
-
-interface FestivalDto {
-  title: string;
-  startDate: string;
-  endDate: string;
-  place: string;
-  area: string;
-  thumbnail: string;
 }
 
 @Injectable()

@@ -45,7 +45,7 @@ export class UserFilterService {
           region: user.region,
           likeCount: user.likeCount,
           age: user.age,
-          profileImage: user.profile.profileImage[0].imageUrl,
+          profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
         })),
         nextCursor,
       };
@@ -77,7 +77,7 @@ export class UserFilterService {
         region: user.region,
         likeCount: user.likeCount,
         age: user.age,
-        profileImage: user.profile.profileImage[0].imageUrl,
+        profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
       })),
       nextCursor,
     };

@@ -374,9 +374,15 @@ export class UserService {
         'user.nickname',
         'user.region',
         'user.likeCount',
+        'user.age',
+        'profile.id',
+        'profileImage.id',
         'profileImage.imageUrl',
       ])
-      .where('user.deletedAt IS NULL');
+      .where('user.deletedAt IS NULL')
+      .orderBy('user.likeCount', 'DESC')
+      .addOrderBy('user.id', 'ASC')
+      .take(6);
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);

@@ -46,20 +46,20 @@ export class SparkListService {
 
   async getMatchList(userId: string) {
     const matchList = await this.matchService.getUserMatchList(userId);
-    // const filteredMatchList = matchList.map((match) => {
-    //   const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
-
-    //   return {
-    //     matchId: match.id,
-    //     matchedUserId: matchedUser.id,
-    //     matchedNickname: matchedUser.nickname,
-    //     matchedProfileImage:
-    //       matchedUser.profile.profileImage?.[0]?.imageUrl ?? null,
-    //     matchedAge: matchedUser.age,
-    //     matchedRegion: matchedUser.region,
-    //   };
-    // });
-    return matchList;
+    const filteredMatchList = matchList.map((match) => {
+      const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
+      return {
+        matchId: match.id,
+        matchedUserId: matchedUser.id,
+        matchedNickname: matchedUser.nickname,
+        matchedProfileImage:
+          matchedUser.profile?.profileImage?.[0]?.imageUrl ?? null,
+        matchedAge: matchedUser.age,
+        matchedRegion: matchedUser.region,
+        matchedLikeCount: matchedUser.likeCount,
+      };
+    });
+    return filteredMatchList;
   }
 
   async getSparkList(userId: string) {
