@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { LocationService } from '../location/location.service';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
@@ -7,40 +6,23 @@ import { firstValueFrom } from 'rxjs';
 import * as dayjs from 'dayjs';
 import { AxiosError } from 'axios';
 import { FestivalDto } from './dto/festival.dto';
-
-interface FestivalResponse {
-  body: {
-    items: {
-      item: FestivalItem[];
-    };
-  };
-}
-
-interface FestivalItem {
-  title: string;
-  eventstartdate: string;
-  eventenddate: string;
-  addr1: string;
-  areacode: string;
-  firstimage: string;
-}
-
+import { FestivalRegionDto } from './dto/region.dto';
+import { FestivalResponse } from './types/festival.types';
 @Injectable()
 export class FestivalService {
   constructor(
-    private readonly locationService: LocationService,
     @Inject(HttpService) private readonly httpService: HttpService,
     private readonly configService: ConfigService<AllConfig>,
   ) {}
 
-  async getFestivalByRegion(region: number): Promise<FestivalDto[]> {
-    // const regionCode = this.locationService.convertNameToCode(region);
-    // if (!regionCode) {
-    //   throw new NotFoundException('해당 지역을 찾을 수 없습니다.');
-    // }
-
-    const today = dayjs().format('YYYYMMDD');
-    const oneMonthLater = dayjs().add(30, 'day').format('YYYYMMDD');
+  async getFestivalByRegion(
+    festivalRegionDto: FestivalRegionDto,
+  ): Promise<FestivalDto[]> {
+    const regionCode = festivalRegionDto.region;
+    const today = dayjs();
+    const todayDate = today.format('YYYYMMDD');
+    const oneMonthLater = today.add(30, 'day');
+    const oneMonthLaterDate = oneMonthLater.format('YYYYMMDD');
 
     try {
       const { data } = await firstValueFrom(
@@ -52,19 +34,40 @@ export class FestivalService {
                 'publicApi.festivalApiKey',
                 { infer: true },
               ),
-              from: today,
-              to: oneMonthLater,
-              signgucode: region,
-              rows: 10,
-              cPage: 1,
+              MobileOS: 'ETC', // 고정
+              MobileApp: 'TestApp', // 고정
+              _type: 'json', // json 응답 원하니까
+              areaCode: regionCode, // 지역 코드
+              numOfRows: 10, // 한 페이지에 10개
+              pageNo: 1, // 1페이지
+              listYN: 'Y', // 목록형
+              arrange: 'A', // 제목순 정렬
+              eventStartDate: todayDate, // 오늘 기준 시작하는 행사
             },
           },
         ),
       );
 
-      const festivals = data?.body?.items?.item ?? [];
+      const festivals = data?.response?.body?.items?.item ?? [];
 
-      return festivals.map((festival: FestivalItem) => ({
+      // 날짜 필터링
+      const filtered = festivals.filter((festival) => {
+        return (
+          dayjs(festival.eventstartdate, 'YYYYMMDD').isAfter(todayDate) &&
+          dayjs(festival.eventstartdate, 'YYYYMMDD').isBefore(oneMonthLaterDate)
+        );
+      });
+
+      // 정렬 by startDate (오름차순)
+      const sorted = filtered.sort((a, b) => {
+        return (
+          dayjs(a.eventstartdate, 'YYYYMMDD').unix() -
+          dayjs(b.eventstartdate, 'YYYYMMDD').unix()
+        );
+      });
+
+      // Dto 매핑
+      return sorted.map((festival) => ({
         title: festival.title,
         startDate: festival.eventstartdate,
         endDate: festival.eventenddate,
