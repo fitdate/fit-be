@@ -40,7 +40,7 @@ export class FestivalService {
     // }
 
     const today = dayjs().format('YYYYMMDD');
-    const oneWeekLater = dayjs().add(7, 'day').format('YYYYMMDD');
+    const oneMonthLater = dayjs().add(30, 'day').format('YYYYMMDD');
 
     try {
       const { data } = await firstValueFrom(
@@ -53,7 +53,7 @@ export class FestivalService {
                 { infer: true },
               ),
               from: today,
-              to: oneWeekLater,
+              to: oneMonthLater,
               signgucode: region,
               rows: 10,
               cPage: 1,
