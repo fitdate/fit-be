@@ -24,6 +24,8 @@ export class FestivalService {
     this.logger.debug(
       `[getFestivalByRegion] 시작 - region: ${festivalRegionDto.region}`,
     );
+    const today = dayjs();
+    const todayDate = today.format('YYYYMMDD');
 
     try {
       this.logger.debug('[getFestivalByRegion] API 요청 시작');
@@ -44,6 +46,7 @@ export class FestivalService {
               pageNo: 1,
               listYN: 'Y',
               arrange: 'A',
+              eventStartDate: todayDate,
             },
           },
         ),
