@@ -1,17 +1,17 @@
 export interface UserIntroduction {
-  id: number;
-  introductionId: number;
+  id: string;
+  introductionId: string;
   content: string;
 }
 
 export interface UserFeedback {
-  id: number;
-  feedbackId: number;
+  id: string;
+  feedbackId: string;
   content: string;
 }
 
 export interface InterestCategory {
-  id: number;
-  interestCategoryId: number;
+  id: string;
+  interestCategoryId: string;
   name: string;
 }

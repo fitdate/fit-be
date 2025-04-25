@@ -27,8 +27,8 @@ export class FilterService {
     this.logger.debug(`소개 매핑: ${JSON.stringify(intro)}`);
     const introWithContent = intro.introduction as IntroductionWithContent;
     return {
-      id: Number(intro.id),
-      introductionId: Number(intro.introduction?.id) || 0,
+      id: intro.id, // UUID는 문자열로 유지
+      introductionId: intro.introduction?.id || '', // UUID 문자열로 유지
       content: introWithContent?.content || '',
     };
   }
@@ -37,8 +37,8 @@ export class FilterService {
     this.logger.debug(`피드백 매핑: ${JSON.stringify(feedback)}`);
     const feedbackWithContent = feedback.feedback as FeedbackWithContent;
     return {
-      id: Number(feedback.id),
-      feedbackId: Number(feedback.feedback?.id) || 0,
+      id: feedback.id, // UUID는 문자열로 유지
+      feedbackId: feedback.feedback?.id || '', // UUID 문자열로 유지
       content: feedbackWithContent?.content || '',
     };
   }
@@ -50,8 +50,8 @@ export class FilterService {
     const categoryWithName =
       interest.interestCategory as InterestCategoryWithName;
     return {
-      id: Number(interest.id),
-      interestCategoryId: Number(interest.interestCategory?.id) || 0,
+      id: interest.id, // UUID는 문자열로 유지
+      interestCategoryId: interest.interestCategory?.id || '', // UUID 문자열로 유지
       name: categoryWithName?.name || '',
     };
   }
