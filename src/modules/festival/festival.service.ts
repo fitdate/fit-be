@@ -29,6 +29,28 @@ export class FestivalService {
 
     try {
       this.logger.debug('[getFestivalByRegion] API 요청 시작');
+      this.logger.debug(
+        `[getFestivalByRegion] 요청 URL: https://apis.data.go.kr/B551011/KorService1/searchFestival1`,
+      );
+      this.logger.debug(
+        `[getFestivalByRegion] 요청 파라미터: ${JSON.stringify({
+          serviceKey: this.configService.getOrThrow(
+            'publicApi.festivalDecodingApiKey',
+            {
+              infer: true,
+            },
+          ),
+          MobileOS: 'ETC',
+          MobileApp: 'fit-date',
+          _type: 'json',
+          areaCode: festivalRegionDto.region,
+          numOfRows: 30,
+          pageNo: 1,
+          listYN: 'Y',
+          arrange: 'A',
+          eventStartDate: todayDate,
+        })}`,
+      );
       const { data } = await firstValueFrom(
         this.httpService.get<FestivalResponse>(
           'https://apis.data.go.kr/B551011/KorService1/searchFestival1',
