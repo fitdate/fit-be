@@ -189,17 +189,17 @@ export class UserService {
 
   async findUserByNickname(nickname: string) {
     const user = await this.userRepository.findOne({ where: { nickname } });
-    if (!user) {
-      throw new NotFoundException('존재하지 않는 닉네임입니다.');
-    }
+    // if (!user) {
+    //   throw new NotFoundException('존재하지 않는 닉네임입니다.');
+    // }
     return user;
   }
 
   async findUserByPhone(phone: string) {
     const user = await this.userRepository.findOne({ where: { phone } });
-    if (!user) {
-      throw new NotFoundException('존재하지 않는 전화번호입니다.');
-    }
+    // if (!user) {
+    //   throw new NotFoundException('존재하지 않는 전화번호입니다.');
+    // }
     return user;
   }
 
