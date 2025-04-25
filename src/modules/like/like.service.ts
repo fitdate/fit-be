@@ -5,9 +5,12 @@ import { Like } from './entities/like.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../../common/enum/notification.enum';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class LikeService {
+  private readonly logger = new Logger(LikeService.name);
+
   constructor(
     @InjectRepository(Like)
     private readonly likeRepository: Repository<Like>,
@@ -55,18 +58,22 @@ export class LikeService {
           await manager.save(like);
           await manager.increment(User, { id: likedUserId }, 'likeCount', 1);
 
-          // 알림 생성
-          await this.notificationService.create({
-            type: NotificationType.LIKE,
-            receiverId: likedUserId,
-            data: {
-              senderId: userId,
-            },
-          });
+          try {
+            // 알림 생성
+            await this.notificationService.create({
+              type: NotificationType.LIKE,
+              receiverId: likedUserId,
+              data: {
+                senderId: userId,
+              },
+            });
 
-          // 알림 전송 완료 표시
-          like.isNotified = true;
-          await manager.save(like);
+            // 알림 전송 완료 표시
+            like.isNotified = true;
+            await manager.save(like);
+          } catch (error) {
+            this.logger.error(`알림 생성 실패: ${(error as Error).message}`);
+          }
 
           return { isLiked: true };
         }
