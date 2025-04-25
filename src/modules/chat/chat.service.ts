@@ -6,6 +6,7 @@ import { ChatRoom } from './entities/chat-room.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../../common/enum/notification.enum';
+import { IsNull } from 'typeorm';
 
 @Injectable()
 export class ChatService {
@@ -130,13 +131,16 @@ export class ChatService {
   async getRooms(userId: string) {
     this.logger.log(`채팅방 목록 조회 시작 - 사용자 ID: ${userId}`);
 
-    const rooms = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .leftJoinAndSelect('chatRoom.users', 'users')
-      .where('users.id = :userId', { userId })
-      .andWhere('chatRoom.deletedAt IS NULL')
-      .orderBy('chatRoom.updatedAt', 'DESC')
-      .getMany();
+    const rooms = await this.chatRoomRepository.find({
+      relations: ['users'],
+      where: {
+        users: { id: userId },
+        deletedAt: IsNull(),
+      },
+      order: {
+        updatedAt: 'DESC',
+      },
+    });
 
     this.logger.log(`조회된 채팅방 수: ${rooms.length}`);
     rooms.forEach((room, index) => {
