@@ -9,10 +9,10 @@ import {
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
 import { FindOrCreateChatRoomDto } from './dto/find-or-create-chat-room.dto';
+import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 
 @ApiTags('Chat')
 @Controller('chat')
@@ -74,10 +74,13 @@ export class ChatController {
     description: '커피챗 수락 성공',
   })
   async acceptCoffeeChat(
-    @Body('userId') userId: string,
-    @Body('partnerId') partnerId: string,
+    @UserId() userId: string,
+    @Body() acceptCoffeeChatDto: AcceptCoffeeChatDto,
   ) {
-    return this.chatService.acceptCoffeeChat(userId, partnerId);
+    return this.chatService.acceptCoffeeChat(
+      userId,
+      acceptCoffeeChatDto.partnerId,
+    );
   }
 
   @ApiOperation({
