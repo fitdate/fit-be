@@ -410,37 +410,6 @@ export class MatchService {
         'user2.profile',
         'user2.profile.profileImage',
       ],
-      select: {
-        id: true,
-        user1: {
-          id: true,
-          nickname: true,
-          age: true,
-          region: true,
-          likeCount: true,
-          profile: {
-            id: true,
-            profileImage: {
-              id: true,
-              imageUrl: true,
-            },
-          },
-        },
-        user2: {
-          id: true,
-          nickname: true,
-          age: true,
-          region: true,
-          likeCount: true,
-          profile: {
-            id: true,
-            profileImage: {
-              id: true,
-              imageUrl: true,
-            },
-          },
-        },
-      },
     });
 
     return matchList;
