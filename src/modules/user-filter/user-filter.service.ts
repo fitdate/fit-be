@@ -4,7 +4,7 @@ import { UserFilter } from './entities/user-filter.entity';
 import { UserService } from '../user/user.service';
 import { Repository } from 'typeorm';
 import { UserFilterDto } from './dto/user-filter.dto';
-import { Request, Response } from 'express';
+import { calculateAge } from 'src/common/util/age-calculator.util';
 
 @Injectable()
 export class UserFilterService {
@@ -38,6 +38,10 @@ export class UserFilterService {
         take: 6,
       });
 
+      users.forEach((user) => {
+        user.age = calculateAge(user.birthday);
+      });
+
       return {
         users: users.map((user) => ({
           id: user.id,
@@ -69,6 +73,10 @@ export class UserFilterService {
         take: 6,
       },
     );
+
+    users.forEach((user) => {
+      user.age = calculateAge(user.birthday);
+    });
 
     return {
       users: users.map((user) => ({

@@ -27,8 +27,10 @@ export class FestivalController {
   })
   @Get()
   getFestivalByRegion(
-    @Query('region') festivalRegionDto: FestivalRegionDto,
+    @Query('region') region: RegionCode,
   ): Promise<FestivalDto[]> {
+    const festivalRegionDto = new FestivalRegionDto();
+    festivalRegionDto.region = region;
     return this.festivalService.getFestivalByRegion(festivalRegionDto);
   }
 }

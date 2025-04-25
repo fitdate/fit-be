@@ -18,6 +18,7 @@ import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
 import { RedisService } from '../redis/redis.service';
 import { HashService } from '../auth/hash/hash.service';
 import { UpdateDatingPreferenceDto } from '../dating-preference/dto/update-dating-preference.dto';
+
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -321,7 +322,6 @@ export class UserService {
         'user.birthday',
         'user.gender',
         'user.likeCount',
-        'user.age',
         'user.region',
         'profileImage.imageUrl',
       ])
@@ -374,7 +374,7 @@ export class UserService {
         'user.nickname',
         'user.region',
         'user.likeCount',
-        'user.age',
+        'user.birthday',
         'profile.id',
         'profileImage.id',
         'profileImage.imageUrl',
