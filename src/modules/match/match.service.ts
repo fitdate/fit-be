@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Match } from './entities/match.entity';
+import { MatchSelection } from './entities/match-selection.entity';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationService } from '../notification/notification.service';
@@ -21,6 +22,8 @@ export class MatchService {
   constructor(
     @InjectRepository(Match)
     private readonly matchRepository: Repository<Match>,
+    @InjectRepository(MatchSelection)
+    private readonly matchSelectionRepository: Repository<MatchSelection>,
     private readonly notificationService: NotificationService,
     private readonly userService: UserService,
   ) {}
@@ -399,5 +402,29 @@ export class MatchService {
     });
 
     return matchList;
+  }
+
+  /**
+   * 특정 사용자를 선택한 사람들의 정보를 가져옵니다.
+   * @param selectedUserId 선택된 사용자 ID
+   */
+  async getSelectorsList(selectedUserId: string) {
+    this.logger.debug(
+      `[getSelectorsList] 시작 - selectedUserId: ${selectedUserId}`,
+    );
+
+    const selectorsList = await this.matchSelectionRepository
+      .createQueryBuilder('matchSelection')
+      .leftJoinAndSelect('matchSelection.selector', 'selector')
+      .leftJoinAndSelect('selector.profile', 'selectorProfile')
+      .leftJoinAndSelect('selectorProfile.profileImage', 'selectorProfileImage')
+      .where('matchSelection.selected_id = :selectedUserId', { selectedUserId })
+      .getMany();
+
+    this.logger.debug(
+      `[getSelectorsList] 선택자 리스트 개수: ${selectorsList.length}`,
+    );
+
+    return selectorsList;
   }
 }

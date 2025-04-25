@@ -8,10 +8,17 @@ import { UserModule } from '../user/user.module';
 import { Profile } from '../profile/entities/profile.entity';
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 import { User } from '../user/entities/user.entity';
+import { MatchSelection } from './entities/match-selection.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Match, Profile, ProfileImage, User]),
+    TypeOrmModule.forFeature([
+      Match,
+      Profile,
+      ProfileImage,
+      User,
+      MatchSelection,
+    ]),
     NotificationModule,
     UserModule,
   ],

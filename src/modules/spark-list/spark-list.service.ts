@@ -51,34 +51,36 @@ export class SparkListService {
   async getMatchList(userId: string) {
     this.logger.debug(`[getMatchList] 시작 - userId: ${userId}`);
 
-    const matchList = await this.matchService.getUserMatchList(userId);
-    this.logger.debug(`[getMatchList] 매치 리스트 개수: ${matchList.length}`);
+    const selectorsList = await this.matchService.getSelectorsList(userId);
+    this.logger.debug(
+      `[getMatchList] 선택자 리스트 개수: ${selectorsList.length}`,
+    );
 
-    const filteredMatchList = matchList.map((match) => {
-      const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
-      this.logger.debug(`[getMatchList] 매칭된 사용자 정보:`);
-      this.logger.debug(`- ID: ${matchedUser.id}`);
-      this.logger.debug(`- 닉네임: ${matchedUser.nickname}`);
-      this.logger.debug(`- 프로필 존재: ${!!matchedUser.profile}`);
+    const filteredSelectorsList = selectorsList.map((selection) => {
+      const selector = selection.selector;
+      this.logger.debug(`[getMatchList] 선택자 정보:`);
+      this.logger.debug(`- ID: ${selector.id}`);
+      this.logger.debug(`- 닉네임: ${selector.nickname}`);
+      this.logger.debug(`- 프로필 존재: ${!!selector.profile}`);
       this.logger.debug(
-        `- 프로필 이미지 개수: ${matchedUser.profile?.profileImage?.length ?? 0}`,
+        `- 프로필 이미지 개수: ${selector.profile?.profileImage?.length ?? 0}`,
       );
       this.logger.debug(
-        `- 첫 번째 프로필 이미지 URL: ${matchedUser.profile?.profileImage?.[0]?.imageUrl ?? 'null'}`,
+        `- 첫 번째 프로필 이미지 URL: ${selector.profile?.profileImage?.[0]?.imageUrl ?? 'null'}`,
       );
 
-      const profileImage = matchedUser.profile?.profileImage?.[0];
+      const profileImage = selector.profile?.profileImage?.[0];
       return {
-        matchId: match.id,
-        matchedUserId: matchedUser.id,
-        matchedNickname: matchedUser.nickname,
-        matchedLikeCount: matchedUser.likeCount,
-        matchedAge: calculateAge(matchedUser.birthday),
-        matchedRegion: matchedUser.region,
-        matchedProfileImage: profileImage ? profileImage.imageUrl : null,
+        selectionId: selection.id,
+        selectorId: selector.id,
+        selectorNickname: selector.nickname,
+        selectorLikeCount: selector.likeCount,
+        selectorAge: calculateAge(selector.birthday),
+        selectorRegion: selector.region,
+        selectorProfileImage: profileImage ? profileImage.imageUrl : null,
       };
     });
-    return filteredMatchList;
+    return filteredSelectorsList;
   }
 
   async getSparkList(userId: string) {
