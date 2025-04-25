@@ -181,9 +181,9 @@ export class UserService {
       where: { email },
       relations: ['profile'],
     });
-    if (!user) {
-      throw new NotFoundException('존재하지 않는 이메일입니다.');
-    }
+    // if (!user) {
+    //   throw new NotFoundException('존재하지 않는 이메일입니다.');
+    // }
     return user;
   }
 
