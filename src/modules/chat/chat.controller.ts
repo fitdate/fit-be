@@ -8,7 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
 import { FindOrCreateChatRoomDto } from './dto/find-or-create-chat-room.dto';
@@ -19,68 +19,42 @@ import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  @Post('matchingRooms/:partnerId')
   @ApiOperation({
     summary: '매칭 채팅방 생성',
     description:
       '매칭 결과 페이지 👉 결과보기 👉 "대화하러 가기" 클릭 시 호출됩니다.',
   })
   @ApiResponse({ status: 201, description: '매칭 채팅방이 성공적으로 생성됨' })
-  @ApiBody({
-    type: CreateMatchingRoomDto,
-    description: '매칭된 두 사용자의 ID',
-    examples: {
-      example1: {
-        value: {
-          userId: '',
-          partnerId: '',
-        },
-      },
-    },
+  @ApiParam({
+    name: 'partnerId',
+    description: '매칭된 상대방의 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @Post('matchingRooms')
-  async createMatchingRoom(@Body() body: CreateMatchingRoomDto) {
-    return this.chatService.createMatchingRoom(body.userId, body.partnerId);
+  async createMatchingRoom(
+    @UserId() userId: string,
+    @Param() params: CreateMatchingRoomDto,
+  ) {
+    return this.chatService.createMatchingRoom(userId, params.partnerId);
   }
 
+  @Post('chatRooms/findOrCreate/:partnerId')
   @ApiOperation({
     summary: '대화방 버튼 클릭 시 채팅방 입장',
     description:
       '채팅 페이지에서 대화방 버튼을 클릭하면 호출됩니다. 기존 채팅방이 있으면 해당 채팅방을 반환하고, 없으면 새로 생성합니다.',
   })
   @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
-  @ApiBody({
-    type: FindOrCreateChatRoomDto,
+  @ApiParam({
+    name: 'partnerId',
     description: '채팅방 상대방 사용자 ID',
-    examples: {
-      example1: {
-        value: {
-          partnerId: '',
-        },
-      },
-    },
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @Post('chatRooms/findOrCreate')
   async findOrCreateChatRoom(
     @UserId() userId: string,
-    @Body() body: FindOrCreateChatRoomDto,
+    @Param() params: FindOrCreateChatRoomDto,
   ) {
-    return this.chatService.findOrCreateChatRoom(userId, body.partnerId);
-  }
-
-  @Post('coffee-chat/accept')
-  @ApiOperation({ summary: '커피챗 수락' })
-  @ApiResponse({
-    status: 200,
-    description: '커피챗 수락 성공',
-  })
-  async acceptCoffeeChat(
-    @UserId() userId: string,
-    @Body() acceptCoffeeChatDto: AcceptCoffeeChatDto,
-  ) {
-    return this.chatService.acceptCoffeeChat(
-      userId,
-      acceptCoffeeChatDto.partnerId,
-    );
+    return this.chatService.findOrCreateChatRoom(userId, params.partnerId);
   }
 
   @ApiOperation({
@@ -112,5 +86,23 @@ export class ChatController {
     @Body('userId') userId: string,
   ) {
     return this.chatService.exitRoom(chatRoomId, userId);
+  }
+
+  @Post('coffee-chat/accept/:partnerId')
+  @ApiOperation({ summary: '커피챗 수락' })
+  @ApiResponse({
+    status: 200,
+    description: '커피챗 수락 성공',
+  })
+  @ApiParam({
+    name: 'partnerId',
+    description: '커피챗을 보낸 상대방의 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  async acceptCoffeeChat(
+    @UserId() userId: string,
+    @Param() params: AcceptCoffeeChatDto,
+  ) {
+    return this.chatService.acceptCoffeeChat(userId, params.partnerId);
   }
 }
