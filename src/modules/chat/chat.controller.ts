@@ -8,7 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
@@ -65,6 +65,19 @@ export class ChatController {
     @Body() body: FindOrCreateChatRoomDto,
   ) {
     return this.chatService.findOrCreateChatRoom(userId, body.partnerId);
+  }
+
+  @Post('coffee-chat/accept')
+  @ApiOperation({ summary: '커피챗 수락' })
+  @ApiResponse({
+    status: 200,
+    description: '커피챗 수락 성공',
+  })
+  async acceptCoffeeChat(
+    @Body('userId') userId: string,
+    @Body('partnerId') partnerId: string,
+  ) {
+    return this.chatService.acceptCoffeeChat(userId, partnerId);
   }
 
   @ApiOperation({
