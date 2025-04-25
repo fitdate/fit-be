@@ -31,15 +31,15 @@ export class ChatController {
     examples: {
       example1: {
         value: {
-          user1Id: '',
-          user2Id: '',
+          userId: '',
+          partnerId: '',
         },
       },
     },
   })
   @Post('matchingRooms')
   async createMatchingRoom(@Body() body: CreateMatchingRoomDto) {
-    return this.chatService.createMatchingRoom(body.user1Id, body.user2Id);
+    return this.chatService.createMatchingRoom(body.userId, body.partnerId);
   }
 
   @ApiOperation({

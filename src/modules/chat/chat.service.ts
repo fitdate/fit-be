@@ -23,34 +23,38 @@ export class ChatService {
 
   /**
    * 매칭 결과 페이지에서 매칭 성공 시 새로운 채팅방을 생성하고 참여자를 추가합니다.
-   * @param user1Id 첫 번째 사용자 ID
-   * @param user2Id 두 번째 사용자 ID
+   * @param userId 현재 로그인한 사용자 ID
+   * @param partnerId 매칭된 상대방 ID
    * @returns 생성된 채팅방 정보
    */
-  async createMatchingRoom(user1Id: string, user2Id: string) {
+  async createMatchingRoom(userId: string, partnerId: string) {
     this.logger.log(
-      `채팅방 생성 시작 - 사용자1 ID: ${user1Id}, 사용자2 ID: ${user2Id}`,
+      `채팅방 생성 시작 - 사용자 ID: ${userId}, 상대방 ID: ${partnerId}`,
     );
 
-    const user1 = await this.userRepository.findOne({ where: { id: user1Id } });
-    const user2 = await this.userRepository.findOne({ where: { id: user2Id } });
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const partner = await this.userRepository.findOne({
+      where: { id: partnerId },
+    });
 
-    if (!user1 || !user2) {
+    if (!user || !partner) {
       this.logger.error(
-        `사용자를 찾을 수 없습니다. - 사용자1: ${user1Id}, 사용자2: ${user2Id}`,
+        `사용자를 찾을 수 없습니다. - 사용자: ${userId}, 상대방: ${partnerId}`,
       );
       throw new Error('사용자를 찾을 수 없습니다.');
     }
 
     this.logger.log(
-      `사용자 정보 조회 성공 - 사용자1: ${user1.nickname}, 사용자2: ${user2.nickname}`,
+      `사용자 정보 조회 성공 - 사용자: ${user.nickname}, 상대방: ${partner.nickname}`,
     );
 
     // 기존 채팅방 확인
     const existingRoom = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .innerJoin('chatRoom.users', 'user1', 'user1.id = :user1Id', { user1Id })
-      .innerJoin('chatRoom.users', 'user2', 'user2.id = :user2Id', { user2Id })
+      .innerJoin('chatRoom.users', 'user1', 'user1.id = :userId', { userId })
+      .innerJoin('chatRoom.users', 'user2', 'user2.id = :partnerId', {
+        partnerId,
+      })
       .getOne();
 
     if (existingRoom) {
@@ -60,16 +64,16 @@ export class ChatService {
 
     this.logger.log('새로운 채팅방 생성 시작');
     const chatRoom = this.chatRoomRepository.create({
-      name: `${user1.nickname}님과 ${user2.nickname}님의 채팅방`,
-      users: [user1, user2],
+      name: `${user.nickname}님과 ${partner.nickname}님의 채팅방`,
+      users: [user, partner],
     });
 
     const savedRoom = await this.chatRoomRepository.save(chatRoom);
     this.logger.log(`채팅방 생성 완료 - ID: ${savedRoom.id}`);
 
     // 채팅방 생성 시 양방향 알림 전송
-    await this.sendChatRoomEntryNotification(savedRoom.id, user1Id, user2Id);
-    await this.sendChatRoomEntryNotification(savedRoom.id, user2Id, user1Id);
+    await this.sendChatRoomEntryNotification(savedRoom.id, userId, partnerId);
+    await this.sendChatRoomEntryNotification(savedRoom.id, partnerId, userId);
 
     return savedRoom;
   }
@@ -153,8 +157,7 @@ export class ChatService {
       return {
         id: room.id,
         name: room.name,
-        user1Id: userId,
-        user2Id: partner?.id || null,
+        userId: userId,
         partner: partner
           ? {
               id: partner.id,

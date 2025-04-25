@@ -3,20 +3,20 @@ import { IsUUID } from 'class-validator';
 
 export class CreateMatchingRoomDto {
   @ApiProperty({
-    description: '첫 번째 사용자의 ID',
-    example: 'user1-uuid',
+    description: '현재 로그인한 사용자의 ID',
+    example: 'user-uuid',
     type: 'string',
     format: 'uuid',
   })
   @IsUUID()
-  user1Id: string;
+  userId: string;
 
   @ApiProperty({
-    description: '두 번째 사용자의 ID',
-    example: 'user2-uuid',
+    description: '매칭된 상대방의 ID',
+    example: 'partner-uuid',
     type: 'string',
     format: 'uuid',
   })
   @IsUUID()
-  user2Id: string;
+  partnerId: string;
 }
