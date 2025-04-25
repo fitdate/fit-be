@@ -402,8 +402,27 @@ export class MatchService {
   async getUserMatchList(userId: string) {
     const matchList = await this.matchRepository.find({
       where: [{ user1: { id: userId } }, { user2: { id: userId } }],
-      relations: ['user1', 'user2'],
+      relations: [
+        'user1',
+        'user1.profile',
+        'user1.profile.profileImage',
+        'user2',
+        'user2.profile',
+        'user2.profile.profileImage',
+      ],
     });
-    return matchList;
+
+    // 상대 유저만 필터링 (user1 또는 user2가 로그인된 userId와 다른 경우)
+    const filteredMatches = matchList.map((match) => {
+      return match.user1.id === userId ? match.user2 : match.user1;
+    });
+
+    // 중복된 상대 유저 제거
+    const uniqueMatches = filteredMatches.filter((match, index, self) => {
+      // match.id가 중복되지 않도록 확인
+      return self.findIndex((m) => m.id === match.id) === index;
+    });
+
+    return uniqueMatches;
   }
 }

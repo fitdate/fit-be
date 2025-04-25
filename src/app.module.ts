@@ -62,6 +62,7 @@ import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
 import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
 import { DatingPreferenceModule } from './modules/dating-preference/dating-preference.module';
 import { SparkListModule } from './modules/spark-list/spark-list.module';
+import { FestivalModule } from './modules/festival/festival.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -136,6 +137,7 @@ import { SparkListModule } from './modules/spark-list/spark-list.module';
     ChatModule,
     DatingPreferenceModule,
     SparkListModule,
+    FestivalModule,
   ],
   controllers: [AppController],
   providers: [

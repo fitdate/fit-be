@@ -10,6 +10,9 @@ export class UserFilter {
   @OneToOne(() => User, (user) => user.userFilter)
   user: User;
 
+  @Column({ default: '여자' })
+  gender: '남자' | '여자';
+
   // @Column({ default: 10 })
   // @Min(0)
   // @Max(10)

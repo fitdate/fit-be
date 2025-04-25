@@ -34,7 +34,7 @@ export class UserFilterService {
       this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
       const { users, nextCursor } = await this.userService.getUserList({
         cursor: null,
-        order: ['createdAt_ASC'],
+        order: ['likeCount_DESC'],
         take: 6,
       });
 
@@ -44,6 +44,8 @@ export class UserFilterService {
           nickname: user.nickname,
           region: user.region,
           likeCount: user.likeCount,
+          age: user.age,
+          profileImage: user.profile.profileImage[0].imageUrl,
         })),
         nextCursor,
       };
@@ -63,7 +65,7 @@ export class UserFilterService {
       filterDto,
       {
         cursor: null,
-        order: ['createdAt_ASC'],
+        order: ['likeCount_DESC'],
         take: 6,
       },
     );
@@ -74,6 +76,8 @@ export class UserFilterService {
         nickname: user.nickname,
         region: user.region,
         likeCount: user.likeCount,
+        age: user.age,
+        profileImage: user.profile.profileImage[0].imageUrl,
       })),
       nextCursor,
     };
