@@ -25,45 +25,6 @@ export class MatchService {
     private readonly userService: UserService,
   ) {}
 
-  // 유사도 계산
-  private calculateSimilarity(user1: User, user2: User): number {
-    let similarity = 0;
-
-    // MBTI 유사도
-    if (user1?.profile?.mbti?.mbti && user2?.profile?.mbti?.mbti) {
-      if (user1.profile.mbti.mbti === user2.profile.mbti.mbti) {
-        similarity += 50;
-      }
-    }
-
-    // 관심 카테고리 유사도
-    if (
-      user1?.profile?.interestCategory?.length &&
-      user2?.profile?.interestCategory?.length
-    ) {
-      const categories1 = new Set(
-        user1.profile.interestCategory
-          .filter((cat) => cat.interestCategory && cat.interestCategory.name)
-          .map((cat) => cat.interestCategory.name),
-      );
-      const categories2 = new Set(
-        user2.profile.interestCategory
-          .filter((cat) => cat.interestCategory && cat.interestCategory.name)
-          .map((cat) => cat.interestCategory.name),
-      );
-
-      const commonCategories = new Set(
-        [...categories1].filter((cat) => categories2.has(cat)),
-      );
-
-      similarity +=
-        (commonCategories.size / Math.max(categories1.size, categories2.size)) *
-        50;
-    }
-
-    return similarity;
-  }
-
   // 성별 필터링
   private filterUsersByGender(
     users: User[],
@@ -136,36 +97,39 @@ export class MatchService {
     );
 
     // 유사도 계산 및 정렬
-    const usersWithSimilarity = oppositeGenderUsers
-      .map((user) => ({
-        user,
-        similarity: this.calculateSimilarity(currentUser, user),
-      }))
-      .sort((a, b) => b.similarity - a.similarity);
+    // const usersWithSimilarity = oppositeGenderUsers
+    //   .map((user) => ({
+    //     user,
+    //     similarity: this.calculateSimilarity(currentUser, user),
+    //   }))
+    //   .sort((a, b) => b.similarity - a.similarity);
 
-    // 유사도 기반 가중치 적용하여 4명 선택
-    const selectedUsers: User[] = [];
-    const totalSimilarity = usersWithSimilarity.reduce(
-      (sum, item) => sum + item.similarity,
-      0,
-    );
+    // // 유사도 기반 가중치 적용하여 4명 선택
+    // const selectedUsers: User[] = [];
+    // const totalSimilarity = usersWithSimilarity.reduce(
+    //   (sum, item) => sum + item.similarity,
+    //   0,
+    // );
 
-    while (selectedUsers.length < 4 && usersWithSimilarity.length > 0) {
-      const random = Math.random() * totalSimilarity;
-      let currentSum = 0;
-      let selectedIndex = 0;
+    // while (selectedUsers.length < 4 && usersWithSimilarity.length > 0) {
+    //   const random = Math.random() * totalSimilarity;
+    //   let currentSum = 0;
+    //   let selectedIndex = 0;
 
-      for (let i = 0; i < usersWithSimilarity.length; i++) {
-        currentSum += usersWithSimilarity[i].similarity;
-        if (currentSum >= random) {
-          selectedIndex = i;
-          break;
-        }
-      }
+    //   for (let i = 0; i < usersWithSimilarity.length; i++) {
+    //     currentSum += usersWithSimilarity[i].similarity;
+    //     if (currentSum >= random) {
+    //       selectedIndex = i;
+    //       break;
+    //     }
+    //   }
 
-      selectedUsers.push(usersWithSimilarity[selectedIndex].user);
-      usersWithSimilarity.splice(selectedIndex, 1);
-    }
+    //   selectedUsers.push(usersWithSimilarity[selectedIndex].user);
+    //   usersWithSimilarity.splice(selectedIndex, 1);
+    // }
+
+    // 랜덤으로 4명 선택
+    const selectedUsers = this.selectRandomUsers(oppositeGenderUsers, 4);
 
     // 매칭 생성
     const matches: { matchId: string; user1: User; user2: User }[] = [];
