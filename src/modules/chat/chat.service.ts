@@ -67,6 +67,7 @@ export class ChatService {
     const savedRoom = await this.chatRoomRepository.save(chatRoom);
     this.logger.log(`채팅방 생성 완료 - ID: ${savedRoom.id}`);
 
+    // 채팅방 생성 시 양방향 알림 전송
     await this.sendChatRoomEntryNotification(savedRoom.id, user1Id, user2Id);
     await this.sendChatRoomEntryNotification(savedRoom.id, user2Id, user1Id);
 
@@ -88,6 +89,13 @@ export class ChatService {
       .getOne();
 
     if (existingRoom) {
+      // 기존 채팅방이 있을 때도 입장 알림 전송
+      // user1Id(현재 로그인한 사용자)가 입장했을 때 user2Id(상대방)에게 알림
+      await this.sendChatRoomEntryNotification(
+        existingRoom.id,
+        user1Id, // 현재 로그인한 사용자
+        user2Id, // 상대방
+      );
       return existingRoom;
     }
 
@@ -104,7 +112,7 @@ export class ChatService {
   async findOrCreateChatRoom(user1Id: string, user2Id: string) {
     const chatRoom = await this.getOrCreateRoom(user1Id, user2Id);
 
-    // 채팅방 입장 알림 전송
+    // 채팅방 입장 알림 전송 - 현재 사용자(user1Id)가 입장했을 때 상대방(user2Id)에게 알림
     await this.sendChatRoomEntryNotification(chatRoom.id, user1Id, user2Id);
 
     return chatRoom;
