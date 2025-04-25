@@ -24,6 +24,11 @@ export class FestivalService {
     this.logger.debug(
       `[getFestivalByRegion] 시작 - region: ${festivalRegionDto.region}`,
     );
+    this.logger.debug(
+      `${this.configService.getOrThrow('publicApi.festivalApiKey', {
+        infer: true,
+      })}`,
+    );
 
     const today = dayjs();
     const todayDate = today.format('YYYYMMDD');
