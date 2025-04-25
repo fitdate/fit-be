@@ -11,7 +11,6 @@ import { ChatService } from './chat.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 import { UserId } from '../../common/decorator/get-user.decorator';
-import { User } from '../user/entities/user.entity';
 import { CreateMatchingRoomDto } from './dto/create-matching-room.dto';
 import { FindOrCreateChatRoomDto } from './dto/find-or-create-chat-room.dto';
 
@@ -55,17 +54,17 @@ export class ChatController {
     examples: {
       example1: {
         value: {
-          partnerId: 'user-uuid',
+          partnerId: '',
         },
       },
     },
   })
   @Post('chatRooms/findOrCreate')
   async findOrCreateChatRoom(
-    @UserId() user: User,
+    @UserId() userId: string,
     @Body() body: FindOrCreateChatRoomDto,
   ) {
-    return this.chatService.findOrCreateChatRoom(user.id, body.partnerId);
+    return this.chatService.findOrCreateChatRoom(userId, body.partnerId);
   }
 
   @ApiOperation({
