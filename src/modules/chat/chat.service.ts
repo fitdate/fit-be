@@ -98,44 +98,46 @@ export class ChatService {
 
   /**
    * 두 사용자 간의 채팅방을 찾거나 생성합니다.
-   * @param user1Id 첫 번째 사용자 ID
-   * @param user2Id 두 번째 사용자 ID
+   * @param userId 현재 로그인한 사용자 ID
+   * @param partnerId 상대방 ID
    * @returns 채팅방 정보
    */
-  private async getOrCreateRoom(user1Id: string, user2Id: string) {
+  private async getOrCreateRoom(userId: string, partnerId: string) {
     // 두 사용자 간의 기존 채팅방 찾기
     const existingRoom = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .innerJoin('chatRoom.users', 'user1', 'user1.id = :user1Id', { user1Id })
-      .innerJoin('chatRoom.users', 'user2', 'user2.id = :user2Id', { user2Id })
+      .innerJoin('chatRoom.users', 'user1', 'user1.id = :userId', { userId })
+      .innerJoin('chatRoom.users', 'user2', 'user2.id = :partnerId', {
+        partnerId,
+      })
       .getOne();
 
     if (existingRoom) {
       // 기존 채팅방이 있을 때도 입장 알림 전송
-      // user1Id(현재 로그인한 사용자)가 입장했을 때 user2Id(상대방)에게 알림
+      // userId(현재 로그인한 사용자)가 입장했을 때 partnerId(상대방)에게 알림
       await this.sendChatRoomEntryNotification(
         existingRoom.id,
-        user1Id, // 현재 로그인한 사용자
-        user2Id, // 상대방
+        userId, // 현재 로그인한 사용자
+        partnerId, // 상대방
       );
       return existingRoom;
     }
 
     // 채팅방이 없으면 새로 생성
-    return this.createMatchingRoom(user1Id, user2Id);
+    return this.createMatchingRoom(userId, partnerId);
   }
 
   /**
    * 채팅 페이지에서 대화방 버튼 클릭 시 두 사용자 간의 채팅방을 찾거나 생성합니다.
-   * @param user1Id 첫 번째 사용자 ID
-   * @param user2Id 두 번째 사용자 ID
+   * @param userId 현재 로그인한 사용자 ID
+   * @param partnerId 상대방 ID
    * @returns 채팅방 정보
    */
-  async findOrCreateChatRoom(user1Id: string, user2Id: string) {
-    const chatRoom = await this.getOrCreateRoom(user1Id, user2Id);
+  async findOrCreateChatRoom(userId: string, partnerId: string) {
+    const chatRoom = await this.getOrCreateRoom(userId, partnerId);
 
-    // 채팅방 입장 알림 전송 - 현재 사용자(user1Id)가 입장했을 때 상대방(user2Id)에게 알림
-    await this.sendChatRoomEntryNotification(chatRoom.id, user1Id, user2Id);
+    // 채팅방 입장 알림 전송 - 현재 사용자(userId)가 입장했을 때 상대방(partnerId)에게 알림
+    await this.sendChatRoomEntryNotification(chatRoom.id, userId, partnerId);
 
     return chatRoom;
   }
