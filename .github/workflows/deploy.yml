@@ -189,7 +189,7 @@ jobs:
             
             # 앱 상태 확인
             echo '🔍 앱 상태 확인 중...'
-            timeout 3 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 1; done'
+            timeout 15 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 2; done'
 
             # Nginx 설정 적용
             echo '🔄 Nginx 설정 적용 중...'

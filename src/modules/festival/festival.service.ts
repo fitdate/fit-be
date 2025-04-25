@@ -33,11 +33,11 @@ export class FestivalService {
     private readonly configService: ConfigService<AllConfig>,
   ) {}
 
-  async getFestivalByRegion(region: string): Promise<FestivalDto[]> {
-    const regionCode = this.locationService.convertNameToCode(region);
-    if (!regionCode) {
-      throw new NotFoundException('해당 지역을 찾을 수 없습니다.');
-    }
+  async getFestivalByRegion(region: number): Promise<FestivalDto[]> {
+    // const regionCode = this.locationService.convertNameToCode(region);
+    // if (!regionCode) {
+    //   throw new NotFoundException('해당 지역을 찾을 수 없습니다.');
+    // }
 
     const today = dayjs().format('YYYYMMDD');
     const oneWeekLater = dayjs().add(7, 'day').format('YYYYMMDD');
@@ -54,7 +54,7 @@ export class FestivalService {
               ),
               from: today,
               to: oneWeekLater,
-              signgucode: regionCode,
+              signgucode: region,
               rows: 10,
               cPage: 1,
             },
