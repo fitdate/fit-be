@@ -69,8 +69,25 @@ export class ChatService {
       users: [user, partner],
     });
 
+    this.logger.log(`채팅방 생성 전 사용자 수: ${chatRoom.users.length}`);
+    this.logger.log(
+      `사용자 목록: ${chatRoom.users.map((u) => u.nickname).join(', ')}`,
+    );
+
     const savedRoom = await this.chatRoomRepository.save(chatRoom);
     this.logger.log(`채팅방 생성 완료 - ID: ${savedRoom.id}`);
+
+    // 저장된 채팅방의 사용자 정보 확인
+    const savedRoomWithUsers = await this.chatRoomRepository.findOne({
+      where: { id: savedRoom.id },
+      relations: ['users'],
+    });
+    this.logger.log(
+      `저장된 채팅방의 사용자 수: ${savedRoomWithUsers?.users.length}`,
+    );
+    this.logger.log(
+      `저장된 사용자 목록: ${savedRoomWithUsers?.users.map((u) => u.nickname).join(', ')}`,
+    );
 
     // 채팅방 생성 시 양방향 알림 전송
     await this.sendChatRoomEntryNotification(savedRoom.id, userId, partnerId);
@@ -81,44 +98,80 @@ export class ChatService {
 
   /**
    * 두 사용자 간의 채팅방을 찾거나 생성합니다.
-   * @param user1Id 첫 번째 사용자 ID
-   * @param user2Id 두 번째 사용자 ID
+   * @param userId 현재 로그인한 사용자 ID
+   * @param partnerId 상대방 ID
    * @returns 채팅방 정보
    */
-  private async getOrCreateRoom(user1Id: string, user2Id: string) {
+  private async getOrCreateRoom(userId: string, partnerId: string) {
     // 두 사용자 간의 기존 채팅방 찾기
     const existingRoom = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .innerJoin('chatRoom.users', 'user1', 'user1.id = :user1Id', { user1Id })
-      .innerJoin('chatRoom.users', 'user2', 'user2.id = :user2Id', { user2Id })
+      .innerJoin('chatRoom.users', 'user1', 'user1.id = :userId', { userId })
+      .innerJoin('chatRoom.users', 'user2', 'user2.id = :partnerId', {
+        partnerId,
+      })
       .getOne();
 
     if (existingRoom) {
       // 기존 채팅방이 있을 때도 입장 알림 전송
-      // user1Id(현재 로그인한 사용자)가 입장했을 때 user2Id(상대방)에게 알림
+      // userId(현재 로그인한 사용자)가 입장했을 때 partnerId(상대방)에게 알림
       await this.sendChatRoomEntryNotification(
         existingRoom.id,
-        user1Id, // 현재 로그인한 사용자
-        user2Id, // 상대방
+        userId, // 현재 로그인한 사용자
+        partnerId, // 상대방
       );
       return existingRoom;
     }
 
     // 채팅방이 없으면 새로 생성
-    return this.createMatchingRoom(user1Id, user2Id);
+    return this.createMatchingRoom(userId, partnerId);
   }
 
   /**
    * 채팅 페이지에서 대화방 버튼 클릭 시 두 사용자 간의 채팅방을 찾거나 생성합니다.
-   * @param user1Id 첫 번째 사용자 ID
-   * @param user2Id 두 번째 사용자 ID
+   * @param userId 현재 로그인한 사용자 ID
+   * @param partnerId 상대방 ID
    * @returns 채팅방 정보
    */
-  async findOrCreateChatRoom(user1Id: string, user2Id: string) {
-    const chatRoom = await this.getOrCreateRoom(user1Id, user2Id);
+  async findOrCreateChatRoom(userId: string, partnerId: string) {
+    const chatRoom = await this.getOrCreateRoom(userId, partnerId);
 
-    // 채팅방 입장 알림 전송 - 현재 사용자(user1Id)가 입장했을 때 상대방(user2Id)에게 알림
-    await this.sendChatRoomEntryNotification(chatRoom.id, user1Id, user2Id);
+    // 채팅방 입장 알림 전송 - 현재 사용자(userId)가 입장했을 때 상대방(partnerId)에게 알림
+    await this.sendChatRoomEntryNotification(chatRoom.id, userId, partnerId);
+
+    return chatRoom;
+  }
+
+  /**
+   * 커피챗 수락 시 채팅방을 생성하고 알림을 전송합니다.
+   * @param userId 현재 로그인한 사용자 ID
+   * @param partnerId 매칭된 상대방 ID
+   * @returns 생성된 채팅방 정보
+   */
+  async acceptCoffeeChat(userId: string, partnerId: string) {
+    this.logger.log(
+      `커피챗 수락 처리 시작 - 사용자 ID: ${userId}, 상대방 ID: ${partnerId}`,
+    );
+
+    // 채팅방 생성
+    const chatRoom = await this.createMatchingRoom(userId, partnerId);
+
+    // 커피챗 수락 알림 전송
+    const notification = {
+      type: NotificationType.COFFEE_CHAT,
+      receiverId: partnerId,
+      title: '커피챗 수락',
+      content:
+        '상대방이 커피챗을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
+      data: {
+        chatRoomId: chatRoom.id,
+        senderId: userId,
+      },
+    };
+
+    await this.notificationService.create(notification);
+
+    this.logger.log(`커피챗 수락 처리 완료 - 채팅방 ID: ${chatRoom.id}`);
 
     return chatRoom;
   }
