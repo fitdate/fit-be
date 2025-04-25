@@ -17,7 +17,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiBody,
 } from '@nestjs/swagger';
 import { Notification } from './entities/notification.entity';
 
@@ -27,16 +26,15 @@ import { Notification } from './entities/notification.entity';
 export class NotificationController implements OnModuleDestroy {
   constructor(private readonly notificationService: NotificationService) {}
 
-  @ApiOperation({ summary: '알림 생성' })
+  @ApiOperation({
+    summary: '알림 생성',
+    description:
+      '이 API는 내부용으로, 다른 모듈(채팅, 매칭 등)에서 알림을 생성할 때 사용됩니다. 직접 호출하지 마세요.',
+  })
   @ApiResponse({
     status: 201,
     description: '알림이 생성되었습니다.',
     type: Notification,
-  })
-  @ApiBody({
-    type: CreateNotificationDto,
-    description:
-      '알림 생성에 필요한 데이터 (알림 생성은 다른 모듈에서 이루어집니다.)',
   })
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {

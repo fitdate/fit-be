@@ -29,7 +29,7 @@ export class ChatController {
   @ApiParam({
     name: 'partnerId',
     description: '매칭된 상대방의 ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: '',
   })
   async createMatchingRoom(
     @UserId() userId: string,
@@ -48,13 +48,31 @@ export class ChatController {
   @ApiParam({
     name: 'partnerId',
     description: '채팅방 상대방 사용자 ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: '',
   })
   async findOrCreateChatRoom(
     @UserId() userId: string,
     @Param() params: FindOrCreateChatRoomDto,
   ) {
     return this.chatService.findOrCreateChatRoom(userId, params.partnerId);
+  }
+
+  @Post('coffee-chat/accept/:partnerId')
+  @ApiOperation({ summary: '커피챗 수락' })
+  @ApiResponse({
+    status: 200,
+    description: '커피챗 수락 성공',
+  })
+  @ApiParam({
+    name: 'partnerId',
+    description: '커피챗을 보낸 상대방의 ID',
+    example: '',
+  })
+  async acceptCoffeeChat(
+    @UserId() userId: string,
+    @Param() params: AcceptCoffeeChatDto,
+  ) {
+    return this.chatService.acceptCoffeeChat(userId, params.partnerId);
   }
 
   @ApiOperation({
@@ -86,23 +104,5 @@ export class ChatController {
     @Body('userId') userId: string,
   ) {
     return this.chatService.exitRoom(chatRoomId, userId);
-  }
-
-  @Post('coffee-chat/accept/:partnerId')
-  @ApiOperation({ summary: '커피챗 수락' })
-  @ApiResponse({
-    status: 200,
-    description: '커피챗 수락 성공',
-  })
-  @ApiParam({
-    name: 'partnerId',
-    description: '커피챗을 보낸 상대방의 ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  async acceptCoffeeChat(
-    @UserId() userId: string,
-    @Param() params: AcceptCoffeeChatDto,
-  ) {
-    return this.chatService.acceptCoffeeChat(userId, params.partnerId);
   }
 }
