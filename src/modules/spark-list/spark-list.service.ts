@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { LikeService } from '../like/like.service';
 import { CoffeeChatService } from '../coffee-chat/coffee-chat.service';
 import { MatchService } from '../match/match.service';
 @Injectable()
 export class SparkListService {
+  private readonly logger = new Logger(SparkListService.name);
+
   constructor(
     private readonly likeService: LikeService,
     private readonly coffeeChatService: CoffeeChatService,
@@ -45,9 +47,20 @@ export class SparkListService {
   }
 
   async getMatchList(userId: string) {
+    this.logger.debug(`[getMatchList] 시작 - userId: ${userId}`);
+    
     const matchList = await this.matchService.getUserMatchList(userId);
+    this.logger.debug(`[getMatchList] 매치 리스트 개수: ${matchList.length}`);
+    
     const filteredMatchList = matchList.map((match) => {
       const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
+      this.logger.debug(`[getMatchList] 매칭된 사용자 정보:`);
+      this.logger.debug(`- ID: ${matchedUser.id}`);
+      this.logger.debug(`- 닉네임: ${matchedUser.nickname}`);
+      this.logger.debug(`- 프로필 존재: ${!!matchedUser.profile}`);
+      this.logger.debug(`- 프로필 이미지 개수: ${matchedUser.profile?.profileImage?.length ?? 0}`);
+      this.logger.debug(`- 첫 번째 프로필 이미지 URL: ${matchedUser.profile?.profileImage?.[0]?.imageUrl ?? 'null'}`);
+      
       const profileImage = matchedUser.profile?.profileImage?.[0];
       return {
         matchId: match.id,
@@ -59,6 +72,8 @@ export class SparkListService {
         matchedLikeCount: matchedUser.likeCount,
       };
     });
+    this.logger.debug(`이미지 주소: ${filteredMatchList[0].matchedProfileImage}`);
+    this.logger.debug(`[getMatchList] 필터링된 매치 리스트 개수: ${filteredMatchList.length}`);
     return filteredMatchList;
   }
 
