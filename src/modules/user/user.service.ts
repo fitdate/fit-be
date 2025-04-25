@@ -313,16 +313,23 @@ export class UserService {
 
     const qb = this.userRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
       .select([
         'user.id',
         'user.nickname',
         'user.birthday',
         'user.gender',
         'user.likeCount',
+        'user.age',
+        'user.region',
+        'profileImage.imageUrl',
       ])
       .where('user.id != :userId', { userId: currentUserId })
       .andWhere('user.deletedAt IS NULL')
-      .andWhere('user.gender != :gender', { gender: currentUser.gender });
+      .andWhere('user.gender = :gender', {
+        gender: currentUser.gender === '남자' ? '여자' : '남자',
+      });
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;
@@ -360,7 +367,15 @@ export class UserService {
   async getUserList(dto: CursorPaginationDto) {
     const qb = this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.nickname', 'user.region', 'user.likeCount'])
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
+      .select([
+        'user.id',
+        'user.nickname',
+        'user.region',
+        'user.likeCount',
+        'profileImage.imageUrl',
+      ])
       .where('user.deletedAt IS NULL');
 
     const { nextCursor } =

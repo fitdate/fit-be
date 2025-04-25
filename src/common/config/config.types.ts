@@ -68,6 +68,10 @@ export interface AwsConfig {
   cloudfrontDomain: string;
 }
 
+export interface PublicApiConfig {
+  festivalApiKey: string;
+}
+
 export interface AllConfig {
   database: DatabaseConfig;
   app: AppConfig;
@@ -77,4 +81,5 @@ export interface AllConfig {
   redis: RedisConfig;
   social: SocialConfig;
   aws: AwsConfig;
+  publicApi: PublicApiConfig;
 }
