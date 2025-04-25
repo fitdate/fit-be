@@ -366,17 +366,16 @@ export class MatchService {
   async getUserMatchList(userId: string) {
     this.logger.debug(`[getUserMatchList] 시작 - userId: ${userId}`);
 
-    const matchList = await this.matchRepository.find({
-      where: [{ user1: { id: userId } }, { user2: { id: userId } }],
-      relations: [
-        'user1',
-        'user1.profile',
-        'user1.profile.profileImage',
-        'user2',
-        'user2.profile',
-        'user2.profile.profileImage',
-      ],
-    });
+    const matchList = await this.matchRepository
+      .createQueryBuilder('match')
+      .leftJoinAndSelect('match.user1', 'user1')
+      .leftJoinAndSelect('match.user2', 'user2')
+      .leftJoinAndSelect('user1.profile', 'user1Profile')
+      .leftJoinAndSelect('user2.profile', 'user2Profile')
+      .leftJoinAndSelect('user1Profile.profileImage', 'user1ProfileImage')
+      .leftJoinAndSelect('user2Profile.profileImage', 'user2ProfileImage')
+      .where('match.user1_id = :userId OR match.user2_id = :userId', { userId })
+      .getMany();
 
     this.logger.debug(`[getUserMatchList] 매치 리스트 개수: ${matchList.length}`);
 

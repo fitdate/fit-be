@@ -72,8 +72,6 @@ export class SparkListService {
         matchedLikeCount: matchedUser.likeCount,
       };
     });
-    this.logger.debug(`이미지 주소: ${filteredMatchList[0].matchedProfileImage}`);
-    this.logger.debug(`[getMatchList] 필터링된 매치 리스트 개수: ${filteredMatchList.length}`);
     return filteredMatchList;
   }
 
