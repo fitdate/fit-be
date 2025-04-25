@@ -134,6 +134,7 @@ export class ChatService {
       .createQueryBuilder('chatRoom')
       .leftJoinAndSelect('chatRoom.users', 'users')
       .where('users.id = :userId', { userId })
+      .andWhere('chatRoom.deletedAt IS NULL')
       .orderBy('chatRoom.updatedAt', 'DESC')
       .getMany();
 
@@ -152,24 +153,28 @@ export class ChatService {
       });
     });
 
-    return rooms.map((room) => {
-      const partner = room.users.find((user) => user.id !== userId);
-      return {
-        id: room.id,
-        name: room.name,
-        userId: userId,
-        partner: partner
-          ? {
-              id: partner.id,
-              name: partner.name,
-              age: this.calculateAge(partner.birthday),
-              height: partner.height,
-            }
-          : null,
-        createdAt: room.createdAt,
-        updatedAt: room.updatedAt,
-      };
-    });
+    return rooms
+      .map((room) => {
+        const partner = room.users.find((user) => user.id !== userId);
+        if (!partner) {
+          this.logger.warn(`채팅방 ${room.id}에서 상대방을 찾을 수 없습니다.`);
+          return null;
+        }
+        return {
+          id: room.id,
+          name: room.name,
+          userId: userId,
+          partner: {
+            id: partner.id,
+            name: partner.name,
+            age: partner.birthday ? this.calculateAge(partner.birthday) : null,
+            height: partner.height || null,
+          },
+          createdAt: room.createdAt,
+          updatedAt: room.updatedAt,
+        };
+      })
+      .filter(Boolean);
   }
 
   /**
