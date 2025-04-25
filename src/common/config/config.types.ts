@@ -69,7 +69,8 @@ export interface AwsConfig {
 }
 
 export interface PublicApiConfig {
-  festivalApiKey: string;
+  festivalEncodingApiKey: string;
+  festivalDecodingApiKey: string;
 }
 
 export interface AllConfig {

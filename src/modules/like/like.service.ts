@@ -92,12 +92,16 @@ export class LikeService {
   }
 
   async getLikeList(userId: string) {
-    const likeList = await this.likeRepository.find({
-      where: {
-        user: { id: userId },
-      },
-      relations: ['likedUser.profile.profileImage'],
-    });
+    const likeList = await this.likeRepository
+      .createQueryBuilder('like')
+      .leftJoinAndSelect('like.likedUser', 'likedUser')
+      .leftJoinAndSelect('likedUser.profile', 'likedUserProfile')
+      .leftJoinAndSelect(
+        'likedUserProfile.profileImage',
+        'likedUserProfileImage',
+      )
+      .where('like.user_id = :userId', { userId })
+      .getMany();
     return likeList;
   }
 }

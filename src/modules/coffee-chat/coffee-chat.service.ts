@@ -64,17 +64,14 @@ export class CoffeeChatService {
   }
 
   async getCoffeeChatList(userId: string) {
-    const coffeeChatList = await this.coffeeChatRepository.find({
-      where: { receiver: { id: userId } },
-      relations: [
-        'sender',
-        'sender.profile',
-        'sender.profile.profileImage',
-        'receiver',
-        'receiver.profile',
-        'receiver.profile.profileImage',
-      ],
-    });
+    const coffeeChatList = await this.coffeeChatRepository
+      .createQueryBuilder('coffeeChat')
+      .leftJoinAndSelect('coffeeChat.receiver', 'receiver')
+      .leftJoinAndSelect('receiver.profile', 'receiverProfile')
+      .leftJoinAndSelect('receiverProfile.profileImage', 'receiverProfileImage')
+      .where('receiver.id = :userId', { userId })
+      .getMany();
+
     return coffeeChatList;
   }
 }

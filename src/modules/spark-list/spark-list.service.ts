@@ -16,36 +16,36 @@ export class SparkListService {
 
   async getLikeList(userId: string) {
     const likeList = await this.likeService.getLikeList(userId);
-    // const filteredLikeList = likeList.map((like) => ({
-    //   likedUserId: like.likedUser.id,
-    //   nickname: like.likedUser.nickname,
-    //   likes: like.likedUser.likeCount,
-    //   age: like.likedUser.age,
-    //   region: like.likedUser.region,
-    //   profileImage: like.likedUser.profile.profileImage?.[0]?.imageUrl ?? null,
-    // }));
-    return likeList;
+    const filteredLikeList = likeList.map((like) => {
+      const profileImage = like.likedUser.profile?.profileImage?.[0];
+      return {
+        likedUserId: like.likedUser.id,
+        nickname: like.likedUser.nickname,
+        likeCount: like.likedUser.likeCount,
+        age: calculateAge(like.likedUser.birthday),
+        region: like.likedUser.region,
+        profileImage: profileImage ? profileImage.imageUrl : null,
+      };
+    });
+    return filteredLikeList;
   }
 
   async getCoffeeChatList(userId: string) {
     const coffeeChatList =
       await this.coffeeChatService.getCoffeeChatList(userId);
-    // const filteredCoffeeChatList = coffeeChatList.map((coffeeChat) => ({
-    //   coffeeChatId: coffeeChat.id,
-    //   senderId: coffeeChat.sender.id,
-    //   senderNickname: coffeeChat.sender.nickname,
-    //   senderProfileImage:
-    //     coffeeChat.sender.profile.profileImage?.[0]?.imageUrl ?? null,
-    //   senderAge: coffeeChat.sender.age,
-    //   senderRegion: coffeeChat.sender.region,
-    //   receiverId: coffeeChat.receiver.id,
-    //   receiverNickname: coffeeChat.receiver.nickname,
-    //   receiverProfileImage:
-    //     coffeeChat.receiver.profile.profileImage?.[0]?.imageUrl ?? null,
-    //   receiverAge: coffeeChat.receiver.age,
-    //   receiverRegion: coffeeChat.receiver.region,
-    // }));
-    return coffeeChatList;
+    const filteredCoffeeChatList = coffeeChatList.map((coffeeChat) => {
+      const profileImage = coffeeChat.receiver.profile?.profileImage?.[0];
+      return {
+        coffeeChatId: coffeeChat.id,
+        receiverId: coffeeChat.receiver.id,
+        receiverNickname: coffeeChat.receiver.nickname,
+        receiverLikeCount: coffeeChat.receiver.likeCount,
+        receiverAge: calculateAge(coffeeChat.receiver.birthday),
+        receiverRegion: coffeeChat.receiver.region,
+        receiverProfileImage: profileImage ? profileImage.imageUrl : null,
+      };
+    });
+    return filteredCoffeeChatList;
   }
 
   async getMatchList(userId: string) {
@@ -72,10 +72,10 @@ export class SparkListService {
         matchId: match.id,
         matchedUserId: matchedUser.id,
         matchedNickname: matchedUser.nickname,
-        matchedProfileImage: profileImage ? profileImage.imageUrl : null,
+        matchedLikeCount: matchedUser.likeCount,
         matchedAge: calculateAge(matchedUser.birthday),
         matchedRegion: matchedUser.region,
-        matchedLikeCount: matchedUser.likeCount,
+        matchedProfileImage: profileImage ? profileImage.imageUrl : null,
       };
     });
     return filteredMatchList;

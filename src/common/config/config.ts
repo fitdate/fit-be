@@ -64,7 +64,8 @@ export const config = () => ({
     cloudfrontDomain: process.env.AWS_CLOUDFRONT_DOMAIN,
   },
   publicApi: {
-    festivalApiKey: process.env.FESTIVAL_API_KEY,
+    festivalEncodingApiKey: process.env.FESTIVAL_ENCODING_API_KEY,
+    festivalDecodingApiKey: process.env.FESTIVAL_DECODING_API_KEY,
   },
 });
 
@@ -109,7 +110,8 @@ export const validationSchema = Joi.object({
   AWS_REGION: Joi.string().required(),
   AWS_BUCKET_NAME: Joi.string().required(),
   AWS_CLOUDFRONT_DOMAIN: Joi.string().required(),
-  FESTIVAL_API_KEY: Joi.string().required(),
+  FESTIVAL_ENCODING_API_KEY: Joi.string().required(),
+  FESTIVAL_DECODING_API_KEY: Joi.string().required(),
 });
 
 export const ConfigModuleOptions = {

@@ -25,7 +25,7 @@ export class FestivalService {
       `[getFestivalByRegion] 시작 - region: ${festivalRegionDto.region}`,
     );
     this.logger.debug(
-      `${this.configService.getOrThrow('publicApi.festivalApiKey', {
+      `${this.configService.getOrThrow('publicApi.festivalDecodingApiKey', {
         infer: true,
       })}`,
     );
@@ -47,7 +47,7 @@ export class FestivalService {
           {
             params: {
               serviceKey: this.configService.getOrThrow(
-                'publicApi.festivalApiKey',
+                'publicApi.festivalDecodingApiKey',
                 { infer: true },
               ),
               MobileOS: 'ETC',
