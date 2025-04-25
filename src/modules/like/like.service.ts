@@ -77,7 +77,7 @@ export class LikeService {
           try {
             this.logger.log('알림 생성 시도');
             // 알림 생성
-            await this.notificationService.create({
+            const notification = await this.notificationService.create({
               type: NotificationType.LIKE,
               receiverId: likedUserId,
               data: {
@@ -88,10 +88,14 @@ export class LikeService {
             // 알림 전송 완료 표시
             like.isNotified = true;
             await manager.save(like);
-            this.logger.log('알림 생성 및 저장 완료');
+            this.logger.log(
+              `알림 생성 및 저장 완료: notificationId=${notification.id}`,
+            );
           } catch (error) {
             this.logger.error(`알림 생성 실패: ${(error as Error).message}`);
             this.logger.error(`알림 생성 실패 상세: ${JSON.stringify(error)}`);
+            // 알림 생성 실패 시 트랜잭션 롤백
+            throw error;
           }
 
           return { isLiked: true };
