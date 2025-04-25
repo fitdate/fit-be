@@ -24,20 +24,6 @@ export class FestivalService {
     this.logger.debug(
       `[getFestivalByRegion] 시작 - region: ${festivalRegionDto.region}`,
     );
-    this.logger.debug(
-      `${this.configService.getOrThrow('publicApi.festivalDecodingApiKey', {
-        infer: true,
-      })}`,
-    );
-
-    const today = dayjs();
-    const todayDate = today.format('YYYYMMDD');
-    const oneMonthLater = today.add(30, 'day');
-    const oneMonthLaterDate = oneMonthLater.format('YYYYMMDD');
-
-    this.logger.debug(
-      `[getFestivalByRegion] 날짜 범위: ${todayDate} ~ ${oneMonthLaterDate}`,
-    );
 
     try {
       this.logger.debug('[getFestivalByRegion] API 요청 시작');
@@ -54,11 +40,10 @@ export class FestivalService {
               MobileApp: 'fit-date',
               _type: 'json',
               areaCode: festivalRegionDto.region,
-              numOfRows: 10,
+              numOfRows: 30,
               pageNo: 1,
               listYN: 'Y',
               arrange: 'A',
-              eventStartDate: todayDate,
             },
           },
         ),
@@ -74,22 +59,22 @@ export class FestivalService {
       const festivals = data?.response?.body?.items?.item ?? [];
 
       // 날짜 필터링
+      const today = dayjs();
+      const oneMonthLater = today.add(365, 'day');
       const filtered = festivals.filter((festival) => {
-        return (
-          dayjs(festival.eventstartdate, 'YYYYMMDD').isAfter(todayDate) &&
-          dayjs(festival.eventstartdate, 'YYYYMMDD').isBefore(oneMonthLaterDate)
-        );
+        const startDate = dayjs(festival.eventstartdate, 'YYYYMMDD');
+        return startDate.isAfter(today) && startDate.isBefore(oneMonthLater);
       });
 
       this.logger.debug(
         `[getFestivalByRegion] 날짜 필터링 후 항목 수: ${filtered.length}`,
       );
 
-      // 정렬 by startDate (오름차순)
+      // 정렬 by startDate (내림차순)
       const sorted = filtered.sort((a, b) => {
         return (
-          dayjs(a.eventstartdate, 'YYYYMMDD').unix() -
-          dayjs(b.eventstartdate, 'YYYYMMDD').unix()
+          dayjs(b.eventstartdate, 'YYYYMMDD').unix() -
+          dayjs(a.eventstartdate, 'YYYYMMDD').unix()
         );
       });
 

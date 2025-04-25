@@ -21,8 +21,10 @@ export class FestivalController {
     explode: false,
     schema: {
       type: 'string',
-      enum: Object.values(RegionCode),
-      default: RegionCode.서울,
+      enum: Object.entries(RegionCode).map(
+        ([key, value]) => `${key}: ${value}`,
+      ),
+      default: '서울: 11',
     },
   })
   @Get()
