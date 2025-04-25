@@ -45,12 +45,32 @@ export class NotificationService implements OnModuleDestroy {
         throw new InternalServerErrorException('수신자 ID가 필요합니다.');
       }
 
+      if (!createNotificationDto.title) {
+        this.logger.error('알림 제목이 없습니다.');
+        throw new InternalServerErrorException('알림 제목이 필요합니다.');
+      }
+
+      if (!createNotificationDto.content) {
+        this.logger.error('알림 내용이 없습니다.');
+        throw new InternalServerErrorException('알림 내용이 필요합니다.');
+      }
+
       const notification = this.notificationRepository.create({
         ...createNotificationDto,
         receiverId: createNotificationDto.receiverId,
       });
-      const savedNotification =
-        await this.notificationRepository.save(notification);
+
+      // 타임아웃 설정
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('알림 생성 시간 초과'));
+        }, 10000); // 10초 타임아웃
+      });
+
+      const savedNotification = await Promise.race<Notification>([
+        this.notificationRepository.save(notification),
+        timeoutPromise,
+      ]);
 
       this.logger.log(`알림 저장 성공: ID ${savedNotification.id}`);
 

@@ -27,7 +27,7 @@ export class LikeService {
     );
 
     return await this.likeRepository.manager.transaction(
-      'SERIALIZABLE',
+      'READ COMMITTED',
       async (manager) => {
         this.logger.log('트랜잭션 시작');
 
@@ -80,8 +80,11 @@ export class LikeService {
             const notification = await this.notificationService.create({
               type: NotificationType.LIKE,
               receiverId: likedUserId,
+              title: '새로운 좋아요',
+              content: `${user.nickname}님이 회원님을 좋아합니다.`,
               data: {
                 senderId: userId,
+                senderNickname: user.nickname,
               },
             });
 
