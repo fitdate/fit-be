@@ -3,9 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '../../redis/redis.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { v4 as uuidv4 } from 'uuid';
+import { CookieOptions } from 'express';
+import { JwtTokenResponse } from '../types/auth.types';
 
 @Injectable()
 export class TokenService {
@@ -170,26 +172,112 @@ export class TokenService {
     userId: string,
     oldTokenId: string,
   ): Promise<{ accessToken: string; refreshToken: string; tokenId: string }> {
-    this.logger.debug(
-      `Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`,
-    );
-    // 이전 토큰 유효성 검사
-    const isValid = await this.validateRefreshToken(userId, oldTokenId);
-    if (!isValid) {
-      this.logger.warn(
-        `Invalid refresh token during rotation for user: ${userId}`,
+    try {
+      this.logger.debug(
+        `Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`,
       );
-      throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
+
+      // 이전 토큰 유효성 검사
+      const isValid = await this.validateRefreshToken(userId, oldTokenId);
+      if (!isValid) {
+        this.logger.warn(
+          `Invalid refresh token during rotation for user: ${userId}`,
+        );
+        throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
+      }
+
+      // 이전 토큰 삭제
+      await this.revokeRefreshToken(userId, oldTokenId);
+      this.logger.debug(`Successfully revoked old refresh token`);
+
+      // 새로운 토큰 발급
+      const newTokens = await this.generateTokens(userId, UserRole.USER);
+      this.logger.debug(
+        `Successfully generated new tokens for user: ${userId}`,
+      );
+
+      return newTokens;
+    } catch (error) {
+      this.logger.error('Error rotating refresh token', {
+        userId,
+        oldTokenId,
+        error: error instanceof UnauthorizedException,
+      });
+      throw new UnauthorizedException('Failed to rotate refresh token');
+    }
+  }
+
+  createCookieOptions(maxAge: number, origin?: string): CookieOptions {
+    this.logger.debug(
+      `Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`,
+    );
+    let domain: string | undefined;
+
+    const configDomain = this.configService.get('app.host', {
+      infer: true,
+    });
+    if (configDomain) {
+      domain = configDomain;
+      this.logger.debug(`Using config domain: ${domain}`);
+    } else if (origin) {
+      const hostname = new URL(origin).hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        domain = 'localhost';
+      } else {
+        domain = hostname;
+      }
+      this.logger.debug(`Using origin hostname as domain: ${domain}`);
     }
 
-    // 이전 토큰 삭제
-    await this.revokeRefreshToken(userId, oldTokenId);
-    this.logger.debug(`Successfully revoked old refresh token`);
+    const options: CookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge,
+      domain: '.fit-date.co.kr',
+      path: '/',
+    };
 
-    // 새로운 토큰 발급
-    const newTokens = await this.generateTokens(userId, UserRole.USER);
-    this.logger.debug(`Successfully generated new tokens for user: ${userId}`);
+    this.logger.debug(`Created cookie options:`, options);
+    return options;
+  }
 
-    return newTokens;
+  getLogoutCookieOptions(origin?: string): {
+    accessOptions: CookieOptions;
+    refreshOptions: CookieOptions;
+  } {
+    this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
+    const options = {
+      accessOptions: this.createCookieOptions(0, origin),
+      refreshOptions: this.createCookieOptions(0, origin),
+    };
+    this.logger.debug(`Created logout cookie options:`, options);
+    return options;
+  }
+
+  async generateAndSetTokens(
+    userId: string,
+    userRole: UserRole,
+    origin?: string,
+  ): Promise<JwtTokenResponse> {
+    const { accessToken, refreshToken } = await this.generateTokens(
+      userId,
+      userRole,
+    );
+
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    return {
+      accessToken,
+      refreshToken,
+      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+    };
   }
 }

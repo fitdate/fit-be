@@ -13,7 +13,8 @@ import { LocationModule } from '../location/location.module';
 import { ProfileModule } from '../profile/profile.module';
 import { S3Module } from '../s3/s3.module';
 import { ProfileImageModule } from '../profile/profile-image/profile-image.module';
-import { TokenService } from './token.service';
+import { TokenService } from './services/token.service';
+import { SocialAuthService } from './services/social-auth.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { TokenService } from './token.service';
       provide: HashService,
       useClass: BcryptService,
     },
+    SocialAuthService,
     JwtStrategy,
     GoogleStrategy,
     TokenService,

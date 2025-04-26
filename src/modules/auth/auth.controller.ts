@@ -28,10 +28,16 @@ import { RequestWithUser } from './types/request.types';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from 'src/modules/s3/types/multer.types';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { SocialAuthService } from './services/social-auth.service';
+import { AuthProvider } from './types/oatuth.types';
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly socialAuthService: SocialAuthService,
+  ) {}
 
   // 회원 가입
   @SkipProfileComplete()
@@ -148,18 +154,7 @@ export class AuthController {
   })
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
-    try {
-      const redirectUrl = await this.authService.handleGoogleCallback(
-        req.user as { email: string; name?: string },
-        req,
-        res,
-      );
-      return res.redirect(redirectUrl);
-    } catch (error) {
-      throw new BadRequestException('구글 로그인에 실패했습니다.', {
-        cause: error,
-      });
-    }
+    return this.handleSocialCallback(req, res, AuthProvider.GOOGLE);
   }
 
   // Kakao OAuth 로그인
@@ -182,18 +177,7 @@ export class AuthController {
   @ApiResponse({ status: 302, description: '프론트엔드로 리다이렉트' })
   @UseGuards(AuthGuard('kakao'))
   async kakaoCallback(@Req() req: Request, @Res() res: Response) {
-    try {
-      const redirectUrl = await this.authService.handleKakaoCallback(
-        req.user as { email: string; name?: string },
-        req,
-        res,
-      );
-      return res.redirect(redirectUrl);
-    } catch (error) {
-      throw new BadRequestException('카카오 로그인에 실패했습니다.', {
-        cause: error,
-      });
-    }
+    return this.handleSocialCallback(req, res, AuthProvider.KAKAO);
   }
 
   // Naver OAuth 로그인
@@ -219,15 +203,24 @@ export class AuthController {
   })
   @UseGuards(AuthGuard('naver'))
   async naverCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleSocialCallback(req, res, AuthProvider.NAVER);
+  }
+
+  private async handleSocialCallback(
+    req: Request,
+    res: Response,
+    authProvider: AuthProvider,
+  ) {
     try {
-      const redirectUrl = await this.authService.handleNaverCallback(
+      const redirectUrl = await this.socialAuthService.handleSocialCallback(
         req.user as { email: string; name?: string },
+        authProvider,
         req,
         res,
       );
       return res.redirect(redirectUrl);
     } catch (error) {
-      throw new BadRequestException('네이버 로그인에 실패했습니다.', {
+      throw new BadRequestException(`${authProvider} 로그인에 실패했습니다.`, {
         cause: error,
       });
     }

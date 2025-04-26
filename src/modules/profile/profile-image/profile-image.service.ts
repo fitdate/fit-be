@@ -223,4 +223,83 @@ export class ProfileImageService {
       throw new InternalServerErrorException('이미지 이동에 실패했습니다.');
     }
   }
+
+  async processImagesInChunks(
+    images: string[],
+    profileId: string,
+    log: (message: string) => void,
+  ) {
+    const CHUNK_SIZE = 3; // 동시에 처리할 이미지 수
+    const results: Array<{
+      profile: { id: string };
+      imageUrl: string;
+      key: string;
+      isMain: boolean;
+    } | null> = [];
+
+    log(`Starting to process ${images.length} images`);
+    log(`Input images: ${JSON.stringify(images, null, 2)}`);
+
+    for (let i = 0; i < images.length; i += CHUNK_SIZE) {
+      const chunk = images.slice(i, i + CHUNK_SIZE);
+      log(
+        `Processing chunk ${i / CHUNK_SIZE + 1}: ${JSON.stringify(chunk, null, 2)}`,
+      );
+      const chunkResults = await Promise.all(
+        chunk.map(async (url, index) => {
+          try {
+            log(`Processing image ${i + index + 1}: ${url}`);
+            if (!url) {
+              log(`Skipping null/undefined URL at index ${i + index}`);
+              return null;
+            }
+
+            log(`Extracting key from URL: ${url}`);
+            const key = this.s3Service.extractKeyFromUrl(url);
+            log(`Extracted key: ${key}`);
+            log(
+              `URL components: ${JSON.stringify(url.split('.amazonaws.com/'), null, 2)}`,
+            );
+
+            log(
+              `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
+            );
+            const moved = await this.moveTempToProfileImage(profileId, key);
+            log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
+
+            const result = {
+              profile: { id: profileId },
+              imageUrl: moved.url,
+              key: moved.key,
+              isMain: i + index === 0,
+            };
+            log(
+              `Created profile image object: ${JSON.stringify(result, null, 2)}`,
+            );
+            return result;
+          } catch (err) {
+            log(
+              `Failed to process image ${i + index + 1}: ${
+                err instanceof Error ? err.message : err
+              }`,
+            );
+            if (err instanceof Error && err.stack) {
+              log(`Error stack: ${err.stack}`);
+            }
+            return null;
+          }
+        }),
+      );
+      log(
+        `Chunk ${i / CHUNK_SIZE + 1} results: ${JSON.stringify(chunkResults, null, 2)}`,
+      );
+      results.push(...chunkResults);
+    }
+
+    const filteredResults = results.filter(
+      (img): img is NonNullable<typeof img> => img !== null,
+    );
+    log(`Final filtered results: ${JSON.stringify(filteredResults, null, 2)}`);
+    return filteredResults;
+  }
 }

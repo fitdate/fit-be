@@ -6,7 +6,7 @@ import { AuthProvider } from '../types/oatuth.types';
 import { SocialUserInfo } from '../types/oatuth.types';
 import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
-import { TokenService } from '../token.service';
+import { TokenService } from './token.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 
 @Injectable()
@@ -81,41 +81,7 @@ export class SocialAuthService {
     req: Request,
     res: Response,
   ): Promise<string> {
-    this.logger.log(`Processing Google callback for user: ${user.email}`);
-    try {
-      const socialUserInfo: SocialUserInfo = {
-        email: user.email,
-        name: user.name,
-        authProvider: AuthProvider.GOOGLE,
-      };
-
-      const result = await this.processSocialLogin(
-        socialUserInfo,
-        req.headers.origin,
-      );
-
-      res.cookie('accessToken', result.accessToken, result.accessOptions);
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
-
-      const frontendUrl =
-        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
-        this.configService.get('app.host', { infer: true });
-
-      this.logger.log(
-        `Successfully processed Google callback for user: ${user.email}`,
-      );
-      return `${frontendUrl}${result.redirectUrl}`;
-    } catch (error) {
-      this.logger.error(
-        `Failed to process Google callback for user: ${user.email}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
-      );
-      throw new UnauthorizedException(
-        '구글 로그인 처리 중 오류가 발생했습니다.',
-        { cause: error },
-      );
-    }
+    return this.handleSocialCallback(user, AuthProvider.GOOGLE, req, res);
   }
 
   async handleKakaoCallback(
@@ -123,54 +89,23 @@ export class SocialAuthService {
     req: Request,
     res: Response,
   ): Promise<string> {
-    this.logger.log(`Processing Kakao callback for user: ${user.email}`);
-    try {
-      const socialUserInfo: SocialUserInfo = {
-        email: user.email,
-        name: user.name,
-        authProvider: AuthProvider.KAKAO,
-      };
-
-      const result = await this.processSocialLogin(
-        socialUserInfo,
-        req.headers.origin,
-      );
-
-      res.cookie('accessToken', result.accessToken, result.accessOptions);
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
-
-      const frontendUrl =
-        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
-        this.configService.get('app.host', { infer: true });
-
-      this.logger.log(
-        `Successfully processed Kakao callback for user: ${user.email}`,
-      );
-      return `${frontendUrl}${result.redirectUrl}`;
-    } catch (error) {
-      this.logger.error(
-        `Failed to process Kakao callback for user: ${user.email}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
-      );
-      throw new UnauthorizedException(
-        '카카오 로그인 처리 중 오류가 발생했습니다.',
-        { cause: error },
-      );
-    }
+    return this.handleSocialCallback(user, AuthProvider.KAKAO, req, res);
   }
 
-  async handleNaverCallback(
+  async handleSocialCallback(
     user: { email: string; name?: string },
+    authProvider: AuthProvider,
     req: Request,
     res: Response,
   ): Promise<string> {
-    this.logger.log(`Processing Naver callback for user: ${user.email}`);
+    this.logger.log(
+      `Processing ${authProvider} callback for user: ${user.email}`,
+    );
     try {
       const socialUserInfo: SocialUserInfo = {
         email: user.email,
         name: user.name,
-        authProvider: AuthProvider.NAVER,
+        authProvider,
       };
 
       const result = await this.processSocialLogin(
@@ -186,17 +121,16 @@ export class SocialAuthService {
         this.configService.get('app.host', { infer: true });
 
       this.logger.log(
-        `Successfully processed Naver callback for user: ${user.email}`,
+        `Successfully processed ${authProvider} callback for user: ${user.email}`,
       );
       return `${frontendUrl}${result.redirectUrl}`;
     } catch (error) {
       this.logger.error(
-        `Failed to process Naver callback for user: ${user.email}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
+        `Failed to process ${authProvider} callback for user: ${user.email}`,
+        error instanceof Error ? error.stack : String(error),
       );
       throw new UnauthorizedException(
-        '네이버 로그인 처리 중 오류가 발생했습니다.',
+        `${authProvider} 로그인 처리 중 오류가 발생했습니다.`,
         { cause: error },
       );
     }
@@ -215,7 +149,6 @@ export class SocialAuthService {
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         domain = 'localhost';
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         domain = hostname;
       }
     }

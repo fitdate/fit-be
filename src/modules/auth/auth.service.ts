@@ -1,24 +1,18 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
-import { JwtService } from '@nestjs/jwt';
 import { AllConfig } from 'src/common/config/config.types';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { RegisterDto } from './dto/register.dto';
 import { EmailLoginDto } from './dto/email-login.dto';
-import { MailerService } from '../mailer/mailer.service';
 import { RedisService } from '../redis/redis.service';
-import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { AuthProvider } from './types/oatuth.types';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { CookieOptions, Response, Request } from 'express';
+import { Response, Request } from 'express';
 import { User } from '../user/entities/user.entity';
-import { LocationService } from 'src/modules/location/location.service';
-import { SocialUserInfo } from './types/oatuth.types';
 import { JwtTokenResponse, LoginResponse } from './types/auth.types';
-import { ProfileService } from '../profile/profile.service';
 import { Profile } from '../profile/entities/profile.entity';
 import { DataSource } from 'typeorm';
 import { InternalServerErrorException } from '@nestjs/common';
@@ -29,8 +23,9 @@ import { UserInterestCategory } from '../profile/interest-category/entities/user
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 import { S3Service } from '../s3/s3.service';
-import { TokenService } from './token.service';
+import { TokenService } from './services/token.service';
 import { RequestWithUser } from './types/request.types';
+import { EmailAuthService } from './services/email-auth.service';
 
 @Injectable()
 export class AuthService {
@@ -40,97 +35,13 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly hashService: HashService,
     private readonly configService: ConfigService<AllConfig>,
-    private readonly jwtService: JwtService,
-    private readonly mailerService: MailerService,
     private readonly redisService: RedisService,
-    private readonly locationService: LocationService,
-    private readonly profileService: ProfileService,
     private readonly dataSource: DataSource,
     private readonly s3Service: S3Service,
     private readonly profileImageService: ProfileImageService,
     private readonly tokenService: TokenService,
+    private readonly emailAuthService: EmailAuthService,
   ) {}
-  private async processImagesInChunks(
-    images: string[],
-    profileId: string,
-    log: (message: string) => void,
-  ) {
-    const CHUNK_SIZE = 3; // 동시에 처리할 이미지 수
-    const results: Array<{
-      profile: { id: string };
-      imageUrl: string;
-      key: string;
-      isMain: boolean;
-    } | null> = [];
-
-    log(`Starting to process ${images.length} images`);
-    log(`Input images: ${JSON.stringify(images, null, 2)}`);
-
-    for (let i = 0; i < images.length; i += CHUNK_SIZE) {
-      const chunk = images.slice(i, i + CHUNK_SIZE);
-      log(
-        `Processing chunk ${i / CHUNK_SIZE + 1}: ${JSON.stringify(chunk, null, 2)}`,
-      );
-      const chunkResults = await Promise.all(
-        chunk.map(async (url, index) => {
-          try {
-            log(`Processing image ${i + index + 1}: ${url}`);
-            if (!url) {
-              log(`Skipping null/undefined URL at index ${i + index}`);
-              return null;
-            }
-
-            log(`Extracting key from URL: ${url}`);
-            const key = this.s3Service.extractKeyFromUrl(url);
-            log(`Extracted key: ${key}`);
-            log(
-              `URL components: ${JSON.stringify(url.split('.amazonaws.com/'), null, 2)}`,
-            );
-
-            log(
-              `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
-            );
-            const moved = await this.profileImageService.moveTempToProfileImage(
-              profileId,
-              key,
-            );
-            log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
-
-            const result = {
-              profile: { id: profileId },
-              imageUrl: moved.url,
-              key: moved.key,
-              isMain: i + index === 0,
-            };
-            log(
-              `Created profile image object: ${JSON.stringify(result, null, 2)}`,
-            );
-            return result;
-          } catch (err) {
-            log(
-              `Failed to process image ${i + index + 1}: ${
-                err instanceof Error ? err.message : err
-              }`,
-            );
-            if (err instanceof Error && err.stack) {
-              log(`Error stack: ${err.stack}`);
-            }
-            return null;
-          }
-        }),
-      );
-      log(
-        `Chunk ${i / CHUNK_SIZE + 1} results: ${JSON.stringify(chunkResults, null, 2)}`,
-      );
-      results.push(...chunkResults);
-    }
-
-    const filteredResults = results.filter(
-      (img): img is NonNullable<typeof img> => img !== null,
-    );
-    log(`Final filtered results: ${JSON.stringify(filteredResults, null, 2)}`);
-    return filteredResults;
-  }
 
   async register(registerDto: RegisterDto) {
     const logBuffer: string[] = [];
@@ -142,7 +53,7 @@ export class AuthService {
     log(`Attempting to register new user with email: ${registerDto.email}`);
 
     // 이메일 인증 여부 확인
-    const isEmailVerified = await this.checkEmailVerification(
+    const isEmailVerified = await this.emailAuthService.checkEmailVerification(
       registerDto.email,
     );
     if (!isEmailVerified) {
@@ -216,11 +127,12 @@ export class AuthService {
       if (registerDto.images?.length) {
         log(`Found ${registerDto.images.length} images to process`);
         log('Starting profile image processing');
-        const profileImages = await this.processImagesInChunks(
-          registerDto.images,
-          profile.id,
-          log,
-        );
+        const profileImages =
+          await this.profileImageService.processImagesInChunks(
+            registerDto.images,
+            profile.id,
+            log,
+          );
 
         log(`Processed ${profileImages.length} images`);
         if (profileImages.length > 0) {
@@ -252,11 +164,22 @@ export class AuthService {
             `Profile images after save: ${JSON.stringify(savedImages, null, 2)}`,
           );
           log(`Profile images saved successfully for user: ${user.id}`);
+
+          // 프로필 이미지가 2장 미만인지 확인**
+          if (savedImages.length < 2) {
+            log('Profile images are less than 2. Throwing error.');
+            throw new UnauthorizedException(
+              '프로필 이미지는 최소 2장 이상이어야 합니다.',
+            );
+          }
         } else {
           log('No profile images to save');
         }
       } else {
         log('No images found in registerDto.images');
+        throw new UnauthorizedException(
+          '프로필 이미지는 최소 2장 이상이어야 합니다.',
+        );
       }
 
       // 4. MBTI 저장
@@ -373,7 +296,7 @@ export class AuthService {
     return { message: '비밀번호 변경 성공' };
   }
 
-  async validate(email: string, password: string) {
+  async validate(email: string, password: string): Promise<User> {
     this.logger.log(`Validating user with email: ${email}`);
     const user = await this.userService.findUserByEmail(email);
     if (!user) {
@@ -381,8 +304,6 @@ export class AuthService {
         '이메일 또는 비밀번호가 일치하지 않습니다.',
       );
     }
-
-    console.log(password);
 
     // const isPasswordValid = await this.hashService.compare(
     //   password,
@@ -394,6 +315,13 @@ export class AuthService {
     //     '이메일 또는 비밀번호가 일치하지 않습니다.',
     //   );
     // }
+
+    if (password !== user.password) {
+      this.logger.log(`Password validation failed for email: ${email}`);
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 일치하지 않습니다.',
+      );
+    }
 
     this.logger.log(`Successfully validated user with email: ${email}`);
     return user;
@@ -407,23 +335,7 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
 
-    const { accessToken, refreshToken } =
-      await this.tokenService.generateTokens(user.id, user.role);
-
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
-
-    return {
-      accessToken,
-      refreshToken,
-      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
-    };
+    return this.tokenService.generateAndSetTokens(user.id, user.role, origin);
   }
 
   //이메일 로그인
@@ -434,39 +346,15 @@ export class AuthService {
   ): Promise<LoginResponse> {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
-    const { accessToken, refreshToken } =
-      await this.tokenService.generateTokens(user.id, user.role);
 
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
-
-    this.logger.debug(`Setting cookies with options:`, {
-      accessTokenMaxAge,
-      refreshTokenMaxAge,
-      origin: req.headers.origin,
-    });
-
-    const accessOptions = this.createCookieOptions(
-      accessTokenMaxAge,
-      req.headers.origin,
-    );
-    const refreshOptions = this.createCookieOptions(
-      refreshTokenMaxAge,
+    const tokens = await this.tokenService.generateAndSetTokens(
+      user.id,
+      user.role,
       req.headers.origin,
     );
 
-    this.logger.debug(`Cookie options:`, {
-      accessOptions,
-      refreshOptions,
-    });
-
-    res.cookie('accessToken', accessToken, accessOptions);
-    res.cookie('refreshToken', refreshToken, refreshOptions);
+    res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
+    res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
 
     this.logger.debug(`Cookies set successfully`);
 
@@ -486,13 +374,13 @@ export class AuthService {
   //로그아웃
   async handleLogout(req: RequestWithUser, res: Response) {
     try {
-      const cookieOptions = this.logoutCookieOptions(req.headers.origin);
+      const cookieOptions = this.tokenService.getLogoutCookieOptions(
+        req.headers.origin,
+      );
 
-      // 쿠키 만료 설정
       res.cookie('accessToken', '', cookieOptions.accessOptions);
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
 
-      // Refresh Token 취소
       const userId = req.user?.sub;
       const tokenId = (req.user as { tokenId?: string })?.tokenId;
       if (userId && tokenId) {
@@ -508,358 +396,22 @@ export class AuthService {
     }
   }
 
-  //구글 콜백 처리
-  async handleGoogleCallback(
-    user: { email: string; name?: string },
-    req: Request,
-    res: Response,
-  ): Promise<string> {
-    this.logger.log(`Processing Google callback for user: ${user.email}`);
-    try {
-      const socialUserInfo: SocialUserInfo = {
-        email: user.email,
-        name: user.name,
-        authProvider: AuthProvider.GOOGLE,
-      };
-
-      const result = await this.googleLogin(socialUserInfo, req.headers.origin);
-
-      res.cookie('accessToken', result.accessToken, result.accessOptions);
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
-
-      // 프론트엔드 URL 및 리다이렉트 경로 설정
-      const frontendUrl =
-        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
-        this.configService.get('app.host', { infer: true });
-
-      // 리다이렉트 URL 구성
-      this.logger.log(
-        `Successfully processed Google callback for user: ${user.email}`,
-      );
-      return `${frontendUrl}${result.redirectUrl}`;
-    } catch (error) {
-      this.logger.error(
-        `Failed to process Google callback for user: ${user.email}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
-      );
-      throw new UnauthorizedException(
-        '구글 로그인 처리 중 오류가 발생했습니다.',
-        { cause: error },
-      );
-    }
-  }
-
-  async handleKakaoCallback(
-    user: { email: string; name?: string },
-    req: Request,
-    res: Response,
-  ): Promise<string> {
-    this.logger.log(`Processing Kakao callback for user: ${user.email}`);
-    try {
-      const socialUserInfo: SocialUserInfo = {
-        email: user.email,
-        name: user.name,
-        authProvider: AuthProvider.KAKAO,
-      };
-      const result = await this.kakaoLogin(socialUserInfo, req.headers.origin);
-
-      res.cookie('accessToken', result.accessToken, result.accessOptions);
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
-
-      const frontendUrl =
-        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
-        this.configService.get('app.host', { infer: true });
-
-      this.logger.log(
-        `Successfully processed Kakao callback for user: ${user.email}`,
-      );
-      return `${frontendUrl}${result.redirectUrl}`;
-    } catch (error) {
-      this.logger.error(
-        `Failed to process Kakao callback for user: ${user.email}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
-      );
-      throw new UnauthorizedException(
-        '카카오 로그인 처리 중 오류가 발생했습니다.',
-        { cause: error },
-      );
-    }
-  }
-
-  async handleNaverCallback(
-    user: { email: string; name?: string },
-    req: Request,
-    res: Response,
-  ): Promise<string> {
-    this.logger.log(`Processing Naver callback for user: ${user.email}`);
-    try {
-      const socialUserInfo: SocialUserInfo = {
-        email: user.email,
-        name: user.name,
-        authProvider: AuthProvider.NAVER,
-      };
-      const result = await this.naverLogin(socialUserInfo, req.headers.origin);
-
-      res.cookie('accessToken', result.accessToken, result.accessOptions);
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
-
-      const frontendUrl =
-        this.configService.get('social.socialFrontendUrl', { infer: true }) ||
-        this.configService.get('app.host', { infer: true });
-
-      this.logger.log(
-        `Successfully processed Naver callback for user: ${user.email}`,
-      );
-      return `${frontendUrl}${result.redirectUrl}`;
-    } catch (error) {
-      this.logger.error(
-        `Failed to process Naver callback for user: ${user.email}`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        error.stack,
-      );
-      throw new UnauthorizedException(
-        '네이버 로그인 처리 중 오류가 발생했습니다.',
-        { cause: error },
-      );
-    }
-  }
-
-  //쿠키
-  createCookieOptions(maxAge: number, origin?: string): CookieOptions {
-    this.logger.debug(
-      `Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`,
-    );
-    let domain: string | undefined;
-
-    const configDomain = this.configService.get('app.host', {
-      infer: true,
-    });
-    if (configDomain) {
-      domain = configDomain;
-      this.logger.debug(`Using config domain: ${domain}`);
-    } else if (origin) {
-      // 환경 변수에 설정이 없는 경우 origin에서 도메인 추출
-      const hostname = new URL(origin).hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        domain = 'localhost';
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        domain = hostname;
-      }
-      this.logger.debug(`Using origin hostname as domain: ${domain}`);
-    }
-
-    const options: CookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge,
-      domain: '.fit-date.co.kr', //배포할때 삭제하기,
-      path: '/',
-    };
-
-    this.logger.debug(`Created cookie options:`, options);
-    return options;
-  }
-
-  //로그아웃
-  logoutCookieOptions(origin?: string): {
-    accessOptions: CookieOptions;
-    refreshOptions: CookieOptions;
-  } {
-    this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
-    const options = {
-      accessOptions: this.createCookieOptions(0, origin),
-      refreshOptions: this.createCookieOptions(0, origin),
-    };
-    this.logger.debug(`Created logout cookie options:`, options);
-    return options;
-  }
-
   async sendVerificationEmail(
     sendVerificationEmailDto: SendVerificationEmailDto,
   ): Promise<{ success: boolean }> {
-    console.log(sendVerificationEmailDto);
-    this.logger.log(
-      `Sending verification email to: ${sendVerificationEmailDto.email}`,
+    return this.emailAuthService.sendVerificationEmail(
+      sendVerificationEmailDto,
     );
-    const { email } = sendVerificationEmailDto;
-    // 6자리 인증 코드 생성
-    const verificationCode = this.mailerService.generateEmailVerificationCode();
-
-    // Redis에 코드를 키로, 이메일을 값으로 저장 (역방향 매핑)
-    const codeKey = `verification-code:${verificationCode}`;
-
-    // 시간 문자열을 초 단위로 변환
-    const tokenTtlStr = this.configService.getOrThrow('mailer.tokenTtl', {
-      infer: true,
-    });
-    const tokenTtlSeconds = parseTimeToSeconds(tokenTtlStr);
-
-    // 코드를 키로 이메일을 저장
-    await this.redisService.set(codeKey, email, tokenTtlSeconds);
-
-    // 생성한 인증 코드를 전달하여 이메일 발송
-    await this.mailerService.sendEmailVerification(email, verificationCode);
-    this.logger.log(
-      `Successfully sent verification email to: ${sendVerificationEmailDto.email}`,
-    );
-    return { success: true };
   }
 
   async verifyEmail(
     verifyEmailDto: VerifyEmailDto,
   ): Promise<{ verified: boolean; email: string }> {
-    const logBuffer: string[] = [];
-    const log = (message: string) => {
-      logBuffer.push(message);
-      this.logger.log(message);
-    };
-
-    log(`Starting email verification for code: ${verifyEmailDto.code}`);
-
-    try {
-      // Redis에서 코드로 이메일 찾기
-      const codeKey = `verification-code:${verifyEmailDto.code}`;
-      const email = await this.redisService.get(codeKey);
-      log(`Looking up email with code key: ${codeKey}`);
-
-      if (!email) {
-        log('Verification code not found or expired');
-        throw new UnauthorizedException(
-          '유효하지 않거나 만료된 인증 코드입니다.',
-        );
-      }
-
-      // 인증 완료 상태 저장
-      const verifiedKey = `email-verified:${email}`;
-      const verifiedTtlSeconds = 60 * 60; // 1시간
-      await this.redisService.set(verifiedKey, 'verified', verifiedTtlSeconds);
-      log(`Email verification status saved for: ${email}`);
-
-      // 인증 코드 삭제
-      await this.redisService.del(codeKey);
-      log(`Verification code deleted for: ${email}`);
-
-      return {
-        verified: true,
-        email,
-      };
-    } catch (error) {
-      log(
-        `Email verification failed: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`,
-      );
-      throw new UnauthorizedException(
-        '인증에 실패했습니다. 유효하지 않거나 만료된 인증 코드입니다.',
-        { cause: error },
-      );
-    }
+    return this.emailAuthService.verifyEmail(verifyEmailDto);
   }
 
   async checkEmailVerification(email: string): Promise<boolean> {
-    this.logger.log(`Checking email verification status for: ${email}`);
-    const verifiedKey = `email-verified:${email}`;
-    const verifiedValue = await this.redisService.get(verifiedKey);
-    this.logger.log(
-      `Checking verification - Key: ${verifiedKey}, Value: ${verifiedValue}`,
-    );
-    return verifiedValue === 'verified';
-  }
-
-  // 소셜 로그인
-  async processSocialLogin(
-    userData: SocialUserInfo,
-    origin?: string,
-  ): Promise<
-    JwtTokenResponse & {
-      isProfileComplete: boolean;
-      redirectUrl: string;
-    }
-  > {
-    let user: User | null = await this.userService.findUserByEmail(
-      userData.email,
-    );
-
-    if (!user) {
-      try {
-        const newUser = await this.userService.createSocialUser({
-          email: userData.email,
-          name: userData.name,
-          authProvider: userData.authProvider,
-        });
-        user = newUser;
-      } catch (error) {
-        throw new UnauthorizedException(
-          '소셜 로그인 사용자 생성에 실패했습니다.',
-          {
-            cause: error,
-          },
-        );
-      }
-    }
-
-    const { accessToken, refreshToken } =
-      await this.tokenService.generateTokens(user.id, user.role);
-
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
-
-    const tokenResponse = {
-      accessToken,
-      refreshToken,
-      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
-    };
-
-    // 프로필 완성 여부 확인
-    const isProfileComplete = user.isProfileComplete || false;
-
-    // 리다이렉트 경로 결정
-    const redirectPath = isProfileComplete ? '/' : '/complete-profile';
-
-    return {
-      ...tokenResponse,
-      isProfileComplete,
-      redirectUrl: redirectPath,
-    };
-  }
-
-  // 구글 로그인
-  async googleLogin(userData: SocialUserInfo, origin?: string) {
-    return this.processSocialLogin(
-      {
-        ...userData,
-        authProvider: AuthProvider.GOOGLE,
-      },
-      origin,
-    );
-  }
-
-  async kakaoLogin(userData: SocialUserInfo, origin?: string) {
-    return this.processSocialLogin(
-      {
-        ...userData,
-        authProvider: AuthProvider.KAKAO,
-      },
-      origin,
-    );
-  }
-
-  async naverLogin(userData: SocialUserInfo, origin?: string) {
-    return this.processSocialLogin(
-      {
-        ...userData,
-        authProvider: AuthProvider.NAVER,
-      },
-      origin,
-    );
+    return this.emailAuthService.checkEmailVerification(email);
   }
 
   async deleteAccount(userId: string) {
@@ -971,31 +523,6 @@ export class AuthService {
       await qr.release();
       log('QueryRunner released');
     }
-  }
-
-  // 토큰 갱신 메서드 추가
-  async refreshTokens(
-    userId: string,
-    oldTokenId: string,
-    origin?: string,
-  ): Promise<JwtTokenResponse> {
-    const { accessToken, refreshToken } =
-      await this.tokenService.rotateRefreshToken(userId, oldTokenId);
-
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
-
-    return {
-      accessToken,
-      refreshToken,
-      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
-    };
   }
 
   async checkAndRefreshActivity(userId: string): Promise<boolean> {
