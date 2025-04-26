@@ -15,7 +15,7 @@ import { S3Module } from '../s3/s3.module';
 import { ProfileImageModule } from '../profile/profile-image/profile-image.module';
 import { TokenService } from './services/token.service';
 import { SocialAuthService } from './services/social-auth.service';
-
+import { EmailAuthService } from './services/email-auth.service';
 @Module({
   imports: [
     UserModule,
@@ -35,6 +35,7 @@ import { SocialAuthService } from './services/social-auth.service';
       useClass: BcryptService,
     },
     SocialAuthService,
+    EmailAuthService,
     JwtStrategy,
     GoogleStrategy,
     TokenService,
