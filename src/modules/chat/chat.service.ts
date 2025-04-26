@@ -7,6 +7,7 @@ import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../../common/enum/notification.enum';
 import { IsNull } from 'typeorm';
+import { calculateAge } from '../../common/util/age-calculator.util';
 
 @Injectable()
 export class ChatService {
@@ -224,7 +225,7 @@ export class ChatService {
           partner: {
             id: partner.id,
             name: partner.name,
-            age: partner.birthday ? this.calculateAge(partner.birthday) : null,
+            age: calculateAge(partner.birthday),
             height: partner.height || null,
           },
           createdAt: room.createdAt,
@@ -232,27 +233,6 @@ export class ChatService {
         };
       })
       .filter(Boolean);
-  }
-
-  /**
-   * 생년월일로 나이를 계산합니다.
-   * @param birthday 생년월일 (YYYY-MM-DD)
-   * @returns 나이
-   */
-  private calculateAge(birthday: string): number {
-    const today = new Date();
-    const birthDate = new Date(birthday);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-
-    return age;
   }
 
   /**
