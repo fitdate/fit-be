@@ -16,24 +16,24 @@ export class MatchSelection extends BaseTable {
   id: string;
 
   @ApiProperty()
-  @Column({ type: 'uuid', name: 'user_id' })
+  @Column({ type: 'uuid', name: 'userId' })
   userId: string;
 
   @ApiProperty()
-  @Column({ type: 'uuid', name: 'partner_id' })
+  @Column({ type: 'uuid', name: 'partnerId' })
   partnerId: string;
 
   @ApiProperty()
-  @Column({ type: 'uuid', name: 'selected_by' })
+  @Column({ type: 'uuid', name: 'selectedBy' })
   selectedBy: string;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'selector_id' })
+  @JoinColumn({ name: 'userId' })
   selector: User;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, { eager: true, onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'selected_id' })
+  @JoinColumn({ name: 'partnerId' })
   selected: User;
 }

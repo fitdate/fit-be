@@ -99,7 +99,7 @@ import { FestivalModule } from './modules/festival/festival.module';
           infer: true,
         }),
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        synchronize: true,
+        synchronize: false,
         logging: true,
         extra: {
           max: 1, // 최대 연결 풀 크기 (동시에 유지할 수 있는 최대 연결 수)
