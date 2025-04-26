@@ -61,14 +61,18 @@ export class SparkListService {
           return null;
         }
 
-        const profileImage = matchedUser.profile?.profileImage?.[0];
+        const profileImage = matchedUser.profile?.profileImage?.[0]?.imageUrl;
+        this.logger.debug(
+          `[getMatchList] 프로필 이미지 URL: ${profileImage || 'null'}`,
+        );
+
         return {
           matchedUserId: matchedUser.id,
           nickname: matchedUser.nickname,
           likeCount: matchedUser.likeCount,
           age: calculateAge(matchedUser.birthday),
           region: matchedUser.region,
-          profileImage: profileImage ? profileImage.imageUrl : null,
+          profileImage: profileImage || null,
         };
       })
       .filter(Boolean);
