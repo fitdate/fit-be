@@ -425,6 +425,13 @@ export class MatchService {
       `[getSelectorsList] 선택자 리스트 개수: ${selectorsList.length}`,
     );
 
+    selectorsList.forEach((selection, index) => {
+      this.logger.debug(`[getSelectorsList] 선택 ${index + 1} 정보:`);
+      this.logger.debug(`- 선택 ID: ${selection.id}`);
+      this.logger.debug(`- 선택자 ID: ${selection.selector.id}`);
+      this.logger.debug(`- 선택된 사람 ID: ${selectedUserId}`);
+    });
+
     return selectorsList;
   }
 }

@@ -56,23 +56,27 @@ export class SparkListService {
       `[getMatchList] 선택자 리스트 개수: ${selectorsList.length}`,
     );
 
-    const filteredSelectorsList = selectorsList.map((selection) => {
+    const matchList = selectorsList.map((selection) => {
       const selector = selection.selector;
-      this.logger.debug(`[getMatchList] 선택자 정보:`);
-      this.logger.debug(`- ID: ${selector.id}`);
-      this.logger.debug(`- 닉네임: ${selector.nickname}`);
-      this.logger.debug(`- 프로필 존재: ${!!selector.profile}`);
+      this.logger.debug(`[getMatchList] 매칭 데이터 변환:`);
+      this.logger.debug(`- 매칭 ID: ${selection.id}`);
+      this.logger.debug(`- 현재 유저 ID: ${userId}`);
+      this.logger.debug(`- 파트너 ID: ${selector.id}`);
+      this.logger.debug(`- 선택자 ID: ${selection.selector.id}`);
+      this.logger.debug(`- 선택자 닉네임: ${selector.nickname}`);
+      this.logger.debug(`- 선택자 좋아요 수: ${selector.likeCount}`);
+      this.logger.debug(`- 선택자 나이: ${calculateAge(selector.birthday)}`);
+      this.logger.debug(`- 선택자 지역: ${selector.region}`);
       this.logger.debug(
-        `- 프로필 이미지 개수: ${selector.profile?.profileImage?.length ?? 0}`,
-      );
-      this.logger.debug(
-        `- 첫 번째 프로필 이미지 URL: ${selector.profile?.profileImage?.[0]?.imageUrl ?? 'null'}`,
+        `- 선택자 프로필 이미지: ${selector.profile?.profileImage?.[0]?.imageUrl ?? '없음'}`,
       );
 
       const profileImage = selector.profile?.profileImage?.[0];
       return {
-        selectionId: selection.id,
-        selectorId: selector.id,
+        id: selection.id,
+        userId: userId,
+        partnerId: selector.id,
+        selectedBy: selection.selector.id,
         selectorNickname: selector.nickname,
         selectorLikeCount: selector.likeCount,
         selectorAge: calculateAge(selector.birthday),
@@ -80,7 +84,11 @@ export class SparkListService {
         selectorProfileImage: profileImage ? profileImage.imageUrl : null,
       };
     });
-    return filteredSelectorsList;
+
+    this.logger.debug(
+      `[getMatchList] 변환된 매칭 리스트 개수: ${matchList.length}`,
+    );
+    return matchList;
   }
 
   async getSparkList(userId: string) {
