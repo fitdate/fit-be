@@ -20,4 +20,10 @@ export class FestivalDto {
   @ApiProperty({ description: '축제 썸네일' })
   @IsString()
   thumbnail: string;
+  @ApiProperty({ description: '축제 네이버 검색 URL' })
+  @IsString()
+  naverSearchUrl: string | null;
+  @ApiProperty({ description: '축제 지역 코드' })
+  @IsString()
+  areaCode: string;
 }

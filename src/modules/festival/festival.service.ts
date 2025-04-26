@@ -3,12 +3,12 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { firstValueFrom } from 'rxjs';
-import * as dayjs from 'dayjs';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosResponse } from 'axios';
 import { FestivalDto } from './dto/festival.dto';
 import { FestivalRegionDto } from './dto/region.dto';
 import { FestivalResponse } from './types/festival.types';
-
+import { format } from 'date-fns';
+import { NaverSearchService } from './naver-search.service';
 @Injectable()
 export class FestivalService {
   private readonly logger = new Logger(FestivalService.name);
@@ -16,116 +16,87 @@ export class FestivalService {
   constructor(
     @Inject(HttpService) private readonly httpService: HttpService,
     private readonly configService: ConfigService<AllConfig>,
+    private readonly naverSearchService: NaverSearchService,
   ) {}
 
   async getFestivalByRegion(
     festivalRegionDto: FestivalRegionDto,
   ): Promise<FestivalDto[]> {
-    this.logger.debug(
-      `[getFestivalByRegion] 시작 - region: ${festivalRegionDto.region}`,
-    );
-    const today = dayjs();
-    const todayDate = today.format('YYYYMMDD');
-
     try {
       this.logger.debug('[getFestivalByRegion] API 요청 시작');
+      const today = format(new Date(), 'yyyyMMdd');
+
+      const serviceKey = `${this.configService.getOrThrow(
+        'publicApi.festivalDecodingApiKey',
+        {
+          infer: true,
+        },
+      )}`;
+
+      const params = {
+        serviceKey,
+        MobileOS: 'ETC',
+        MobileApp: 'AppTest',
+        _type: 'json',
+        listYN: 'Y',
+        arrange: 'A',
+        eventStartDate: `${today}`,
+      };
+
       this.logger.debug(
-        `[getFestivalByRegion] 요청 URL: https://apis.data.go.kr/B551011/KorService1/searchFestival1`,
+        `[getFestivalByRegion] 요청 파라미터: ${JSON.stringify(params)}`,
       );
-      this.logger.debug(
-        `[getFestivalByRegion] 요청 파라미터: ${JSON.stringify({
-          serviceKey: this.configService.getOrThrow(
-            'publicApi.festivalDecodingApiKey',
-            {
-              infer: true,
-            },
-          ),
-          MobileOS: 'ETC',
-          MobileApp: 'fit-date',
-          _type: 'json',
-          areaCode: festivalRegionDto.region,
-          numOfRows: 30,
-          pageNo: 1,
-          listYN: 'Y',
-          arrange: 'A',
-          eventStartDate: todayDate,
-        })}`,
-      );
-      const { data } = await firstValueFrom(
-        this.httpService.get<FestivalResponse>(
+
+      const response: AxiosResponse<FestivalResponse> = await firstValueFrom(
+        this.httpService.get(
           'https://apis.data.go.kr/B551011/KorService1/searchFestival1',
-          {
-            params: {
-              serviceKey: this.configService.getOrThrow(
-                'publicApi.festivalDecodingApiKey',
-                { infer: true },
-              ),
-              MobileOS: 'ETC',
-              MobileApp: 'fit-date',
-              _type: 'json',
-              areaCode: festivalRegionDto.region,
-              numOfRows: 30,
-              pageNo: 1,
-              listYN: 'Y',
-              arrange: 'A',
-              eventStartDate: todayDate,
-            },
-          },
+          { params },
         ),
       );
 
+      const data = response.data;
       this.logger.debug(`${JSON.stringify(data)}`);
-      this.logger.debug(
-        `[getFestivalByRegion] API 응답 수신 - 총 항목 수: ${
-          data?.response?.body?.items?.item?.length ?? 0
-        }`,
-      );
 
-      const festivals = data?.response?.body?.items?.item ?? [];
-
-      // 날짜 필터링
-      const today = dayjs();
-      const oneMonthLater = today.add(365, 'day');
-      const filtered = festivals.filter((festival) => {
-        const startDate = dayjs(festival.eventstartdate, 'YYYYMMDD');
-        return startDate.isAfter(today) && startDate.isBefore(oneMonthLater);
-      });
-
-      this.logger.debug(
-        `[getFestivalByRegion] 날짜 필터링 후 항목 수: ${filtered.length}`,
-      );
-
-      // 정렬 by startDate (내림차순)
-      const sorted = filtered.sort((a, b) => {
-        return (
-          dayjs(b.eventstartdate, 'YYYYMMDD').unix() -
-          dayjs(a.eventstartdate, 'YYYYMMDD').unix()
+      if (!data.response?.body?.items?.item) {
+        this.logger.warn(
+          `[getFestivalByRegion] 해당 지역(${festivalRegionDto.region})에 축제 정보가 없습니다.`,
         );
-      });
+        return [];
+      }
 
-      // Dto 매핑
-      const result = sorted.map((festival) => ({
-        title: festival.title,
-        startDate: festival.eventstartdate,
-        endDate: festival.eventenddate,
-        place: festival.addr1,
-        area: festival.areacode,
-        thumbnail: festival.firstimage,
-      }));
+      const festivals = data.response.body.items.item;
+      this.logger.debug(
+        `[getFestivalByRegion] API 응답 수신 - 총 항목 수: ${festivals.length}`,
+      );
+
+      const searchresult = await Promise.all(
+        festivals.map(async (festival) => {
+          const searchQuery = `${festival.title}`;
+          let naverSearchUrl =
+            await this.naverSearchService.getTopFestivalLink(searchQuery);
+          if (!naverSearchUrl) {
+            naverSearchUrl = `https://search.naver.com/search.naver?query=${encodeURIComponent(
+              festival.title,
+            )}`;
+          }
+          return {
+            title: festival.title,
+            startDate: festival.eventstartdate,
+            endDate: festival.eventenddate,
+            place: festival.addr1,
+            area: festival.areacode,
+            areaCode: festival.areacode,
+            thumbnail: festival.firstimage2,
+            naverSearchUrl,
+          };
+        }),
+      );
 
       this.logger.debug(
-        `[getFestivalByRegion] 최종 반환 항목 수: ${result.length}`,
+        `[getFestivalByRegion] 최종 반환 항목 수: ${searchresult.length}`,
       );
-      result.forEach((festival, index) => {
-        this.logger.debug(`[getFestivalByRegion] 축제 ${index + 1} 정보:`);
-        this.logger.debug(`- 제목: ${festival.title}`);
-        this.logger.debug(`- 시작일: ${festival.startDate}`);
-        this.logger.debug(`- 종료일: ${festival.endDate}`);
-        this.logger.debug(`- 장소: ${festival.place}`);
-        this.logger.debug(`- 지역: ${festival.area}`);
-      });
 
-      return result;
+      return searchresult;
     } catch (error) {
       this.logger.error(
         `[getFestivalByRegion] 오류 발생: ${error instanceof AxiosError ? error.message : error}`,

@@ -4,7 +4,8 @@ interface FestivalItem {
   eventenddate: string;
   addr1: string;
   areacode: string;
-  firstimage: string;
+  firstimage2: string;
+  areaCode: string;
 }
 
 export interface FestivalResponse {

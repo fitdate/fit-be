@@ -55,6 +55,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
+    "date-fns": "^4.1.0",
     "express-basic-auth": "^1.2.1",
     "ioredis": "^5.6.1",
     "joi": "^17.13.3",
