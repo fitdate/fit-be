@@ -4,35 +4,37 @@ import { FestivalDto } from './dto/festival.dto';
 import { ApiQuery, ApiOperation } from '@nestjs/swagger';
 import { FestivalRegionDto } from './dto/region.dto';
 import { RegionCode } from './enum/festival-region.enum';
-
+import { UserRequestFestivalService } from './user-request-festival.service';
 @Controller('festival')
 export class FestivalController {
-  constructor(private readonly festivalService: FestivalService) {}
+  constructor(
+    private readonly festivalService: FestivalService,
+    private readonly userRequestFestivalService: UserRequestFestivalService,
+  ) {}
 
-  @ApiOperation({ summary: '지역별 축제 조회' })
+  @ApiOperation({ summary: '전체 축제 조회' })
+  @Get()
+  getFestivals(): Promise<Record<string, FestivalDto[]>> {
+    return this.festivalService.getFestivals();
+  }
+
+  @ApiOperation({ summary: '지역 이름으로 축제 조회' })
   @ApiQuery({
-    name: 'region',
-    enum: RegionCode,
-    description: '지역 코드',
+    name: 'areaName',
+    description: '지역 이름 (예: 서울, 부산, 대구 등)',
     required: true,
-    example: RegionCode.서울,
-    enumName: 'RegionCode',
-    style: 'form',
-    explode: false,
     schema: {
       type: 'string',
-      enum: Object.entries(RegionCode).map(
-        ([key, value]) => `${key}: ${value}`,
-      ),
-      default: '서울: 11',
+      enum: Object.keys(RegionCode),
+      example: '서울',
     },
   })
-  @Get()
-  getFestivalByRegion(
-    @Query('region') region: RegionCode,
+  @Get('user-request')
+  getFestivalsByAreaName(
+    @Query() regionDto: FestivalRegionDto,
   ): Promise<FestivalDto[]> {
-    const festivalRegionDto = new FestivalRegionDto();
-    festivalRegionDto.region = region;
-    return this.festivalService.getFestivalByRegion(festivalRegionDto);
+    return this.userRequestFestivalService.getFestivalsByAreaName(
+      regionDto.region,
+    );
   }
 }

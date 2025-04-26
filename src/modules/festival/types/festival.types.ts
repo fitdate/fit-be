@@ -1,4 +1,4 @@
-interface FestivalItem {
+export interface FestivalItem {
   title: string;
   eventstartdate: string;
   eventenddate: string;

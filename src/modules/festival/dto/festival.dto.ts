@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
+import { RegionCode } from '../enum/festival-region.enum';
+import { IsEnum } from 'class-validator';
 
 export class FestivalDto {
   @ApiProperty({ description: '축제 이름' })
@@ -13,17 +15,16 @@ export class FestivalDto {
   endDate: string;
   @ApiProperty({ description: '축제 장소' })
   @IsString()
-  place: string;
-  @ApiProperty({ description: '축제 지역' })
-  @IsString()
-  area: string;
-  @ApiProperty({ description: '축제 썸네일' })
-  @IsString()
-  thumbnail: string;
-  @ApiProperty({ description: '축제 네이버 검색 URL' })
-  @IsString()
-  naverSearchUrl: string | null;
+  address: string;
   @ApiProperty({ description: '축제 지역 코드' })
   @IsString()
   areaCode: string;
+  @ApiProperty({ description: '축제 썸네일 이미지 URL' })
+  @IsString()
+  @IsOptional()
+  thumbnail: string;
+  @ApiProperty({ description: '축제 네이버 검색 URL' })
+  @IsString()
+  @IsOptional()
+  naverSearchUrl: string | null;
 }

@@ -63,6 +63,7 @@ import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
 import { DatingPreferenceModule } from './modules/dating-preference/dating-preference.module';
 import { SparkListModule } from './modules/spark-list/spark-list.module';
 import { FestivalModule } from './modules/festival/festival.module';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -138,6 +139,7 @@ import { FestivalModule } from './modules/festival/festival.module';
     DatingPreferenceModule,
     SparkListModule,
     FestivalModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

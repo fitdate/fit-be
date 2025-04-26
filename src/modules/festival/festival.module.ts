@@ -5,6 +5,7 @@ import { LocationModule } from '../location/location.module';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NaverSearchService } from './naver-search.service';
+import { RedisService } from '../redis/redis.service';
 @Module({
   imports: [
     LocationModule,
@@ -18,7 +19,7 @@ import { NaverSearchService } from './naver-search.service';
     }),
   ],
   controllers: [FestivalController],
-  providers: [FestivalService, NaverSearchService],
+  providers: [FestivalService, NaverSearchService, RedisService],
   exports: [FestivalService],
 })
 export class FestivalModule {}
