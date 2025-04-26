@@ -60,9 +60,9 @@ export class SparkListService {
       const selector = selection.selector;
       this.logger.debug(`[getMatchList] 매칭 데이터 변환:`);
       this.logger.debug(`- 매칭 ID: ${selection.id}`);
-      this.logger.debug(`- 현재 유저 ID: ${userId}`);
-      this.logger.debug(`- 파트너 ID: ${selector.id}`);
-      this.logger.debug(`- 선택자 ID: ${selection.selector.id}`);
+      this.logger.debug(`- 유저 ID: ${selection.userId}`);
+      this.logger.debug(`- 파트너 ID: ${selection.partnerId}`);
+      this.logger.debug(`- 선택자 ID: ${selection.selectedBy}`);
       this.logger.debug(`- 선택자 닉네임: ${selector.nickname}`);
       this.logger.debug(`- 선택자 좋아요 수: ${selector.likeCount}`);
       this.logger.debug(`- 선택자 나이: ${calculateAge(selector.birthday)}`);
@@ -74,9 +74,9 @@ export class SparkListService {
       const profileImage = selector.profile?.profileImage?.[0];
       return {
         id: selection.id,
-        userId: userId,
-        partnerId: selector.id,
-        selectedBy: selection.selector.id,
+        userId: selection.userId,
+        partnerId: selection.partnerId,
+        selectedBy: selection.selectedBy,
         selectorNickname: selector.nickname,
         selectorLikeCount: selector.likeCount,
         selectorAge: calculateAge(selector.birthday),

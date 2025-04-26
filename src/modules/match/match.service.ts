@@ -268,6 +268,16 @@ export class MatchService {
         throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
       }
 
+      // match_selection 테이블에 데이터 생성
+      const matchSelection = this.matchSelectionRepository.create({
+        userId: currentUserId,
+        partnerId: selectedUserId,
+        selectedBy: currentUserId,
+        selector: { id: currentUserId },
+        selected: { id: selectedUserId },
+      });
+      await this.matchSelectionRepository.save(matchSelection);
+
       await this.notificationService.create({
         receiverId: selectedUserId,
         type: NotificationType.MATCH,
@@ -418,7 +428,10 @@ export class MatchService {
       .leftJoinAndSelect('matchSelection.selector', 'selector')
       .leftJoinAndSelect('selector.profile', 'selectorProfile')
       .leftJoinAndSelect('selectorProfile.profileImage', 'selectorProfileImage')
-      .where('matchSelection.selected_id = :selectedUserId', { selectedUserId })
+      .where(
+        'matchSelection.selected_id = :selectedUserId OR matchSelection.userId = :selectedUserId',
+        { selectedUserId },
+      )
       .getMany();
 
     this.logger.debug(
@@ -428,8 +441,9 @@ export class MatchService {
     selectorsList.forEach((selection, index) => {
       this.logger.debug(`[getSelectorsList] 선택 ${index + 1} 정보:`);
       this.logger.debug(`- 선택 ID: ${selection.id}`);
-      this.logger.debug(`- 선택자 ID: ${selection.selector.id}`);
-      this.logger.debug(`- 선택된 사람 ID: ${selectedUserId}`);
+      this.logger.debug(`- 유저 ID: ${selection.userId}`);
+      this.logger.debug(`- 파트너 ID: ${selection.partnerId}`);
+      this.logger.debug(`- 선택자 ID: ${selection.selectedBy}`);
     });
 
     return selectorsList;
