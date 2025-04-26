@@ -422,6 +422,9 @@ export class MatchService {
         'selector',
         'selector.profile',
         'selector.profile.profileImage',
+        'selected',
+        'selected.profile',
+        'selected.profile.profileImage',
       ],
     });
 
