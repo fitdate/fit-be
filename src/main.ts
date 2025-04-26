@@ -7,7 +7,9 @@ import * as cookieParser from 'cookie-parser';
 import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'debug', 'log', 'verbose'],
+  });
 
   app.use(
     cookieParser() as (req: Request, res: Response, next: NextFunction) => void,
