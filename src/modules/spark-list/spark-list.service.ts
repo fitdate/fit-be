@@ -50,21 +50,29 @@ export class SparkListService {
 
   async getMatchList(userId: string) {
     const selectorsList = await this.matchService.getSelectorsList(userId);
-    const matchList = selectorsList.map((selection) => {
-      const matchedUser =
-        selection.selector.id === userId
-          ? selection.selected
-          : selection.selector;
-      const profileImage = matchedUser.profile?.profileImage?.[0];
-      return {
-        matchedUserId: matchedUser.id,
-        nickname: matchedUser.nickname,
-        likeCount: matchedUser.likeCount,
-        age: calculateAge(matchedUser.birthday),
-        region: matchedUser.region,
-        profileImage: profileImage ? profileImage.imageUrl : null,
-      };
-    });
+    const matchList = selectorsList
+      .map((selection) => {
+        const matchedUser =
+          selection.selector.id === userId
+            ? selection.selected
+            : selection.selector;
+
+        if (!matchedUser) {
+          return null;
+        }
+
+        const profileImage = matchedUser.profile?.profileImage?.[0];
+        return {
+          matchedUserId: matchedUser.id,
+          nickname: matchedUser.nickname,
+          likeCount: matchedUser.likeCount,
+          age: calculateAge(matchedUser.birthday),
+          region: matchedUser.region,
+          profileImage: profileImage ? profileImage.imageUrl : null,
+        };
+      })
+      .filter(Boolean);
+
     return matchList;
   }
 
