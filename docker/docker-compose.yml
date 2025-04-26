@@ -119,6 +119,7 @@ services:
   redis-blue:
     container_name: redis-blue
     image: redis:latest
+    command: redis-server --maxmemory 900mb --maxmemory-policy allkeys-lru
     ports:
       - '6379:6379'
     networks:
@@ -137,6 +138,7 @@ services:
   redis-green:
     container_name: redis-green
     image: redis:latest
+    command: redis-server --maxmemory 900mb --maxmemory-policy allkeys-lru
     ports:
       - '6380:6379'
     networks:
