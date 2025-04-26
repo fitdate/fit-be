@@ -423,16 +423,14 @@ export class MatchService {
       `[getSelectorsList] 시작 - selectedUserId: ${selectedUserId}`,
     );
 
-    const selectorsList = await this.matchSelectionRepository
-      .createQueryBuilder('matchSelection')
-      .leftJoinAndSelect('matchSelection.selector', 'selector')
-      .leftJoinAndSelect('selector.profile', 'selectorProfile')
-      .leftJoinAndSelect('selectorProfile.profileImage', 'selectorProfileImage')
-      .where(
-        'matchSelection.selected_id = :selectedUserId OR matchSelection.userId = :selectedUserId',
-        { selectedUserId },
-      )
-      .getMany();
+    const selectorsList = await this.matchSelectionRepository.find({
+      where: [{ selected: { id: selectedUserId } }, { userId: selectedUserId }],
+      relations: [
+        'selector',
+        'selector.profile',
+        'selector.profile.profileImage',
+      ],
+    });
 
     this.logger.debug(
       `[getSelectorsList] 선택자 리스트 개수: ${selectorsList.length}`,

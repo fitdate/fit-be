@@ -16,15 +16,15 @@ export class MatchSelection extends BaseTable {
   id: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ type: 'uuid' })
   partnerId: string;
 
   @ApiProperty()
-  @Column()
+  @Column({ type: 'uuid' })
   selectedBy: string;
 
   @ApiProperty({ type: () => User })
