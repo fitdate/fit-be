@@ -1,7 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
-import { RegionCode } from '../enum/festival-region.enum';
-import { IsEnum } from 'class-validator';
 
 export class FestivalDto {
   @ApiProperty({ description: '축제 이름' })
