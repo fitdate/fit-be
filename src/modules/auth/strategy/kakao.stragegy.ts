@@ -4,7 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-kakao';
 import { AllConfig } from 'src/common/config/config.types';
 import { AuthProvider } from '../types/oatuth.types';
-import { AuthService } from '../auth.service';
+import { SocialAuthService } from '../services/social-auth.service';
 
 interface KakaoProfile extends Profile {
   _json: {
@@ -27,7 +27,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
 
   constructor(
     private readonly configService: ConfigService<AllConfig>,
-    private readonly authService: AuthService,
+    private readonly socialAuthService: SocialAuthService,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
@@ -60,7 +60,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
         kakaoProfile._json.properties?.nickname ||
         '';
 
-      const user = await this.authService.processSocialLogin({
+      const user = await this.socialAuthService.processSocialLogin({
         email,
         name,
         authProvider: AuthProvider.KAKAO,

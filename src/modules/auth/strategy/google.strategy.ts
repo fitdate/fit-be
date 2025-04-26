@@ -2,16 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-google-oauth20';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth.service';
 import { AuthProvider } from '../types/oatuth.types';
 import { AllConfig } from 'src/common/config/config.types';
-
+import { SocialAuthService } from '../services/social-auth.service';
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   private readonly logger = new Logger(GoogleStrategy.name);
 
   constructor(
-    private readonly authService: AuthService,
+    private readonly socialAuthService: SocialAuthService,
     private readonly configService: ConfigService<AllConfig>,
   ) {
     super({
@@ -41,7 +40,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       const authProvider = AuthProvider.GOOGLE;
 
       // 로그인 처리: 없으면 등록 or 기존 유저 반환
-      const user = await this.authService.processSocialLogin({
+      const user = await this.socialAuthService.processSocialLogin({
         email,
         name: `${familyName}${givenName}`,
         authProvider,

@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy } from 'passport-naver';
 import { AllConfig } from 'src/common/config/config.types';
-import { AuthService } from '../auth.service';
 import { AuthProvider } from '../types/oatuth.types';
+import { SocialAuthService } from '../services/social-auth.service';
 
 interface NaverProfile extends Profile {
   emails: { value: string; verified: boolean }[];
@@ -20,7 +20,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
 
   constructor(
     private readonly configService: ConfigService<AllConfig>,
-    private readonly authService: AuthService,
+    private readonly socialAuthService: SocialAuthService,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
@@ -49,7 +49,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
       }
       const name = naverProfile.displayName;
 
-      const user = await this.authService.processSocialLogin({
+      const user = await this.socialAuthService.processSocialLogin({
         email,
         name,
         authProvider: AuthProvider.NAVER,
