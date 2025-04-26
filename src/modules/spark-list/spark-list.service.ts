@@ -49,45 +49,30 @@ export class SparkListService {
   }
 
   async getMatchList(userId: string) {
-    this.logger.debug(`[getMatchList] 시작 - userId: ${userId}`);
-
     const selectorsList = await this.matchService.getSelectorsList(userId);
-    this.logger.debug(
-      `[getMatchList] 선택자 리스트 개수: ${selectorsList.length}`,
-    );
+    const matchList = selectorsList
+      .map((selection) => {
+        const matchedUser =
+          selection.selector.id === userId
+            ? selection.selected
+            : selection.selector;
 
-    const matchList = selectorsList.map((selection) => {
-      const selector = selection.selector;
-      this.logger.debug(`[getMatchList] 매칭 데이터 변환:`);
-      this.logger.debug(`- 매칭 ID: ${selection.id}`);
-      this.logger.debug(`- 유저 ID: ${selection.userId}`);
-      this.logger.debug(`- 파트너 ID: ${selection.partnerId}`);
-      this.logger.debug(`- 선택자 ID: ${selection.selectedBy}`);
-      this.logger.debug(`- 선택자 닉네임: ${selector.nickname}`);
-      this.logger.debug(`- 선택자 좋아요 수: ${selector.likeCount}`);
-      this.logger.debug(`- 선택자 나이: ${calculateAge(selector.birthday)}`);
-      this.logger.debug(`- 선택자 지역: ${selector.region}`);
-      this.logger.debug(
-        `- 선택자 프로필 이미지: ${selector.profile?.profileImage?.[0]?.imageUrl ?? '없음'}`,
-      );
+        if (!matchedUser) {
+          return null;
+        }
 
-      const profileImage = selector.profile?.profileImage?.[0];
-      return {
-        id: selection.id,
-        userId: selection.userId,
-        partnerId: selection.partnerId,
-        selectedBy: selection.selectedBy,
-        selectorNickname: selector.nickname,
-        selectorLikeCount: selector.likeCount,
-        selectorAge: calculateAge(selector.birthday),
-        selectorRegion: selector.region,
-        selectorProfileImage: profileImage ? profileImage.imageUrl : null,
-      };
-    });
+        const profileImage = matchedUser.profile?.profileImage?.[0];
+        return {
+          matchedUserId: matchedUser.id,
+          nickname: matchedUser.nickname,
+          likeCount: matchedUser.likeCount,
+          age: calculateAge(matchedUser.birthday),
+          region: matchedUser.region,
+          profileImage: profileImage ? profileImage.imageUrl : null,
+        };
+      })
+      .filter(Boolean);
 
-    this.logger.debug(
-      `[getMatchList] 변환된 매칭 리스트 개수: ${matchList.length}`,
-    );
     return matchList;
   }
 
