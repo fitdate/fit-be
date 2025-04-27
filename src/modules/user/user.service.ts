@@ -323,6 +323,8 @@ export class UserService {
         'user.gender',
         'user.likeCount',
         'user.region',
+        'profile.id',
+        'profileImage.id',
         'profileImage.imageUrl',
       ])
       .where('user.id != :userId', { userId: currentUserId })
