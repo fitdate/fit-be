@@ -360,6 +360,13 @@ export class UserService {
 
     const users = await qb.getMany();
 
+    // 결과 유저 id, gender 로깅
+    this.logger.debug(
+      `쿼리 결과 유저 목록: ${users
+        .map((u) => `id: ${u.id}, gender: ${u.gender}`)
+        .join(', ')} `,
+    );
+
     return { users, nextCursor };
   }
 
