@@ -103,7 +103,12 @@ export class MatchService {
     const selectorsList = await this.getSelectorsList(userId);
     const matchedUserIds = selectorsList
       .filter((selection) => selection.selected && selection.selected.id)
-      .map((selection) => selection.selected.id);
+      .map((selection) => selection.selected.id)
+      .concat(
+        selectorsList
+          .filter((selection) => selection.selector && selection.selector.id)
+          .map((selection) => selection.selector.id),
+      );
 
     // 이미 매칭된 사용자 제외
     const availableUsers = oppositeGenderUsers.filter(
