@@ -99,40 +99,19 @@ export class MatchService {
       userId,
     );
 
-    // 유사도 계산 및 정렬
-    // const usersWithSimilarity = oppositeGenderUsers
-    //   .map((user) => ({
-    //     user,
-    //     similarity: this.calculateSimilarity(currentUser, user),
-    //   }))
-    //   .sort((a, b) => b.similarity - a.similarity);
+    // 이미 매칭된 사용자 목록 가져오기
+    const selectorsList = await this.getSelectorsList(userId);
+    const matchedUserIds = selectorsList.map(
+      (selection) => selection.selected.id,
+    );
 
-    // // 유사도 기반 가중치 적용하여 4명 선택
-    // const selectedUsers: User[] = [];
-    // const totalSimilarity = usersWithSimilarity.reduce(
-    //   (sum, item) => sum + item.similarity,
-    //   0,
-    // );
-
-    // while (selectedUsers.length < 4 && usersWithSimilarity.length > 0) {
-    //   const random = Math.random() * totalSimilarity;
-    //   let currentSum = 0;
-    //   let selectedIndex = 0;
-
-    //   for (let i = 0; i < usersWithSimilarity.length; i++) {
-    //     currentSum += usersWithSimilarity[i].similarity;
-    //     if (currentSum >= random) {
-    //       selectedIndex = i;
-    //       break;
-    //     }
-    //   }
-
-    //   selectedUsers.push(usersWithSimilarity[selectedIndex].user);
-    //   usersWithSimilarity.splice(selectedIndex, 1);
-    // }
+    // 이미 매칭된 사용자 제외
+    const availableUsers = oppositeGenderUsers.filter(
+      (user) => !matchedUserIds.includes(user.id),
+    );
 
     // 랜덤으로 4명 선택
-    const selectedUsers = this.selectRandomUsers(oppositeGenderUsers, 4);
+    const selectedUsers = this.selectRandomUsers(availableUsers, 4);
 
     // 매칭 생성
     const matches: { matchId: string; user1: User; user2: User }[] = [];
@@ -370,43 +349,35 @@ export class MatchService {
     }
   }
 
-  async getUserMatchList(userId: string) {
-    this.logger.debug(`[getUserMatchList] 시작 - userId: ${userId}`);
+  // async getUserMatchList(userId: string) {
+  //   this.logger.debug(`[getUserMatchList] 시작 - userId: ${userId}`);
 
-    const matchList = await this.matchRepository
-      .createQueryBuilder('match')
-      .leftJoinAndSelect('match.user1', 'user1')
-      .leftJoinAndSelect('match.user2', 'user2')
-      .leftJoinAndSelect('user1.profile', 'user1Profile')
-      .leftJoinAndSelect('user2.profile', 'user2Profile')
-      .leftJoinAndSelect('user1Profile.profileImage', 'user1ProfileImage')
-      .leftJoinAndSelect('user2Profile.profileImage', 'user2ProfileImage')
-      .where('match.user1_id = :userId OR match.user2_id = :userId', { userId })
-      .getMany();
+  //   const matchList = await this.matchRepository
+  //     .createQueryBuilder('match')
+  //     .leftJoinAndSelect('match.user1', 'user1')
+  //     .leftJoinAndSelect('match.user2', 'user2')
+  //     .leftJoinAndSelect('user1.profile', 'user1Profile')
+  //     .leftJoinAndSelect('user2.profile', 'user2Profile')
+  //     .leftJoinAndSelect('user1Profile.profileImage', 'user1ProfileImage')
+  //     .leftJoinAndSelect('user2Profile.profileImage', 'user2ProfileImage')
+  //     .where('match.user1_id = :userId OR match.user2_id = :userId', { userId })
+  //     .getMany();
 
-    this.logger.debug(
-      `[getUserMatchList] 매치 리스트 개수: ${matchList.length}`,
-    );
+  //   this.logger.debug(
+  //     `[getUserMatchList] 매치 리스트 개수: ${matchList.length}`,
+  //   );
 
-    matchList.forEach((match, index) => {
-      this.logger.debug(`[getUserMatchList] 매치 ${index + 1} 정보:`);
-      this.logger.debug(`- 매치 ID: ${match.id}`);
-      this.logger.debug(
-        `- user1 ID: ${match.user1.id}, 프로필 존재: ${!!match.user1.profile}`,
-      );
-      this.logger.debug(
-        `- user1 프로필 이미지 개수: ${match.user1.profile?.profileImage?.length ?? 0}`,
-      );
-      this.logger.debug(
-        `- user2 ID: ${match.user2.id}, 프로필 존재: ${!!match.user2.profile}`,
-      );
-      this.logger.debug(
-        `- user2 프로필 이미지 개수: ${match.user2.profile?.profileImage?.length ?? 0}`,
-      );
-    });
-
-    return matchList;
-  }
+  //   matchList.forEach((match, index) => {
+  //     this.logger.debug(`[getUserMatchList] 매치 ${index + 1} 정보:`);
+  //     this.logger.debug(`- 매치 ID: ${match.id}`);
+  //     this.logger.debug(
+  //       `- user1 ID: ${match.user1.id}, 프로필 존재: ${!!match.user1.profile}`,
+  //     );
+  //     this.logger.debug(
+  //       `- user2 ID: ${match.user2.id}, 프로필 존재: ${!!match.user2.profile}`,
+  //     );
+  //   });
+  // }
 
   /**
    * 특정 사용자를 선택한 사람들의 정보를 가져옵니다.
