@@ -51,6 +51,13 @@ export class UserService {
     return this.userRepository.update({ id }, { password });
   }
 
+  async getUserCoffee(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    return user?.coffee ? user.coffee : 0;
+  }
+
   async changePassword(
     userId: string,
     oldPassword: string,

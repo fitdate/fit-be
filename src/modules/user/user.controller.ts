@@ -143,4 +143,17 @@ export class UserController {
       changePasswordDto.newPassword,
     );
   }
+
+  @Get('user-coffee/:userId')
+  @ApiOperation({
+    summary: '사용자 커피 조회',
+    description: '특정 사용자의 커피 개수를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '사용자 커피 개수를 성공적으로 조회했습니다.',
+  })
+  getUserCoffee(@Param('userId') userId: string) {
+    return this.userService.getUserCoffee(userId);
+  }
 }
