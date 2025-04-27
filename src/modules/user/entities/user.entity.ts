@@ -19,6 +19,7 @@ import { ChatRoom } from '../../chat/entities/chat-room.entity';
 import { UserFilter } from '../../user-filter/entities/user-filter.entity';
 import { CoffeeChat } from 'src/modules/coffee-chat/entities/coffee-chat.entity';
 import { DatingPreference } from 'src/modules/dating-preference/entities/dating-preference.entity';
+import { AcceptedCoffeeChat } from 'src/modules/coffee-chat/entities/accepted-coffee-chat.entity';
 @Entity('users')
 export class User extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
@@ -126,4 +127,16 @@ export class User extends BaseTable {
   @OneToOne(() => DatingPreference, (datingPreference) => datingPreference.user)
   @JoinColumn()
   datingPreference: DatingPreference;
+
+  @OneToMany(
+    () => AcceptedCoffeeChat,
+    (acceptedCoffeeChat) => acceptedCoffeeChat.sender,
+  )
+  sentAcceptedCoffeeChats: AcceptedCoffeeChat[];
+
+  @OneToMany(
+    () => AcceptedCoffeeChat,
+    (acceptedCoffeeChat) => acceptedCoffeeChat.receiver,
+  )
+  receivedAcceptedCoffeeChats: AcceptedCoffeeChat[];
 }

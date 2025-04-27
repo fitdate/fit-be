@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Column,
+  CreateDateColumn,
+} from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { CoffeeChatStatus } from '../enum/coffee-chat-statue.enum';
 @Entity()
@@ -18,4 +24,7 @@ export class CoffeeChat {
     default: CoffeeChatStatus.PENDING,
   })
   status: CoffeeChatStatus;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

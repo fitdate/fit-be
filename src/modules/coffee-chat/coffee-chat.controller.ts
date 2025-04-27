@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { CoffeeChatService } from './coffee-chat.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
@@ -8,6 +8,7 @@ import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 @Controller('coffee-chat')
 export class CoffeeChatController {
   constructor(private readonly coffeeChatService: CoffeeChatService) {}
+
   @ApiOperation({ summary: '커피챗 보내기' })
   @ApiResponse({ status: 200, description: '커피챗 보내기 성공' })
   @ApiResponse({ status: 400, description: '커피챗 보내기 실패' })
@@ -33,5 +34,35 @@ export class CoffeeChatController {
       userId,
       acceptCoffeeChatDto.senderId,
     );
+  }
+
+  @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })
+  @ApiResponse({ status: 200, description: '받은 커피챗 리스트 가져오기 성공' })
+  @ApiResponse({ status: 400, description: '받은 커피챗 리스트 가져오기 실패' })
+  @Get('received')
+  getReceivedCoffeeChatList(@UserId() userId: string) {
+    return this.coffeeChatService.getReceivedCoffeeChatList(userId);
+  }
+
+  @ApiOperation({ summary: '보낸 커피챗 리스트 가져오기' })
+  @ApiResponse({ status: 200, description: '보낸 커피챗 리스트 가져오기 성공' })
+  @ApiResponse({ status: 400, description: '보낸 커피챗 리스트 가져오기 실패' })
+  @Get('sent')
+  getSentCoffeeChatList(@UserId() userId: string) {
+    return this.coffeeChatService.getSentCoffeeChatList(userId);
+  }
+
+  @ApiOperation({ summary: '성사된 커피챗 리스트 가져오기' })
+  @ApiResponse({
+    status: 200,
+    description: '성사된 커피챗 리스트 가져오기 성공',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '성사된 커피챗 리스트 가져오기 실패',
+  })
+  @Get('accepted')
+  getAcceptedCoffeeChatList(@UserId() userId: string) {
+    return this.coffeeChatService.getAcceptedCoffeeChatList(userId);
   }
 }
