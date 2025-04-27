@@ -408,23 +408,23 @@ export class MatchService {
     return matchList;
   }
 
-  // /**
-  //  * 특정 사용자를 선택한 사람들의 정보를 가져옵니다.
-  //  * @param selectedUserId 선택된 사용자 ID
-  //  */
-  // async getSelectorsList(selectedUserId: string) {
-  //   const selectorsList = await this.matchSelectionRepository
-  //     .createQueryBuilder('matchSelection')
-  //     .leftJoinAndSelect('matchSelection.selector', 'selector')
-  //     .leftJoinAndSelect('selector.profile', 'selectorProfile')
-  //     .leftJoinAndSelect('selectorProfile.profileImage', 'selectorProfileImage')
-  //     .leftJoinAndSelect('matchSelection.selected', 'selected')
-  //     .leftJoinAndSelect('selected.profile', 'selectedProfile')
-  //     .leftJoinAndSelect('selectedProfile.profileImage', 'selectedProfileImage')
-  //     .where('selected.id = :selectedUserId', { selectedUserId })
-  //     .orWhere('selector.id = :selectedUserId', { selectedUserId })
-  //     .getMany();
+  /**
+   * 특정 사용자를 선택한 사람들의 정보를 가져옵니다.
+   * @param selectedUserId 선택된 사용자 ID
+   */
+  async getSelectorsList(selectedUserId: string) {
+    const selectorsList = await this.matchSelectionRepository
+      .createQueryBuilder('matchSelection')
+      .leftJoinAndSelect('matchSelection.selector', 'selector')
+      .leftJoinAndSelect('selector.profile', 'selectorProfile')
+      .leftJoinAndSelect('selectorProfile.profileImage', 'selectorProfileImage')
+      .leftJoinAndSelect('matchSelection.selected', 'selected')
+      .leftJoinAndSelect('selected.profile', 'selectedProfile')
+      .leftJoinAndSelect('selectedProfile.profileImage', 'selectedProfileImage')
+      .where('selected.id = :selectedUserId', { selectedUserId })
+      .orWhere('selector.id = :selectedUserId', { selectedUserId })
+      .getMany();
 
-  //   return selectorsList;
-  // }
+    return selectorsList;
+  }
 }

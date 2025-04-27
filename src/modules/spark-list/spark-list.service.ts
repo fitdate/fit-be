@@ -49,11 +49,35 @@ export class SparkListService {
   }
 
   async getMatchList(userId: string) {
-    const matchList = await this.matchService.getUserMatchList(userId);
-    const formattedMatchList = matchList.map((match) => {
-      const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
+    this.logger.debug(`[getMatchList] 시작 - userId: ${userId}`);
+
+    const selectorsList = await this.matchService.getSelectorsList(userId);
+    this.logger.debug(`[getMatchList] 매칭 목록 개수: ${selectorsList.length}`);
+
+    const matchList = selectorsList.map((selection) => {
+      this.logger.debug(`[getMatchList] 매칭 ID: ${selection.id}`);
+      this.logger.debug(`[getMatchList] 선택자 ID: ${selection.selector.id}`);
+      this.logger.debug(
+        `[getMatchList] 선택된 사용자 ID: ${selection.selected.id}`,
+      );
+
+      const matchedUser =
+        selection.selector.id === userId
+          ? selection.selected
+          : selection.selector;
+      this.logger.debug(`[getMatchList] 매칭된 사용자 ID: ${matchedUser.id}`);
+      this.logger.debug(
+        `[getMatchList] 프로필 존재 여부: ${!!matchedUser.profile}`,
+      );
+      this.logger.debug(
+        `[getMatchList] 프로필 이미지 배열: ${JSON.stringify(matchedUser.profile?.profileImage)}`,
+      );
 
       const profileImage = matchedUser.profile?.profileImage?.[0];
+      this.logger.debug(
+        `[getMatchList] 첫 번째 프로필 이미지 객체: ${JSON.stringify(profileImage)}`,
+      );
+
       return {
         matchedUserId: matchedUser.id,
         nickname: matchedUser.nickname,
@@ -64,7 +88,10 @@ export class SparkListService {
       };
     });
 
-    return formattedMatchList;
+    this.logger.debug(
+      `[getMatchList] 완료 - 매칭 목록 개수: ${matchList.length}`,
+    );
+    return matchList;
   }
 
   async getSparkList(userId: string) {
