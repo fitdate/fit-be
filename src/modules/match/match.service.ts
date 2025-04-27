@@ -101,9 +101,9 @@ export class MatchService {
 
     // 이미 매칭된 사용자 목록 가져오기
     const selectorsList = await this.getSelectorsList(userId);
-    const matchedUserIds = selectorsList.map(
-      (selection) => selection.selected.id,
-    );
+    const matchedUserIds = selectorsList
+      .filter((selection) => selection.selected && selection.selected.id)
+      .map((selection) => selection.selected.id);
 
     // 이미 매칭된 사용자 제외
     const availableUsers = oppositeGenderUsers.filter(
