@@ -7,15 +7,16 @@ import {
 import { MatchResultService } from './match-result.service';
 import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { MatchResultResponseDto } from './dto/match-result.dto';
+import { UserId } from '../../common/decorator/get-user.decorator';
 
 @ApiTags('Match Results')
-@Controller('all-match-result')
+@Controller('match-result')
 export class MatchResultController {
   constructor(private readonly matchResultService: MatchResultService) {}
 
   @ApiOperation({
-    summary: '전체 매칭 결과 조회',
-    description: '모든 매칭된 사용자들의 프로필 정보를 조회합니다.',
+    summary: '내 매칭 결과 조회',
+    description: '로그인한 사용자의 모든 매칭 결과를 조회합니다.',
   })
   @ApiQuery({
     name: 'page',
@@ -44,11 +45,13 @@ export class MatchResultController {
   })
   @Get()
   async getMatchResults(
+    @UserId() userId: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ): Promise<{ data: MatchResultResponseDto[]; total: number }> {
     try {
       return await this.matchResultService.getMatchResults(
+        userId,
         page || 1,
         limit || 10,
       );

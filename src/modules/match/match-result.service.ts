@@ -25,19 +25,21 @@ export class MatchResultService {
   ) {}
 
   /**
-   * 모든 매칭 결과를 조회합니다.
+   * 특정 사용자의 매칭 결과를 조회합니다.
    */
   async getMatchResults(
+    userId: string,
     page: number = 1,
     limit: number = 10,
   ): Promise<{ data: MatchResultResponseDto[]; total: number }> {
     try {
       this.logger.log(
-        `매칭 결과 조회 시작 - 페이지: ${page}, 페이지당 항목 수: ${limit}`,
+        `사용자(${userId})의 매칭 결과 조회 시작 - 페이지: ${page}, 페이지당 항목 수: ${limit}`,
       );
 
       const [matches, total] = await this.matchSelectionRepository.findAndCount(
         {
+          where: [{ selector: { id: userId } }, { selected: { id: userId } }],
           relations: [
             'selector',
             'selector.profile',
