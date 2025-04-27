@@ -12,12 +12,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  canActivate(context: ExecutionContext) {
+  async canActivate(context: ExecutionContext) {
     const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-
     const isOptional = this.reflector.getAllAndOverride<boolean>(OPTIONAL_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -32,12 +31,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(`Request headers: ${JSON.stringify(req.headers)}`);
     this.logger.debug(`Request user(초기): ${JSON.stringify(req.user)}`);
 
+    // 항상 인증 시도
+    const result = await super.canActivate(context);
     if (isPublic || isOptional) {
-      this.logger.debug('Optional/Public이므로 인증을 건너뜁니다.');
+      this.logger.debug('Optional/Public이므로 인증 실패여도 통과합니다.');
       return true;
     }
-
-    return super.canActivate(context);
+    return result;
   }
 
   handleRequest<TUser = any>(
@@ -51,11 +51,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(`Auth user(최종): ${String(user)}`);
     this.logger.debug(`Auth info: ${String(info)}`);
 
-    if (err) {
+    // Optional만 인증 실패 시 undefined 반환, Public은 반드시 user 필요
+    if (err || !user) {
+      if (context) {
+        const isOptional = this.reflector.getAllAndOverride<boolean>(
+          OPTIONAL_KEY,
+          [context.getHandler(), context.getClass()],
+        );
+        if (isOptional) {
+          this.logger.debug('Optional이므로 인증 실패 시 undefined 반환');
+          return undefined as TUser;
+        }
+      }
       this.logger.error(`Authentication failed: ${String(err)}`);
-      throw err;
+      throw err || new Error('Unauthorized');
     }
-
     return user;
   }
 }
