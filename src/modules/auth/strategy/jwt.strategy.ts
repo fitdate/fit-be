@@ -10,12 +10,12 @@ import { UserService } from '../../user/user.service';
 
 const cookieExtractor = (req: Request) => {
   if (!req || !req.cookies) {
-    return null;
+    throw new UnauthorizedException('쿠키를 찾을 수 없습니다');
   }
 
   const token = req.cookies.accessToken as string;
   if (!token) {
-    return null;
+    throw new UnauthorizedException('액세스 토큰이 없습니다');
   }
   return token;
 };
@@ -60,8 +60,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // payload의 sub를 유지하면서 사용자 정보를 추가
     return {
       ...payload,
-      sub: payload.sub, // sub 필드 명시적으로 유지
-      user: user,
+      sub: payload.sub,  // sub 필드 명시적으로 유지
+      user: user
     };
   }
 }

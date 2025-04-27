@@ -4,7 +4,6 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { Logger } from '@nestjs/common';
 
 export const OPTIONAL_KEY = 'isOptional';
 
@@ -19,12 +18,7 @@ interface RequestWithUser extends Request {
 export const OptionalUserId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<RequestWithUser>();
-    // request.user 전체 로그
-    const logger = new Logger(OptionalUserId.name);
-    logger.debug('[OptionalUserId] request.user:', request.user);
-    const sub = request.user?.sub ?? undefined;
-    logger.debug('[OptionalUserId] 추출된 sub:', sub);
-    return sub;
+    return request.user?.sub ?? undefined;
   },
 );
 

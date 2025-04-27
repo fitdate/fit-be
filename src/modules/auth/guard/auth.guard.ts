@@ -17,6 +17,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getHandler(),
       context.getClass(),
     ]);
+
     const isOptional = this.reflector.getAllAndOverride<boolean>(OPTIONAL_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -25,49 +26,27 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(`Route is public: ${isPublic}`);
     this.logger.debug(`Route is optional: ${isOptional}`);
 
-    const req: { cookies?: unknown; headers?: unknown; user?: unknown } =
-      context.switchToHttp().getRequest();
-    this.logger.debug(`Request cookies: ${JSON.stringify(req.cookies)}`);
-    this.logger.debug(`Request headers: ${JSON.stringify(req.headers)}`);
-    this.logger.debug(`Request user(초기): ${JSON.stringify(req.user)}`);
-
-    // 항상 인증 시도
-    const result = super.canActivate(context);
     if (isPublic || isOptional) {
-      this.logger.debug('Optional/Public이므로 인증 실패여도 통과합니다.');
       return true;
     }
-    return result;
+
+    const request = context.switchToHttp().getRequest();
+    this.logger.debug(`Request cookies: ${JSON.stringify(request.cookies)}`);
+    this.logger.debug(`Request headers: ${JSON.stringify(request.headers)}`);
+
+    return super.canActivate(context);
   }
 
-  handleRequest<TUser = any>(
-    err: any,
-    user: any,
-    info: any,
-    context?: ExecutionContext,
-    status?: any,
-  ): TUser {
-    this.logger.debug(`Auth error: ${String(err)}`);
-    this.logger.debug(`Auth user(최종): ${String(user)}`);
-    this.logger.debug(`Auth info: ${String(info)}`);
+  handleRequest(err: any, user: any, info: any) {
+    this.logger.debug(`Auth error: ${err}`);
+    this.logger.debug(`Auth user: ${JSON.stringify(user)}`);
+    this.logger.debug(`Auth info: ${info}`);
 
-    // user가 있으면 무조건 반환
-    if (user) {
-      return user;
+    if (err) {
+      this.logger.error(`Authentication failed: ${err}`);
+      throw err;
     }
 
-    // Optional만 인증 실패 시 undefined 반환
-    if (context) {
-      const isOptional = this.reflector.getAllAndOverride<boolean>(
-        OPTIONAL_KEY,
-        [context.getHandler(), context.getClass()],
-      );
-      if (isOptional) {
-        this.logger.debug('Optional이므로 인증 실패 시 undefined 반환');
-        return undefined as TUser;
-      }
-    }
-    this.logger.error(`Authentication failed: ${String(err)}`);
-    throw err || new Error('Unauthorized');
+    return user;
   }
 }
