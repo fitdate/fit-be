@@ -30,6 +30,7 @@ export class UserFilterService {
   }
 
   async getFilteredUsers(userId: string) {
+    this.logger.debug(`사용자 ${userId}의 필터링된 사용자 목록을 조회합니다.`);
     if (!userId) {
       this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
       const { users, nextCursor } = await this.userService.getUserList({

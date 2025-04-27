@@ -16,7 +16,7 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FilteredUsersDto } from './dto/filtered-user.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { ChangePasswordDto } from './dto/change-password-dto';
-
+import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('User')
 @Controller('user')
 export class UserController {
@@ -75,6 +75,7 @@ export class UserController {
     description: '사용자 프로필 정보를 성공적으로 조회했습니다.',
   })
   @Get('user-info/:userId')
+  @Public()
   getUserInfo(@Param('userId') userId: string): Promise<any> {
     return this.userService.getUserInfo(userId);
   }
