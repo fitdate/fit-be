@@ -12,7 +12,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  async canActivate(context: ExecutionContext) {
+  canActivate(context: ExecutionContext) {
     const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -32,7 +32,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(`Request user(초기): ${JSON.stringify(req.user)}`);
 
     // 항상 인증 시도
-    const result = await super.canActivate(context);
+    const result = super.canActivate(context);
     if (isPublic || isOptional) {
       this.logger.debug('Optional/Public이므로 인증 실패여도 통과합니다.');
       return true;
