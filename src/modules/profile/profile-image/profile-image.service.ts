@@ -133,6 +133,12 @@ export class ProfileImageService {
         order: { isMain: 'DESC' }, // 메인 이미지가 먼저 오도록 정렬
       });
 
+      const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net/`;
+
+      images.forEach((img) => {
+        img.imageUrl = `${cloudfrontUrl.replace(/\/$/, '')}${img.imageUrl}`;
+      });
+
       this.logger.log(`프로필 이미지 조회 완료: ${images.length}개`);
       return images;
     } catch (error: unknown) {
