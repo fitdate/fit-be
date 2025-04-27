@@ -267,13 +267,11 @@ export class ProfileImageService {
             const moved = await this.moveTempToProfileImage(profileId, key);
             log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
 
-            const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net`;
+            const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net/${moved.key}`;
+            moved.url = cloudfrontUrl;
             const result = {
               profile: { id: profileId },
-              imageUrl: moved.url.replace(
-                'https://fit-aws-bucket.s3.ap-northeast-2.amazonaws.com',
-                `${cloudfrontUrl}`,
-              ),
+              imageUrl: moved.url,
               key: moved.key,
               isMain: i + index === 0,
             };
