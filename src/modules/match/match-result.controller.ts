@@ -8,7 +8,7 @@ import { MatchResultService } from './match-result.service';
 import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { MatchResultResponseDto } from './dto/match-result.dto';
 
-@ApiTags('매칭 결과')
+@ApiTags('Match Results')
 @Controller('all-match-result')
 export class MatchResultController {
   constructor(private readonly matchResultService: MatchResultService) {}
@@ -21,17 +21,17 @@ export class MatchResultController {
     name: 'page',
     required: false,
     type: Number,
-    description: '페이지 번호 (고정값: 1)',
+    description: '페이지 번호 (기본값: 1)',
     example: 1,
-    enum: [1],
+    default: 1,
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: '페이지당 항목 수 (고정값: 10)',
+    description: '페이지당 항목 수 (기본값: 10)',
     example: 10,
-    enum: [10],
+    default: 10,
   })
   @ApiResponse({
     status: 200,
@@ -44,11 +44,14 @@ export class MatchResultController {
   })
   @Get()
   async getMatchResults(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ): Promise<{ data: MatchResultResponseDto[]; total: number }> {
     try {
-      return await this.matchResultService.getMatchResults(page, limit);
+      return await this.matchResultService.getMatchResults(
+        page || 1,
+        limit || 10,
+      );
     } catch (error) {
       throw new InternalServerErrorException(
         '매칭 결과 조회 중 오류가 발생했습니다.',
