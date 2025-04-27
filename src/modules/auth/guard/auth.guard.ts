@@ -51,21 +51,23 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     this.logger.debug(`Auth user(최종): ${String(user)}`);
     this.logger.debug(`Auth info: ${String(info)}`);
 
-    // Optional만 인증 실패 시 undefined 반환, Public은 반드시 user 필요
-    if (err || !user) {
-      if (context) {
-        const isOptional = this.reflector.getAllAndOverride<boolean>(
-          OPTIONAL_KEY,
-          [context.getHandler(), context.getClass()],
-        );
-        if (isOptional) {
-          this.logger.debug('Optional이므로 인증 실패 시 undefined 반환');
-          return undefined as TUser;
-        }
-      }
-      this.logger.error(`Authentication failed: ${String(err)}`);
-      throw err || new Error('Unauthorized');
+    // user가 있으면 무조건 반환
+    if (user) {
+      return user;
     }
-    return user;
+
+    // Optional만 인증 실패 시 undefined 반환
+    if (context) {
+      const isOptional = this.reflector.getAllAndOverride<boolean>(
+        OPTIONAL_KEY,
+        [context.getHandler(), context.getClass()],
+      );
+      if (isOptional) {
+        this.logger.debug('Optional이므로 인증 실패 시 undefined 반환');
+        return undefined as TUser;
+      }
+    }
+    this.logger.error(`Authentication failed: ${String(err)}`);
+    throw err || new Error('Unauthorized');
   }
 }
