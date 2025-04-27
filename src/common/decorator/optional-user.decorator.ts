@@ -18,7 +18,13 @@ interface RequestWithUser extends Request {
 export const OptionalUserId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<RequestWithUser>();
-    return request.user?.sub ?? undefined;
+    // request.user 전체 로그
+    // eslint-disable-next-line no-console
+    console.log('[OptionalUserId] request.user:', request.user);
+    const sub = request.user?.sub ?? undefined;
+    // eslint-disable-next-line no-console
+    console.log('[OptionalUserId] 추출된 sub:', sub);
+    return sub;
   },
 );
 
