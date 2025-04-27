@@ -133,15 +133,6 @@ export class ProfileImageService {
         order: { isMain: 'DESC' }, // 메인 이미지가 먼저 오도록 정렬
       });
 
-      const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net`;
-
-      images.forEach((img) => {
-        img.imageUrl.replace(
-          'https://fit-aws-bucket.s3.ap-northeast-2.amazonaws.com',
-          `${cloudfrontUrl}`,
-        );
-      });
-
       this.logger.log(`프로필 이미지 조회 완료: ${images.length}개`);
       return images;
     } catch (error: unknown) {
@@ -276,9 +267,13 @@ export class ProfileImageService {
             const moved = await this.moveTempToProfileImage(profileId, key);
             log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
 
+            const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net`;
             const result = {
               profile: { id: profileId },
-              imageUrl: moved.url,
+              imageUrl: moved.url.replace(
+                'https://fit-aws-bucket.s3.ap-northeast-2.amazonaws.com',
+                `${cloudfrontUrl}`,
+              ),
               key: moved.key,
               isMain: i + index === 0,
             };
