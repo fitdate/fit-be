@@ -155,18 +155,14 @@ jobs:
             echo 'DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' > /home/ubuntu/.env
             export $(cat /home/ubuntu/.env | xargs)
             
-            # 이전 컨테이너 정리
-            echo '🧹 이전 컨테이너 정리 중...'
-            docker-compose -f /home/ubuntu/docker-compose.yml down
-            docker stop $(docker ps -aq) || true
-            docker rm $(docker ps -aq) || true
-            docker network prune -f
-            docker system prune -f
+            # 사용하지 않는 리소스만 정리
+            echo '🧹 사용하지 않는 리소스 정리 중...'
+            docker container prune -f || true
+            docker image prune -f || true
 
             # 사용 중인 포트 확인 및 해제
             echo '🔍 포트 상태 확인 중...'
             sudo fuser -k 6379/tcp || true
-            sudo fuser -k 6380/tcp || true
             sudo fuser -k 3000/tcp || true
             sudo fuser -k 3001/tcp || true
             sudo fuser -k 80/tcp || true
@@ -178,34 +174,48 @@ jobs:
 
             echo '🚀 앱 컨테이너 시작 중...'
             # 데이터베이스와 Redis 먼저 시작
-            docker-compose -f /home/ubuntu/docker-compose.yml up -d postgres redis-$NEW_ENV
+            docker-compose -f /home/ubuntu/docker-compose.yml up -d postgres redis
             
             # 데이터베이스와 Redis가 준비될 때까지 대기
             echo '⏳ 데이터베이스와 Redis 대기 중...'
             sleep 3
             
-            # 새 환경의 앱 컨테이너만 시작
+            # 새 환경의 앱 컨테이너 시작
+            echo '🔄 새 환경 앱 컨테이너 시작 중...'
             docker-compose -f /home/ubuntu/docker-compose.yml up -d app-$NEW_ENV
             
-            # 앱 상태 확인
-            echo '🔍 앱 상태 확인 중...'
-            timeout 15 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"앱 대기 중...\"; sleep 2; done'
-
-            # Nginx 설정 적용
-            echo '🔄 Nginx 설정 적용 중...'
-            # 현재 환경에 맞게 api.conf 수정
-            sed -i "s/app-blue/app-$NEW_ENV/g" /home/ubuntu/nginx/api.conf
-            cp /home/ubuntu/nginx/api.conf /home/ubuntu/nginx/default.conf
+            # 새 환경의 앱 상태 확인
+            echo '🔍 새 환경 앱 상태 확인 중...'
+            timeout 30 bash -c 'until curl -s http://localhost:$NEW_PORT/health; do echo \"새 환경 앱 대기 중...\"; sleep 2; done'
             
-            # Nginx 컨테이너 시작
-            docker-compose -f /home/ubuntu/docker-compose.yml up -d nginx
-
-            # 이전 환경의 앱 컨테이너 중지
-            echo '🧹 이전 환경 정리 중...'
-            if [ "$CURRENT_ENV" = "blue" ]; then
-              docker-compose -f /home/ubuntu/docker-compose.yml stop app-blue redis-blue || true
+            if [ $? -eq 0 ]; then
+              echo '✅ 새 환경 앱 정상 작동 확인'
+              
+              # Nginx 설정 적용
+              echo '🔄 Nginx 설정 적용 중...'
+              # 현재 환경에 맞게 api.conf 수정
+              sed -i "s/app-blue/app-$NEW_ENV/g" /home/ubuntu/nginx/api.conf
+              cp /home/ubuntu/nginx/api.conf /home/ubuntu/nginx/default.conf
+              
+              # Nginx 컨테이너 재시작
+              docker-compose -f /home/ubuntu/docker-compose.yml restart nginx
+              
+              # 이전 환경의 앱 컨테이너 중지
+              echo '🧹 이전 환경 정리 중...'
+              if [ "$CURRENT_ENV" = "blue" ]; then
+                docker-compose -f /home/ubuntu/docker-compose.yml stop app-blue || true
+              else
+                docker-compose -f /home/ubuntu/docker-compose.yml stop app-green || true
+              fi
             else
-              docker-compose -f /home/ubuntu/docker-compose.yml stop app-green redis-green || true
+              echo '❌ 새 환경 앱 시작 실패'
+              echo '🔄 이전 환경으로 롤백 중...'
+              if [ "$CURRENT_ENV" = "blue" ]; then
+                docker-compose -f /home/ubuntu/docker-compose.yml up -d app-blue
+              else
+                docker-compose -f /home/ubuntu/docker-compose.yml up -d app-green
+              fi
+              exit 1
             fi
 
             # 시스템 상태 확인

@@ -31,7 +31,7 @@ services:
       - blue/.env.blue
     environment:
       - APP_PORT=3000
-      - REDIS_HOST=redis-blue
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
       - NODE_ENV=production
       - ENV_FILE=.env.blue
@@ -41,7 +41,7 @@ services:
       - redis-network
       - postgres-network
     depends_on:
-      redis-blue:
+      redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -68,7 +68,7 @@ services:
       - green/.env.green
     environment:
       - APP_PORT=3001
-      - REDIS_HOST=redis-green
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
       - NODE_ENV=production
       - ENV_FILE=.env.green
@@ -78,7 +78,7 @@ services:
       - redis-network
       - postgres-network
     depends_on:
-      redis-green:
+      redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -116,31 +116,14 @@ services:
       retries: 3
       start_period: 10s
 
-  redis-blue:
-    container_name: redis-blue
+  redis:
+    container_name: redis
     image: redis:latest
-    command: redis-server --maxmemory 900mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 900mb --maxmemory-policy allkeys-lru --appendonly yes
     ports:
       - '6379:6379'
-    networks:
-      - redis-network
-      - postgres-network
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 1
-      start_period: 20s
-    deploy:
-      replicas: 1
-
-  redis-green:
-    container_name: redis-green
-    image: redis:latest
-    command: redis-server --maxmemory 900mb --maxmemory-policy allkeys-lru
-    ports:
-      - '6380:6379'
+    volumes:
+      - redis_data:/data
     networks:
       - redis-network
       - postgres-network
@@ -162,3 +145,4 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:
