@@ -29,33 +29,32 @@ export class UserFilterService {
     return filter;
   }
 
+  async getUsersForanonymousUser() {
+    this.logger.debug(`익명 사용자의 사용자 목록을 조회합니다.`);
+    const { users, nextCursor } = await this.userService.getUserList({
+      cursor: null,
+      order: ['likeCount_DESC'],
+      take: 6,
+    });
+
+    users.forEach((user) => {
+      user.age = calculateAge(user.birthday);
+    });
+
+    return {
+      users: users.map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+        region: user.region,
+        likeCount: user.likeCount,
+        age: user.age,
+        profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
+      })),
+      nextCursor,
+    };
+  }
+
   async getFilteredUsers(userId: string) {
-    this.logger.debug(`사용자 ${userId}의 필터링된 사용자 목록을 조회합니다.`);
-    if (!userId) {
-      this.logger.debug(`사용자 필터링된 사용자 목록을 조회합니다.`);
-      const { users, nextCursor } = await this.userService.getUserList({
-        cursor: null,
-        order: ['likeCount_DESC'],
-        take: 6,
-      });
-
-      users.forEach((user) => {
-        user.age = calculateAge(user.birthday);
-      });
-
-      return {
-        users: users.map((user) => ({
-          id: user.id,
-          nickname: user.nickname,
-          region: user.region,
-          likeCount: user.likeCount,
-          age: user.age,
-          profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
-        })),
-        nextCursor,
-      };
-    }
-
     const filter = await this.getUserFilter(userId);
     const filterDto = {
       ageMin: filter?.minAge ?? 20,

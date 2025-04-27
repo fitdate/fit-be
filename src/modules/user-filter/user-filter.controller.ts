@@ -1,31 +1,29 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Body,
-  Request,
-  Response,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { UserFilterService } from './user-filter.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
-import {
-  OptionalUserId,
-  Optional,
-} from 'src/common/decorator/optional-user.decorator';
+import { Public } from 'src/common/decorator/public.decorator';
 
 @ApiTags('User Filter')
 @Controller('user-filter')
 export class UserFilterController {
   constructor(private readonly userFilterService: UserFilterService) {}
 
-  @Optional()
+  @Public()
+  @Get('users-for-anonymous-user')
+  @ApiOperation({ summary: '익명 사용자의 유저 조회' })
+  @ApiResponse({ status: 200, description: '익명 사용자의 유저 조회 성공' })
+  @ApiResponse({ status: 400, description: '익명 사용자의 유저 조회 실패' })
+  getUsersForanonymousUser() {
+    return this.userFilterService.getUsersForanonymousUser();
+  }
+
   @Get('filtered-users')
   @ApiOperation({ summary: '필터링된 유저 조회' })
   @ApiResponse({ status: 200, description: '필터링된 유저 조회 성공' })
   @ApiResponse({ status: 400, description: '필터링된 유저 조회 실패' })
-  getFilteredUsers(@OptionalUserId() userId: string) {
+  getFilteredUsers(@UserId() userId: string) {
     return this.userFilterService.getFilteredUsers(userId);
   }
 
