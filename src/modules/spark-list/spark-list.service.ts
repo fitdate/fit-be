@@ -49,43 +49,22 @@ export class SparkListService {
   }
 
   async getMatchList(userId: string) {
-    const selectorsList = await this.matchService.getSelectorsList(userId);
-    const matchList = selectorsList
-      .map((selection) => {
-        const matchedUser =
-          selection.selector.id === userId
-            ? selection.selected
-            : selection.selector;
+    const matchList = await this.matchService.getUserMatchList(userId);
+    const formattedMatchList = matchList.map((match) => {
+      const matchedUser = match.user1.id === userId ? match.user2 : match.user1;
 
-        if (!matchedUser) {
-          return null;
-        }
+      const profileImage = matchedUser.profile?.profileImage?.[0];
+      return {
+        matchedUserId: matchedUser.id,
+        nickname: matchedUser.nickname,
+        likeCount: matchedUser.likeCount,
+        age: calculateAge(matchedUser.birthday),
+        region: matchedUser.region,
+        profileImage: profileImage ? profileImage.imageUrl : null,
+      };
+    });
 
-        this.logger.debug(`[getMatchList] 사용자 ID: ${matchedUser.id}`);
-        this.logger.debug(
-          `[getMatchList] 프로필 존재 여부: ${!!matchedUser.profile}`,
-        );
-        this.logger.debug(
-          `[getMatchList] 프로필 이미지 배열: ${JSON.stringify(matchedUser.profile?.profileImage)}`,
-        );
-
-        const profileImage = matchedUser.profile?.profileImage?.[0];
-        this.logger.debug(
-          `[getMatchList] 첫 번째 프로필 이미지 객체: ${JSON.stringify(profileImage)}`,
-        );
-
-        return {
-          matchedUserId: matchedUser.id,
-          nickname: matchedUser.nickname,
-          likeCount: matchedUser.likeCount,
-          age: calculateAge(matchedUser.birthday),
-          region: matchedUser.region,
-          profileImage: profileImage ? profileImage.imageUrl : null,
-        };
-      })
-      .filter(Boolean);
-
-    return matchList;
+    return formattedMatchList;
   }
 
   async getSparkList(userId: string) {
