@@ -61,9 +61,17 @@ export class SparkListService {
           return null;
         }
 
-        const profileImage = matchedUser.profile?.profileImage?.[0]?.imageUrl;
+        this.logger.debug(`[getMatchList] 사용자 ID: ${matchedUser.id}`);
         this.logger.debug(
-          `[getMatchList] 프로필 이미지 URL: ${profileImage || 'null'}`,
+          `[getMatchList] 프로필 존재 여부: ${!!matchedUser.profile}`,
+        );
+        this.logger.debug(
+          `[getMatchList] 프로필 이미지 배열: ${JSON.stringify(matchedUser.profile?.profileImage)}`,
+        );
+
+        const profileImage = matchedUser.profile?.profileImage?.[0];
+        this.logger.debug(
+          `[getMatchList] 첫 번째 프로필 이미지 객체: ${JSON.stringify(profileImage)}`,
         );
 
         return {
@@ -72,7 +80,7 @@ export class SparkListService {
           likeCount: matchedUser.likeCount,
           age: calculateAge(matchedUser.birthday),
           region: matchedUser.region,
-          profileImage: profileImage || null,
+          profileImage: profileImage ? profileImage.imageUrl : null,
         };
       })
       .filter(Boolean);
