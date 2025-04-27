@@ -49,42 +49,35 @@ export class SparkListService {
   }
 
   async getMatchList(userId: string) {
-    this.logger.debug(`[getMatchList] 시작 - userId: ${userId}`);
-
     const selectorsList = await this.matchService.getSelectorsList(userId);
-    this.logger.debug(`[getMatchList] 매칭 목록 개수: ${selectorsList.length}`);
 
     const matchList = selectorsList
       .map((selection) => {
         if (!selection.selector || !selection.selected) {
-          this.logger.warn(
-            `[getMatchList] 매칭 데이터 누락 - 매칭 ID: ${selection.id}`,
-          );
           return null;
         }
 
-        this.logger.debug(`[getMatchList] 매칭 ID: ${selection.id}`);
-        this.logger.debug(`[getMatchList] 선택자 ID: ${selection.selector.id}`);
-        this.logger.debug(
-          `[getMatchList] 선택된 사용자 ID: ${selection.selected.id}`,
-        );
+        // 모두 선택하기 버튼을 눌렀을 때 두 명의 정보를 처리
+        if (selection.selector.id === userId && selection.selected.id) {
+          const matchedUser = selection.selected;
+          const profileImage = matchedUser.profile?.profileImage?.[0];
 
+          return {
+            matchedUserId: matchedUser.id,
+            nickname: matchedUser.nickname,
+            likeCount: matchedUser.likeCount,
+            age: calculateAge(matchedUser.birthday),
+            region: matchedUser.region,
+            profileImage: profileImage ? profileImage.imageUrl : null,
+          };
+        }
+
+        // 선택하기 버튼을 눌렀을 때 한 명의 정보를 처리
         const matchedUser =
           selection.selector.id === userId
             ? selection.selected
             : selection.selector;
-        this.logger.debug(`[getMatchList] 매칭된 사용자 ID: ${matchedUser.id}`);
-        this.logger.debug(
-          `[getMatchList] 프로필 존재 여부: ${!!matchedUser.profile}`,
-        );
-        this.logger.debug(
-          `[getMatchList] 프로필 이미지 배열: ${JSON.stringify(matchedUser.profile?.profileImage)}`,
-        );
-
         const profileImage = matchedUser.profile?.profileImage?.[0];
-        this.logger.debug(
-          `[getMatchList] 첫 번째 프로필 이미지 객체: ${JSON.stringify(profileImage)}`,
-        );
 
         return {
           matchedUserId: matchedUser.id,
@@ -97,9 +90,6 @@ export class SparkListService {
       })
       .filter(Boolean);
 
-    this.logger.debug(
-      `[getMatchList] 완료 - 매칭 목록 개수: ${matchList.length}`,
-    );
     return matchList;
   }
 
