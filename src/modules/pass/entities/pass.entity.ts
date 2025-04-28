@@ -8,7 +8,7 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { BaseTable } from 'src/common/entity/base-table.entity';
 
-@Entity('passes')
+@Entity('pass')
 export class Pass extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
