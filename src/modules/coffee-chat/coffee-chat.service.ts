@@ -195,9 +195,10 @@ export class CoffeeChatService {
     return coffeeChatList;
   }
 
-  async getReceivedCoffeeChatList(userId: string): Promise<CoffeeChat[]> {
+  async getReceivedCoffeeChatList(userId: string): Promise<any[]> {
     this.logger.log(`[받은 커피챗 조회] 사용자 ID: ${userId}`);
-    const receivedCoffeeChatList = await this.coffeeChatRepository
+    // Pending chats
+    const pendingChats = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
       .leftJoinAndSelect('coffeeChat.sender', 'sender')
       .leftJoinAndSelect('sender.profile', 'senderProfile')
@@ -207,10 +208,33 @@ export class CoffeeChatService {
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
+    // Accepted chats
+    const acceptedChats = await this.acceptedCoffeeChatRepository
+      .createQueryBuilder('acceptedChat')
+      .leftJoinAndSelect('acceptedChat.sender', 'sender')
+      .leftJoinAndSelect('sender.profile', 'senderProfile')
+      .leftJoinAndSelect('senderProfile.profileImage', 'senderProfileImage')
+      .leftJoinAndSelect('acceptedChat.receiver', 'receiver')
+      .leftJoinAndSelect('receiver.profile', 'receiverProfile')
+      .leftJoinAndSelect('receiverProfile.profileImage', 'receiverProfileImage')
+      .where('acceptedChat.receiver.id = :userId', { userId })
+      .orderBy('acceptedChat.acceptedAt', 'DESC')
+      .getMany();
+
+    const pendingResult = pendingChats.map(chat => ({
+      ...this.coffeeChatReturn([chat])[0],
+      status: CoffeeChatStatus.PENDING,
+    }));
+    const acceptedResult = acceptedChats.map(chat => ({
+      ...this.coffeeChatReturn([chat], true)[0],
+      status: CoffeeChatStatus.ACCEPTED,
+    }));
+
+    const result = [...pendingResult, ...acceptedResult];
     this.logger.log(
-      `[받은 커피챗 조회 완료] 사용자 ID: ${userId}, 조회된 커피챗 수: ${receivedCoffeeChatList.length}`,
+      `[받은 커피챗 조회 완료] 사용자 ID: ${userId}, 조회된 커피챗 수: ${result.length}`,
     );
-    return receivedCoffeeChatList;
+    return result;
   }
 
   async getAcceptedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
@@ -254,7 +278,7 @@ export class CoffeeChatService {
 
   private createUserSummary(user: User): UserSummary {
     return {
-      id: user.id,
+      id: user.id ?? '',
       nickname: user.nickname,
       region: user.region ?? '',
       likeCount: user.likeCount,
