@@ -71,4 +71,18 @@ export class PassService {
 
     await this.passRepository.save(pass);
   }
+
+  /**
+   * 사용자가 거절한 모든 사용자 ID 목록을 가져옵니다. 랜덤 매칭 기능에 사용
+   * @param userId 현재 사용자 ID
+   * @returns 거절한 사용자 ID 목록
+   */
+  async getPassedUserIds(userId: string): Promise<string[]> {
+    const passes = await this.passRepository.find({
+      where: { userId },
+      select: ['passedUserId'],
+    });
+
+    return passes.map((pass) => pass.passedUserId);
+  }
 }
