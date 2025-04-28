@@ -3,6 +3,7 @@ import { InterestCategory } from '../entities/interest-category.entity';
 import { Repository, In, ILike } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateManyInterestCategoryDto } from '../dto/create-many-interest-category.dto';
+import { CreateInterestCategoryDto } from '../dto/create-interest-category.dto';
 interface CreateManyInterestCategoryResponse {
   created: InterestCategory[];
   skipped: string[];
@@ -88,6 +89,21 @@ export class InterestCategoryService {
       created,
       skipped: skippedNames,
     };
+  }
+
+  async createInterestCategory(
+    createDto: CreateInterestCategoryDto,
+  ): Promise<InterestCategory> {
+    const existingCategory = await this.interestCategoryRepository.findOne({
+      where: { name: createDto.name },
+    });
+
+    if (existingCategory) {
+      return existingCategory;
+    }
+
+    const newCategory = this.interestCategoryRepository.create(createDto);
+    return this.interestCategoryRepository.save(newCategory);
   }
 
   async findAllInterestCategory(): Promise<InterestCategory[]> {
