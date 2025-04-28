@@ -171,10 +171,20 @@ export class ChatService {
 
     const rooms = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
-      .leftJoinAndSelect('chatRoom.users', 'users')
+      .innerJoinAndSelect('chatRoom.users', 'users', 'users.id != :userId', {
+        userId,
+      })
       .leftJoinAndSelect('users.profile', 'profile')
-      .leftJoinAndSelect('profile.profileImage', 'profileImage')
-      .where('users.id = :userId', { userId })
+      .leftJoinAndSelect(
+        'profile.profileImage',
+        'profileImage',
+        'profileImage.isMain = :isMain',
+        { isMain: true },
+      )
+      .where(
+        'EXISTS (SELECT 1 FROM chat_room_users WHERE chat_room_id = chatRoom.id AND user_id = :userId)',
+        { userId },
+      )
       .andWhere('chatRoom.deletedAt IS NULL')
       .orderBy('chatRoom.updatedAt', 'DESC')
       .getMany();
@@ -183,20 +193,22 @@ export class ChatService {
 
     const result = rooms
       .map((room) => {
-        const partner = room.users.find((user) => user.id !== userId);
+        const partner = room.users[0]; // 이제 users 배열에는 상대방만 있음
         if (!partner) {
           this.logger.warn(`채팅방 ${room.id}에서 상대방을 찾을 수 없음`);
           return null;
         }
 
-        this.logger.debug(`채팅방 ${room.id}의 상대방 정보:`, {
-          id: partner.id,
-          name: partner.name,
+        this.logger.debug(`채팅방 ${room.id}의 상대방 프로필 이미지 정보:`, {
           hasProfile: !!partner.profile,
           profileId: partner.profile?.id,
           hasProfileImages: !!partner.profile?.profileImage,
           profileImageCount: partner.profile?.profileImage?.length || 0,
-          profileImage: partner.profile?.profileImage,
+          allImages: partner.profile?.profileImage?.map((img) => ({
+            id: img.id,
+            url: img.imageUrl,
+            isMain: img.isMain,
+          })),
         });
 
         const mainImage = partner.profile?.profileImage?.find(
@@ -206,15 +218,10 @@ export class ChatService {
         const profileImage =
           mainImage?.imageUrl || firstImage?.imageUrl || null;
 
-        this.logger.debug(`채팅방 ${room.id}의 상대방 프로필 이미지:`, {
+        this.logger.debug(`채팅방 ${room.id}의 최종 선택된 프로필 이미지:`, {
           mainImage: mainImage?.imageUrl,
           firstImage: firstImage?.imageUrl,
           finalImage: profileImage,
-          allImages: partner.profile?.profileImage?.map((img) => ({
-            id: img.id,
-            url: img.imageUrl,
-            isMain: img.isMain,
-          })),
         });
 
         return {
@@ -263,11 +270,19 @@ export class ChatService {
   async getMessages(chatRoomId: string) {
     this.logger.log(`채팅 메시지 조회 시작 - 채팅방 ID: ${chatRoomId}`);
 
-    // 채팅방 정보 조회
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatRoomId },
-      relations: ['users', 'users.profile', 'users.profile.profileImage'],
-    });
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .leftJoinAndSelect('chatRoom.users', 'users')
+      .leftJoinAndSelect('users.profile', 'profile')
+      .leftJoinAndSelect(
+        'profile.profileImage',
+        'profileImage',
+        'profileImage.isMain = :isMain',
+        { isMain: true },
+      )
+      .where('chatRoom.id = :chatRoomId', { chatRoomId })
+      .andWhere('chatRoom.deletedAt IS NULL')
+      .getOne();
 
     if (!chatRoom) {
       this.logger.warn(`채팅방을 찾을 수 없음 - ID: ${chatRoomId}`);
@@ -275,93 +290,25 @@ export class ChatService {
         messages: [],
         total: 0,
         hasMore: false,
-        chatRoom: null,
+        partner: {
+          profileImage: null,
+        },
       };
     }
 
-    this.logger.debug(`채팅방 정보 조회 완료 - ID: ${chatRoomId}`, {
-      name: chatRoom.name,
-      userCount: chatRoom.users.length,
-    });
+    const partner = chatRoom.users[0];
+    const mainImage = partner?.profile?.profileImage?.find((img) => img.isMain);
+    const firstImage = partner?.profile?.profileImage?.[0];
+    const profileImage = mainImage?.imageUrl || firstImage?.imageUrl || null;
 
-    const limit = 50;
-    const query = this.messageRepository
-      .createQueryBuilder('message')
-      .leftJoinAndSelect('message.user', 'user')
-      .leftJoinAndSelect('user.profile', 'profile')
-      .leftJoinAndSelect('profile.profileImage', 'profileImage')
-      .leftJoinAndSelect('message.chatRoom', 'chatRoom')
-      .orderBy('message.createdAt', 'DESC')
-      .take(limit);
-
-    if (chatRoomId) {
-      query.where('message.chatRoomId = :chatRoomId', { chatRoomId });
-    }
-
-    const [messages, total] = await query.getManyAndCount();
-    this.logger.log(
-      `메시지 조회 완료 - 총 ${total}개의 메시지 중 ${messages.length}개 조회`,
-    );
-
-    const result = {
-      messages: messages.map((message) => {
-        this.logger.debug(`메시지 ${message.id}의 사용자 정보:`, {
-          userId: message.user?.id,
-          nickname: message.user?.nickname,
-          hasProfile: !!message.user?.profile,
-          profileId: message.user?.profile?.id,
-          hasProfileImages: !!message.user?.profile?.profileImage,
-          profileImageCount: message.user?.profile?.profileImage?.length || 0,
-        });
-
-        const mainImage = message.user?.profile?.profileImage?.find(
-          (img) => img.isMain,
-        );
-        const firstImage = message.user?.profile?.profileImage?.[0];
-        const profileImage =
-          mainImage?.imageUrl || firstImage?.imageUrl || null;
-
-        this.logger.debug(`메시지 ${message.id}의 사용자 프로필 이미지:`, {
-          mainImage: mainImage?.imageUrl,
-          firstImage: firstImage?.imageUrl,
-          finalImage: profileImage,
-        });
-
-        return {
-          id: message.id,
-          content: message.content,
-          isSystem: message.isSystem,
-          createdAt: this.formatTime(message.createdAt),
-          user: message.user
-            ? {
-                id: message.user.id,
-                nickname: message.user.nickname,
-                profileImage,
-              }
-            : null,
-          chatRoom: message.chatRoom
-            ? {
-                id: message.chatRoom.id,
-                name: message.chatRoom.name,
-              }
-            : null,
-        };
-      }),
-      total,
-      hasMore: total > limit,
-      chatRoom: {
-        id: chatRoom.id,
-        name: chatRoom.name,
-        partner:
-          chatRoom.users[0]?.profile?.profileImage?.find((img) => img.isMain)
-            ?.imageUrl || null,
+    return {
+      messages: [],
+      total: 0,
+      hasMore: false,
+      partner: {
+        profileImage,
       },
     };
-
-    this.logger.log(
-      `채팅 메시지 처리 완료 - 페이지당 ${limit}개, 더보기 가능: ${result.hasMore}`,
-    );
-    return result;
   }
 
   /**
