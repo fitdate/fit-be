@@ -104,10 +104,20 @@ export class CoffeeChatService {
   }
 
   async getReceivedCoffeeChatList(userId: string) {
+    // 수신한 커피챗 요청
     const pendingChats = await this.coffeeChatRepository.find({
       where: { receiver: { id: userId }, status: CoffeeChatStatus.PENDING },
+      relations: [
+        'sender',
+        'receiver',
+        'sender.profile',
+        'sender.profile.profileImage',
+        'receiver.profile',
+        'receiver.profile.profileImage',
+      ],
     });
 
+    // 보낸 커피챗 요청
     const pendingChatsReceiver = await this.coffeeChatRepository.find({
       where: { sender: { id: userId }, status: CoffeeChatStatus.PENDING },
       relations: [
@@ -115,9 +125,12 @@ export class CoffeeChatService {
         'receiver',
         'sender.profile',
         'sender.profile.profileImage',
+        'receiver.profile',
+        'receiver.profile.profileImage',
       ],
     });
 
+    // 두 결과를 합쳐 반환
     return [...pendingChats, ...pendingChatsReceiver];
   }
 
