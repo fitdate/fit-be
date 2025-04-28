@@ -4,10 +4,17 @@ import {
   UsePipes,
   ValidationPipe,
   Param,
+  Body,
 } from '@nestjs/common';
 import { PassService } from './pass.service';
 import { UserId } from '../../common/decorator/get-user.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 
 @ApiTags('pass')
 @Controller('pass')
@@ -15,15 +22,32 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 export class PassController {
   constructor(private readonly passService: PassService) {}
 
-  @Post('both/:passedUserId')
+  @Post('both')
   @ApiOperation({ summary: '매칭 페이지에서 X버튼을 눌러 둘 다 선택하지 않음' })
-  @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        passedUserId1: {
+          type: 'string',
+          description: '첫 번째 거절할 사용자 ID',
+        },
+        passedUserId2: {
+          type: 'string',
+          description: '두 번째 거절할 사용자 ID',
+        },
+      },
+      required: ['passedUserId1', 'passedUserId2'],
+    },
+  })
   @ApiResponse({ status: 200, description: '성공적으로 거절됨' })
   async passBothUsers(
     @UserId() userId: string,
-    @Param('passedUserId') passedUserId: string,
+    @Body('passedUserId1') passedUserId1: string,
+    @Body('passedUserId2') passedUserId2: string,
   ): Promise<void> {
-    await this.passService.passBothUsers(userId, passedUserId);
+    await this.passService.passBothUsers(userId, passedUserId1);
+    await this.passService.passBothUsers(userId, passedUserId2);
   }
 
   @Post('match/:passedUserId')

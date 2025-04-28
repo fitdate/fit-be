@@ -151,8 +151,7 @@ export class CoffeeChatService {
     try {
       await this.notificationService.create(notification);
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.error(`알림 전송 중 에러 발생: ${error?.message}`);
+      this.logger.error(`알림 전송 중 에러 발생: ${(error as Error).message}`);
       throw error;
     }
     this.logger.log(`Sent acceptance notification to sender - ID: ${senderId}`);
@@ -200,9 +199,7 @@ export class CoffeeChatService {
   }
 
   async getReceivedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
-    this.logger.log(
-      `Fetching received coffee chat list for user - ID: ${userId}`,
-    );
+    this.logger.log(`[받은 커피챗 조회] 사용자 ID: ${userId}`);
     const receivedCoffeeChatList = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
       .leftJoinAndSelect('coffeeChat.sender', 'sender')
@@ -213,7 +210,7 @@ export class CoffeeChatService {
       .getMany();
 
     this.logger.log(
-      `Retrieved ${receivedCoffeeChatList.length} pending coffee chats for user ${userId}`,
+      `[받은 커피챗 조회 완료] 사용자 ID: ${userId}, 조회된 커피챗 수: ${receivedCoffeeChatList.length}`,
     );
     return this.coffeeChatReturn(receivedCoffeeChatList);
   }
