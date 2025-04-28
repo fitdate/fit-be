@@ -101,18 +101,27 @@ export class MatchService {
 
     // 이미 매칭된 사용자 목록 가져오기
     const selectorsList = await this.getSelectorsList(userId);
-    const matchedUserIds = selectorsList
-      .filter((selection) => selection.selected && selection.selected.id)
-      .map((selection) => selection.selected.id)
-      .concat(
-        selectorsList
-          .filter((selection) => selection.selector && selection.selector.id)
-          .map((selection) => selection.selector.id),
-      );
+
+    // 선택된 사용자와 선택한 사용자 모두 제외
+    const matchedUserIds = new Set<string>();
+
+    // 현재 사용자 제외
+    matchedUserIds.add(userId);
+
+    selectorsList.forEach((selection) => {
+      // 선택한 사용자 제외
+      if (selection.selector && selection.selector.id) {
+        matchedUserIds.add(selection.selector.id);
+      }
+      // 선택된 사용자 제외
+      if (selection.selected && selection.selected.id) {
+        matchedUserIds.add(selection.selected.id);
+      }
+    });
 
     // 이미 매칭된 사용자 제외
     const availableUsers = oppositeGenderUsers.filter(
-      (user) => !matchedUserIds.includes(user.id),
+      (user) => !matchedUserIds.has(user.id),
     );
 
     // 랜덤으로 4명 선택
@@ -291,6 +300,22 @@ export class MatchService {
       if (!currentUser) {
         throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
       }
+
+      // match_selection 테이블에 두 사용자 모두에 대한 데이터 생성
+      await Promise.all([
+        this.matchSelectionRepository.save(
+          this.matchSelectionRepository.create({
+            selector: { id: currentUserId },
+            selected: { id: firstSelectedUserId },
+          }),
+        ),
+        this.matchSelectionRepository.save(
+          this.matchSelectionRepository.create({
+            selector: { id: currentUserId },
+            selected: { id: secondSelectedUserId },
+          }),
+        ),
+      ]);
 
       // 두 사용자에게 모두 알림 전송
       await Promise.all([
