@@ -267,7 +267,7 @@ export class ChatService {
    * @param chatRoomId 특정 채팅방의 메시지만 조회할 경우 채팅방 ID
    * @returns 채팅 메시지 목록
    */
-  async getMessages(chatRoomId: string) {
+  async getMessages(chatRoomId: string, userId: string) {
     this.logger.log(`채팅 메시지 조회 시작 - 채팅방 ID: ${chatRoomId}`);
 
     const chatRoom = await this.chatRoomRepository
@@ -293,21 +293,32 @@ export class ChatService {
         partner: {
           profileImage: null,
         },
+        isMine: true,
       };
     }
 
-    const partner = chatRoom.users[0];
+    const partner = chatRoom.users.find((user) => user.id !== userId);
     const mainImage = partner?.profile?.profileImage?.find((img) => img.isMain);
     const firstImage = partner?.profile?.profileImage?.[0];
     const profileImage = mainImage?.imageUrl || firstImage?.imageUrl || null;
 
+    // 메시지 조회
+    const messages = await this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.user', 'user')
+      .where('message.chatRoomId = :chatRoomId', { chatRoomId })
+      .orderBy('message.createdAt', 'DESC')
+      .take(50)
+      .getMany();
+
     return {
-      messages: [],
-      total: 0,
-      hasMore: false,
+      messages,
+      total: messages.length,
+      hasMore: messages.length === 50,
       partner: {
         profileImage,
       },
+      isMine: true,
     };
   }
 
