@@ -41,10 +41,9 @@ export class CoffeeChatService {
     );
 
     return this.dataSource.transaction(async (manager) => {
-      const sender = await this.userService.getCoffeeChatUserById(userId);
-      const receiver = await this.userService.getCoffeeChatUserById(
-        sendCoffeeChatDto.receiverId,
-      );
+      // sender: 로그인한 본인, receiver: 상대방(신청받을 유저)
+      const sender = await this.userService.getCoffeeChatUserById(userId); // 본인
+      const receiver = await this.userService.getCoffeeChatUserById(sendCoffeeChatDto.receiverId); // 상대방
 
       this.logger.log(
         `Retrieved users - Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
