@@ -57,14 +57,14 @@ export class AuthController {
   }
 
   // 이메일 중복 확인
-  // @SkipProfileComplete()
-  // @Public()
-  // @Post('check-email')
-  // @ApiOperation({ summary: '이메일 중복 확인' })
-  // @ApiResponse({ status: 200, description: '이메일 중복 확인 성공' })
-  // async checkEmail(@Body() sendVerificationEmailDto: SendVerificationEmailDto) {
-  //   return this.authService.checkEmail(sendVerificationEmailDto);
-  // }
+  @SkipProfileComplete()
+  @Public()
+  @Post('check-email')
+  @ApiOperation({ summary: '이메일 중복 확인' })
+  @ApiResponse({ status: 200, description: '이메일 중복 확인 성공' })
+  async checkEmail(@Body() sendVerificationEmailDto: SendVerificationEmailDto) {
+    return this.authService.checkEmail(sendVerificationEmailDto);
+  }
 
   // 닉네임 중복 확인
   @SkipProfileComplete()
@@ -77,27 +77,27 @@ export class AuthController {
   }
 
   // 이메일 인증 코드 전송
-  // @SkipProfileComplete()
-  // @Public()
-  // @Post('send-verification-email')
-  // @ApiOperation({ summary: '인증 이메일 전송' })
-  // @ApiResponse({ status: 200, description: '인증 이메일 전송 성공' })
-  // async sendVerificationEmail(
-  //   @Body() sendVerificationEmailDto: SendVerificationEmailDto,
-  // ) {
-  //   return this.authService.sendVerificationEmail(sendVerificationEmailDto);
-  // }
+  @SkipProfileComplete()
+  @Public()
+  @Post('send-verification-email')
+  @ApiOperation({ summary: '인증 이메일 전송' })
+  @ApiResponse({ status: 200, description: '인증 이메일 전송 성공' })
+  async sendVerificationEmail(
+    @Body() sendVerificationEmailDto: SendVerificationEmailDto,
+  ) {
+    return this.authService.sendVerificationEmail(sendVerificationEmailDto);
+  }
 
   // 이메일 인증 코드 확인
-  // @SkipProfileComplete()
-  // @Public()
-  // @Post('verify-email')
-  // @ApiOperation({ summary: '이메일 인증 코드 확인' })
-  // @ApiResponse({ status: 200, description: '이메일 인증 성공' })
-  // @ApiResponse({ status: 401, description: '인증코드 불일치 또는 만료' })
-  // async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
-  //   return this.authService.verifyEmail(verifyEmailDto);
-  // }
+  @SkipProfileComplete()
+  @Public()
+  @Post('verify-email')
+  @ApiOperation({ summary: '이메일 인증 코드 확인' })
+  @ApiResponse({ status: 200, description: '이메일 인증 성공' })
+  @ApiResponse({ status: 401, description: '인증코드 불일치 또는 만료' })
+  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    return this.authService.verifyEmail(verifyEmailDto);
+  }
 
   // 이메일 로그인
   @SkipProfileComplete()

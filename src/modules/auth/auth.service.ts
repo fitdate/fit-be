@@ -61,12 +61,12 @@ export class AuthService {
     log(`Attempting to register new user with email: ${registerDto.email}`);
 
     // 이메일 인증 여부 확인
-    // const isEmailVerified = await this.emailAuthService.checkEmailVerification(
-    //   registerDto.email,
-    // );
-    // if (!isEmailVerified) {
-    //   throw new UnauthorizedException('이메일 인증이 필요합니다.');
-    // }
+    const isEmailVerified = await this.emailAuthService.checkEmailVerification(
+      registerDto.email,
+    );
+    if (!isEmailVerified) {
+      throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    }
 
     // 기존 유저 확인
     const existingUser = await this.userService.findUserByEmail(
@@ -307,11 +307,11 @@ export class AuthService {
       log('Transaction committed successfully');
 
       // 회원가입 성공 시 Redis에서 인증 상태 삭제
-      // const verifiedKey = `email-verified:${registerDto.email}`;
-      // await this.redisService.del(verifiedKey);
-      // log(
-      //   `Email verification status deleted from Redis for: ${registerDto.email}`,
-      // );
+      const verifiedKey = `email-verified:${registerDto.email}`;
+      await this.redisService.del(verifiedKey);
+      log(
+        `Email verification status deleted from Redis for: ${registerDto.email}`,
+      );
 
       return { user, profile };
     } catch (error) {
@@ -383,13 +383,6 @@ export class AuthService {
         '이메일 또는 비밀번호가 일치하지 않습니다.',
       );
     }
-
-    // if (password !== user.password) {
-    //   this.logger.log(`Password validation failed for email: ${email}`);
-    //   throw new UnauthorizedException(
-    //     '이메일 또는 비밀번호가 일치하지 않습니다.',
-    //   );
-    // }
 
     this.logger.log(`Successfully validated user with email: ${email}`);
     return user;
