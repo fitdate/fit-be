@@ -14,6 +14,7 @@ import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../../common/enum/notification.enum';
 import { UserService } from '../user/user.service';
 import { User } from '../user/entities/user.entity';
+import { PassService } from '../pass/pass.service';
 
 @Injectable()
 export class MatchService {
@@ -24,8 +25,11 @@ export class MatchService {
     private readonly matchRepository: Repository<Match>,
     @InjectRepository(MatchSelection)
     private readonly matchSelectionRepository: Repository<MatchSelection>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly notificationService: NotificationService,
     private readonly userService: UserService,
+    private readonly passService: PassService,
   ) {}
 
   // 성별 필터링
@@ -119,7 +123,11 @@ export class MatchService {
       }
     });
 
-    // 이미 매칭된 사용자 제외
+    // 거절한 사용자 목록 가져오기
+    const passedUserIds = await this.passService.getPassedUserIds(userId);
+    passedUserIds.forEach((id) => matchedUserIds.add(id));
+
+    // 이미 매칭된 사용자와 거절한 사용자 제외
     const availableUsers = oppositeGenderUsers.filter(
       (user) => !matchedUserIds.has(user.id),
     );
