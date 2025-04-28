@@ -42,7 +42,10 @@ export class CoffeeChatController {
   @ApiOperation({ summary: '커피챗 수락' })
   @ApiResponse({ status: 200, description: '커피챗 수락 성공' })
   @ApiResponse({ status: 400, description: '커피챗 수락 실패' })
-  @ApiParam({ name: 'senderId', description: '커피챗 보낸 사람의 ID' })
+  @ApiParam({
+    name: 'senderId',
+    description: '커피챗 보내는 사람의 ID',
+  })
   @Post('accept')
   acceptCoffeeChat(
     @UserId() userId: string,

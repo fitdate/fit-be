@@ -29,7 +29,12 @@ export class CoffeeChatService {
     userId: string,
     sendCoffeeChatDto: SendCoffeeChatDto,
   ): Promise<{
-    savedCoffeeChat: CoffeeChat;
+    savedCoffeeChat: {
+      id: string;
+      sender: string;
+      receiver: string;
+      status: CoffeeChatStatus;
+    };
   }> {
     this.logger.log(
       `Starting coffee chat request - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
@@ -83,7 +88,12 @@ export class CoffeeChatService {
           userId,
         );
       return {
-        savedCoffeeChat,
+        savedCoffeeChat: {
+          id: savedCoffeeChat.id,
+          sender: sender.id,
+          receiver: receiver.id,
+          status: savedCoffeeChat.status,
+        },
         chatRoomEntryNotification,
         receiverChatRoomEntryNotification,
       };
@@ -156,7 +166,11 @@ export class CoffeeChatService {
     );
 
     return {
-      createdChatRoom,
+      createdChatRoom: {
+        id: createdChatRoom.id,
+        sender: chat.sender.id,
+        receiver: chat.receiver.id,
+      },
       sentNotification,
       removedCoffeeChat,
       acceptedChat,
