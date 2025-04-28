@@ -21,11 +21,11 @@ export class ChatController {
 
   @Post('matchingRooms/:partnerId')
   @ApiOperation({
-    summary: '매칭 채팅방 생성',
+    summary: '대화하러 가기 버튼 클릭 시 채팅방 입장',
     description:
-      '매칭 결과 페이지 👉 결과보기 👉 "대화하러 가기" 클릭 시 호출됩니다.',
+      '매칭 결과 페이지에서 대화하러 가기 버튼을 클릭하면 호출됩니다. 기존 채팅방이 있으면 해당 채팅방을 반환하고, 없으면 새로 생성합니다.',
   })
-  @ApiResponse({ status: 201, description: '매칭 채팅방이 성공적으로 생성됨' })
+  @ApiResponse({ status: 201, description: '채팅방 입장 성공' })
   @ApiParam({
     name: 'partnerId',
     description: '매칭된 상대방의 ID',
@@ -44,7 +44,7 @@ export class ChatController {
     description:
       '채팅 페이지에서 대화방 버튼을 클릭하면 호출됩니다. 기존 채팅방이 있으면 해당 채팅방을 반환하고, 없으면 새로 생성합니다.',
   })
-  @ApiResponse({ status: 200, description: '채팅방 입장 성공' })
+  @ApiResponse({ status: 201, description: '채팅방 입장 성공' })
   @ApiParam({
     name: 'partnerId',
     description: '채팅방 상대방 사용자 ID',
@@ -60,7 +60,7 @@ export class ChatController {
   @Post('coffee-chat/accept/:partnerId')
   @ApiOperation({ summary: '커피챗 수락' })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: '커피챗 수락 성공',
   })
   @ApiParam({
@@ -73,6 +73,24 @@ export class ChatController {
     @Param() params: AcceptCoffeeChatDto,
   ) {
     return this.chatService.acceptCoffeeChat(userId, params.partnerId);
+  }
+
+  @Post('match/accept/:partnerId')
+  @ApiOperation({ summary: '매칭 수락' })
+  @ApiResponse({
+    status: 201,
+    description: '매칭 수락 성공',
+  })
+  @ApiParam({
+    name: 'partnerId',
+    description: '매칭된 상대방의 ID',
+    example: '',
+  })
+  async acceptMatch(
+    @UserId() userId: string,
+    @Param() params: AcceptCoffeeChatDto,
+  ) {
+    return this.chatService.acceptMatch(userId, params.partnerId);
   }
 
   @ApiOperation({
