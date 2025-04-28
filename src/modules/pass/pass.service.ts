@@ -35,8 +35,12 @@ export class PassService {
    * 호감페이지에서 매칭 요청을 거절할 때 호출됩니다.
    * @param userId 현재 사용자 ID
    * @param passedUserId 거절할 사용자 ID
+   * @returns 거절 처리 결과
    */
-  async passMatchRequest(userId: string, passedUserId: string): Promise<void> {
+  async passMatchRequest(
+    userId: string,
+    passedUserId: string,
+  ): Promise<{ isSuccess: boolean }> {
     this.logger.log(
       `사용자 ${userId}가 ${passedUserId}의 매칭 요청을 거절했습니다.`,
     );
@@ -48,6 +52,8 @@ export class PassService {
     });
 
     await this.passRepository.save(pass);
+
+    return { isSuccess: false };
   }
 
   /**

@@ -132,7 +132,7 @@ export class ChatService {
    * 매칭 수락 시 채팅방을 생성하고 알림을 전송합니다.
    * @param userId 현재 로그인한 사용자 ID
    * @param partnerId 매칭된 상대방 ID
-   * @returns 생성된 채팅방 정보
+   * @returns 생성된 채팅방 정보와 성공 상태
    */
   async acceptMatch(userId: string, partnerId: string) {
     this.logger.log(
@@ -158,7 +158,10 @@ export class ChatService {
     this.logger.log(`알림 전송 완료`);
 
     this.logger.log(`매칭 수락 처리 완료 - 채팅방 ID: ${chatRoom.id}`);
-    return chatRoom;
+    return {
+      ...chatRoom,
+      isSuccess: true,
+    };
   }
 
   /**
