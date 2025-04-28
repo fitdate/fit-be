@@ -100,7 +100,7 @@ import { ScheduleModule } from '@nestjs/schedule';
           infer: true,
         }),
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-        synchronize: false,
+        synchronize: true,
         logging: true,
         extra: {
           max: 2, // 최대 연결 풀 크기 (동시에 유지할 수 있는 최대 연결 수)

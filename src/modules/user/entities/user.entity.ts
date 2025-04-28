@@ -31,9 +31,6 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   password: string;
 
-  @Column({ nullable: true })
-  age: number;
-
   @Column({ unique: true, nullable: true })
   nickname: string;
 
@@ -114,9 +111,6 @@ export class User extends BaseTable {
   })
   @JoinColumn()
   userFilter: UserFilter;
-
-  @Column({ nullable: true })
-  seed?: string;
 
   @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.sender)
   coffeeChats: CoffeeChat[];

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
+import { calculateAge } from 'src/common/util/age-calculator.util';
 @Injectable()
 export class DatingPreferenceService {
   private readonly logger = new Logger(DatingPreferenceService.name);
@@ -54,7 +55,7 @@ export class DatingPreferenceService {
         nickname: user.nickname,
         region: user.region,
         height: user.height,
-        age: user.age,
+        age: calculateAge(user.birthday),
         likeCount: user.likeCount,
       })),
       nextCursor,

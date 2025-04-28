@@ -37,17 +37,13 @@ export class UserFilterService {
       take: 6,
     });
 
-    users.forEach((user) => {
-      user.age = calculateAge(user.birthday);
-    });
-
     return {
       users: users.map((user) => ({
         id: user.id,
         nickname: user.nickname,
         region: user.region,
         likeCount: user.likeCount,
-        age: user.age,
+        age: calculateAge(user.birthday),
         profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
       })),
       nextCursor,
@@ -74,17 +70,13 @@ export class UserFilterService {
       },
     );
 
-    users.forEach((user) => {
-      user.age = calculateAge(user.birthday);
-    });
-
     return {
       users: users.map((user) => ({
         id: user.id,
         nickname: user.nickname,
         region: user.region,
         likeCount: user.likeCount,
-        age: user.age,
+        age: calculateAge(user.birthday),
         profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
       })),
       nextCursor,

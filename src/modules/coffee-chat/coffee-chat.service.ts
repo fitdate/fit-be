@@ -11,6 +11,7 @@ import { CoffeeChatReturn, UserSummary } from './types/coffee-chat.types';
 import { ChatService } from '../chat/chat.service';
 import { NotificationType } from 'src/common/enum/notification.enum';
 import { NotificationService } from 'src/modules/notification/notification.service';
+import { calculateAge } from 'src/common/util/age-calculator.util';
 @Injectable()
 export class CoffeeChatService {
   private readonly logger = new Logger(CoffeeChatService.name);
@@ -251,7 +252,7 @@ export class CoffeeChatService {
             nickname: chat.sender.nickname,
             region: chat.sender.region,
             likeCount: chat.sender.likeCount,
-            age: chat.sender.age,
+            age: calculateAge(chat.sender.birthday),
             profileImage:
               chat.sender.profile?.profileImage?.[0]?.imageUrl ?? null,
           } as UserSummary)
@@ -262,7 +263,7 @@ export class CoffeeChatService {
             nickname: chat.receiver.nickname,
             region: chat.receiver.region,
             likeCount: chat.receiver.likeCount,
-            age: chat.receiver.age,
+            age: calculateAge(chat.receiver.birthday),
             profileImage:
               chat.receiver.profile?.profileImage?.[0]?.imageUrl ?? null,
           } as UserSummary)
