@@ -8,10 +8,11 @@ import { ChatRoom } from './entities/chat-room.entity';
 import { UserModule } from '../user/user.module';
 import { NotificationModule } from '../notification/notification.module';
 import { User } from '../user/entities/user.entity';
+import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatMessage, ChatRoom, User]),
+    TypeOrmModule.forFeature([ChatMessage, ChatRoom, User, ProfileImage]),
     UserModule,
     NotificationModule,
   ],
