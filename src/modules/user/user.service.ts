@@ -159,7 +159,17 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    return {
+      nickname: user?.nickname,
+      job: user?.job,
+      height: user?.height,
+      age: user?.age,
+      mbti: user?.profile?.mbti,
+      profileImage: user?.profile?.profileImage[0]?.imageUrl,
+      userFeedbacks: user?.profile?.userFeedbacks.map((feedback) => feedback.feedback.name),
+      userIntroductions: user?.profile?.userIntroductions.map((introduction) => introduction.introduction.name),
+      interestCategory: user?.profile?.interestCategory.map((interest) => interest.interestCategory.name),
+    };
   }
 
   async createSocialUser(
