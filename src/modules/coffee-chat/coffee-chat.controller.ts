@@ -43,8 +43,8 @@ export class CoffeeChatController {
   @ApiResponse({ status: 200, description: '커피챗 수락 성공' })
   @ApiResponse({ status: 400, description: '커피챗 수락 실패' })
   @ApiParam({
-    name: 'senderId',
-    description: '커피챗 보내는 사람의 ID',
+    name: 'chatId',
+    description: '커피챗 수락하는 채팅의 ID',
   })
   @Post('accept')
   acceptCoffeeChat(
@@ -53,7 +53,7 @@ export class CoffeeChatController {
   ) {
     return this.coffeeChatService.acceptCoffeeChat(
       userId,
-      acceptCoffeeChatDto.senderId,
+      acceptCoffeeChatDto.chatId,
     );
   }
 

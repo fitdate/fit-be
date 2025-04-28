@@ -204,9 +204,6 @@ export class CoffeeChatService {
       .leftJoinAndSelect('sender.profile', 'senderProfile')
       .leftJoinAndSelect('senderProfile.profileImage', 'senderProfileImage')
       .where('coffeeChat.receiver.id = :userId', { userId })
-      .andWhere('coffeeChat.status = :status', {
-        status: CoffeeChatStatus.PENDING,
-      })
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 

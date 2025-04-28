@@ -11,10 +11,10 @@ export class AcceptedCoffeeChat {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (user) => user.sentAcceptedCoffeeChats)
+  @ManyToOne(() => User, (user) => user.sentAcceptedCoffeeChats, { onDelete: 'CASCADE' })
   sender: User;
 
-  @ManyToOne(() => User, (user) => user.receivedAcceptedCoffeeChats)
+  @ManyToOne(() => User, (user) => user.receivedAcceptedCoffeeChats, { onDelete: 'CASCADE' })
   receiver: User;
 
   @CreateDateColumn()
