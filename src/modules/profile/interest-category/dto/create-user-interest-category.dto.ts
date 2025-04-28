@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsUUID } from 'class-validator';
+import { IsArray, IsString, IsUUID } from 'class-validator';
 
 export class CreateUserInterestCategoryDto {
   @ApiProperty({
@@ -10,11 +10,11 @@ export class CreateUserInterestCategoryDto {
   profileId: string;
 
   @ApiProperty({
-    description: '관심사 카테고리 ID 목록',
-    example: ['UUID', 'UUID', 'UUID'],
+    description: '관심사 카테고리 이름 목록',
+    example: ['Sports', 'Music', 'Art'],
     type: [String],
   })
   @IsArray()
-  @IsUUID('4', { each: true })
-  interestCategoryIds: string[];
+  @IsString({ each: true })
+  interestCategoryNames: string[];
 }

@@ -26,6 +26,8 @@ import { S3Service } from '../s3/s3.service';
 import { TokenService } from './services/token.service';
 import { RequestWithUser } from './types/request.types';
 import { EmailAuthService } from './services/email-auth.service';
+import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
+import { CreateInterestCategoryDto } from '../profile/interest-category/dto/create-interest-category.dto';
 
 @Injectable()
 export class AuthService {
@@ -41,6 +43,7 @@ export class AuthService {
     private readonly profileImageService: ProfileImageService,
     private readonly tokenService: TokenService,
     private readonly emailAuthService: EmailAuthService,
+    private readonly interestCategoryService: InterestCategoryService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -218,11 +221,37 @@ export class AuthService {
       // 7. 관심사 저장
       if (registerDto.interests?.length) {
         log('Starting interests save');
-        const interests = registerDto.interests.map((interest) => ({
+
+        // 관심사 이름으로 InterestCategory 찾기 또는 생성하기
+        const interestCategories = await Promise.all(
+          registerDto.interests.map(async (interestName) => {
+            // 관심사 이름으로 검색
+            const existingCategories =
+              await this.interestCategoryService.searchInterestCategories(
+                interestName,
+              );
+            if (existingCategories.length > 0) {
+              log(`Found existing interest category: ${interestName}`);
+              return existingCategories[0];
+            }
+
+            // 관심사 이름이 없으면 새로 생성
+            log(`Creating new interest category: ${interestName}`);
+            const createDto: CreateInterestCategoryDto = { name: interestName };
+            return this.interestCategoryService.createInterestCategory(
+              createDto,
+            );
+          }),
+        );
+
+        // UserInterestCategory와 연결
+        const userInterestCategories = interestCategories.map((category) => ({
           profile: { id: profile.id },
-          interestCategoryId: interest,
+          interestCategory: { id: category.id },
         }));
-        await qr.manager.save(UserInterestCategory, interests);
+
+        // 저장
+        await qr.manager.save(UserInterestCategory, userInterestCategories);
         log(`User interests saved successfully for user: ${user.id}`);
       }
 
