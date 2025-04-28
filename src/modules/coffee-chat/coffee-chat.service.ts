@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CoffeeChat } from './entities/coffee-chat.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,9 +6,11 @@ import { UserService } from '../user/user.service';
 import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
 import { CoffeeChatStatus } from './enum/coffee-chat-statue.enum';
 import { DataSource } from 'typeorm';
-import { Logger } from '@nestjs/common';
 import { AcceptedCoffeeChat } from './entities/accepted-coffee-chat.entity';
 import { CoffeeChatReturn, UserSummary } from './types/coffee-chat.types';
+import { ChatService } from '../chat/chat.service';
+import { NotificationType } from 'src/common/enum/notification.enum';
+import { NotificationService } from 'src/modules/notification/notification.service';
 @Injectable()
 export class CoffeeChatService {
   private readonly logger = new Logger(CoffeeChatService.name);
@@ -19,23 +21,41 @@ export class CoffeeChatService {
     private readonly dataSource: DataSource,
     @InjectRepository(AcceptedCoffeeChat)
     private acceptedCoffeeChatRepository: Repository<AcceptedCoffeeChat>,
+    private readonly chatService: ChatService,
+    private readonly notificationService: NotificationService,
   ) {}
   async sendCoffeeChat(
     userId: string,
     sendCoffeeChatDto: SendCoffeeChatDto,
-  ): Promise<CoffeeChat> {
+  ): Promise<{
+    savedCoffeeChat: CoffeeChat;
+  }> {
+    this.logger.log(
+      `Starting coffee chat request - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
+    );
+
     return this.dataSource.transaction(async (manager) => {
       const sender = await this.userService.getCoffeeChatUserById(userId);
       const receiver = await this.userService.getCoffeeChatUserById(
         sendCoffeeChatDto.receiverId,
       );
 
+      this.logger.log(
+        `Retrieved users - Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
+      );
+
       if (sender.coffee < 10) {
+        this.logger.warn(
+          `Insufficient coffee for user ${sender.nickname} - Current: ${sender.coffee}`,
+        );
         throw new BadRequestException('커피가 부족합니다.');
       }
 
       sender.coffee -= 10;
       await manager.save(sender);
+      this.logger.log(
+        `Deducted coffee from sender ${sender.nickname} - New balance: ${sender.coffee}`,
+      );
 
       const coffeeChat = manager.create(CoffeeChat, {
         sender,
@@ -44,42 +64,106 @@ export class CoffeeChatService {
       });
 
       const savedCoffeeChat = await manager.save(coffeeChat);
+      this.logger.log(
+        `Created new coffee chat request - ID: ${savedCoffeeChat.id}`,
+      );
 
       //send message to receiver
-
-      return savedCoffeeChat;
+      const chatRoomEntryNotification =
+        await this.chatService.sendChatRoomEntryNotification(
+          savedCoffeeChat.id,
+          userId,
+          receiver.id,
+        );
+      const receiverChatRoomEntryNotification =
+        await this.chatService.sendChatRoomEntryNotification(
+          savedCoffeeChat.id,
+          receiver.id,
+          userId,
+        );
+      return {
+        savedCoffeeChat,
+        chatRoomEntryNotification,
+        receiverChatRoomEntryNotification,
+      };
     });
   }
 
   async acceptCoffeeChat(userId: string, senderId: string) {
+    this.logger.log(
+      `Processing coffee chat acceptance - User: ${userId}, Sender: ${senderId}`,
+    );
+
     const chat = await this.coffeeChatRepository.findOne({
       where: { id: senderId },
       relations: ['receiver', 'sender'],
     });
 
     if (!chat || chat.receiver.id !== userId) {
+      this.logger.warn(
+        `Invalid coffee chat acceptance attempt - Chat not found or wrong receiver`,
+      );
       throw new Error('상대가 커피챗을 수락하지 않았거나 존재하지 않습니다.');
     }
 
+    this.logger.log(`Found valid coffee chat request - ID: ${chat.id}`);
+
     // 메시지 전송 + 채팅방 생성 로직
+    const createdChatRoom = await this.chatService.createMatchingRoom(
+      userId,
+      chat.sender.id,
+    );
+
+    this.logger.log(
+      `Created chat room for coffee chat - Room ID: ${createdChatRoom.id}`,
+    );
 
     // 상태를 ACCEPTED로 업데이트
     chat.status = CoffeeChatStatus.ACCEPTED;
     await this.coffeeChatRepository.save(chat);
+    this.logger.log(`Updated coffee chat status to ACCEPTED - ID: ${chat.id}`);
+
+    // 커피챗 수락 알림 전송
+    const notification = {
+      type: NotificationType.COFFEE_CHAT,
+      receiverId: senderId,
+      title: '커피챗 수락',
+      content:
+        '상대방이 커피챗을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
+      data: {
+        chatRoomId: createdChatRoom.id,
+        senderId: userId,
+      },
+    };
+
+    const sentNotification =
+      await this.notificationService.create(notification);
+    this.logger.log(`Sent acceptance notification to sender - ID: ${senderId}`);
 
     // 수락한 커피챗 삭제
-    await this.coffeeChatRepository.remove(chat);
+    const removedCoffeeChat = await this.coffeeChatRepository.remove(chat);
+    this.logger.log(`Removed pending coffee chat - ID: ${chat.id}`);
+
     const acceptedChat = this.acceptedCoffeeChatRepository.create({
       sender: chat.sender,
       receiver: chat.receiver,
       acceptedAt: new Date(),
     });
     await this.acceptedCoffeeChatRepository.save(acceptedChat);
+    this.logger.log(
+      `Created accepted coffee chat record - ID: ${acceptedChat.id}`,
+    );
 
-    this.logger.debug(`Coffee chat with ID ${chat.id} has been deleted.`);
+    return {
+      createdChatRoom,
+      sentNotification,
+      removedCoffeeChat,
+      acceptedChat,
+    };
   }
 
   async getCoffeeChatList(userId: string) {
+    this.logger.log(`Fetching coffee chat list for user - ID: ${userId}`);
     const coffeeChatList = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
       .leftJoinAndSelect('coffeeChat.receiver', 'receiver')
@@ -89,10 +173,16 @@ export class CoffeeChatService {
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
+    this.logger.log(
+      `Retrieved ${coffeeChatList.length} coffee chats for user ${userId}`,
+    );
     return coffeeChatList;
   }
 
   async getReceivedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
+    this.logger.log(
+      `Fetching received coffee chat list for user - ID: ${userId}`,
+    );
     const receivedCoffeeChatList = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
       .leftJoinAndSelect('coffeeChat.sender', 'sender')
@@ -105,10 +195,16 @@ export class CoffeeChatService {
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
+    this.logger.log(
+      `Retrieved ${receivedCoffeeChatList.length} pending coffee chats for user ${userId}`,
+    );
     return this.coffeeChatReturn(receivedCoffeeChatList);
   }
 
   async getAcceptedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
+    this.logger.log(
+      `Fetching accepted coffee chat list for user - ID: ${userId}`,
+    );
     const acceptedCoffeeChatList = await this.acceptedCoffeeChatRepository
       .createQueryBuilder('acceptedChat')
       .leftJoinAndSelect('acceptedChat.sender', 'sender')
@@ -121,10 +217,14 @@ export class CoffeeChatService {
       .orderBy('acceptedChat.acceptedAt', 'DESC')
       .getMany();
 
+    this.logger.log(
+      `Retrieved ${acceptedCoffeeChatList.length} accepted coffee chats for user ${userId}`,
+    );
     return this.coffeeChatReturn(acceptedCoffeeChatList, true);
   }
 
   async getSentCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
+    this.logger.log(`Fetching sent coffee chat list for user - ID: ${userId}`);
     const sentCoffeeChatList = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
       .leftJoinAndSelect('coffeeChat.receiver', 'receiver')
@@ -134,6 +234,9 @@ export class CoffeeChatService {
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
+    this.logger.log(
+      `Retrieved ${sentCoffeeChatList.length} sent coffee chats for user ${userId}`,
+    );
     return this.coffeeChatReturn(sentCoffeeChatList);
   }
 

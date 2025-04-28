@@ -5,10 +5,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CoffeeChat } from './entities/coffee-chat.entity';
 import { UserModule } from '../user/user.module';
 import { AcceptedCoffeeChat } from './entities/accepted-coffee-chat.entity';
+import { ChatModule } from '../chat/chat.module';
+import { NotificationModule } from '../notification/notification.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([CoffeeChat, AcceptedCoffeeChat]),
     UserModule,
+    ChatModule,
+    NotificationModule,
   ],
   controllers: [CoffeeChatController],
   providers: [CoffeeChatService],
