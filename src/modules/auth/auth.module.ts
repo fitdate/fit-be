@@ -16,6 +16,7 @@ import { ProfileImageModule } from '../profile/profile-image/profile-image.modul
 import { TokenService } from './services/token.service';
 import { SocialAuthService } from './services/social-auth.service';
 import { EmailAuthService } from './services/email-auth.service';
+import { InterestCategoryModule } from '../profile/interest-category/common/interest-category.module';
 @Module({
   imports: [
     UserModule,
@@ -26,6 +27,7 @@ import { EmailAuthService } from './services/email-auth.service';
     ProfileModule,
     S3Module,
     ProfileImageModule,
+    InterestCategoryModule,
   ],
   controllers: [AuthController],
   providers: [
