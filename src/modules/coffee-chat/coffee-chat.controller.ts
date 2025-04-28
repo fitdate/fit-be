@@ -33,7 +33,7 @@ export class CoffeeChatController {
       throw new BadRequestException('Receiver ID is required');
     }
 
-    return this.coffeeChatService.sendCoffeeChat(userId, sendCoffeeChatDto.receiverId);
+    return this.coffeeChatService.sendCoffeeChat(userId, sendCoffeeChatDto);
   }
 
   @ApiOperation({ summary: '커피챗 수락' })
