@@ -153,7 +153,7 @@ export class UserController {
     status: 200,
     description: '사용자 커피 개수를 성공적으로 조회했습니다.',
   })
-  getUserCoffee(@Param('userId') userId: string) {
+  getUserCoffee(@UserId() userId: string) {
     return this.userService.getUserCoffee(userId);
   }
 }
