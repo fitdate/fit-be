@@ -17,13 +17,13 @@ export class SparkListService {
   async getLikeList(userId: string) {
     const likeList = await this.likeService.getLikeList(userId);
     const filteredLikeList = likeList.map((like) => {
-      const profileImage = like.likedUser.profile?.profileImage?.[0];
+      const profileImage = like.user.profile?.profileImage?.[0];
       return {
-        likedUserId: like.likedUser.id,
-        nickname: like.likedUser.nickname,
-        likeCount: like.likedUser.likeCount,
-        age: calculateAge(like.likedUser.birthday),
-        region: like.likedUser.region,
+        likedUserId: like.user.id,
+        nickname: like.user.nickname,
+        likeCount: like.user.likeCount,
+        age: calculateAge(like.user.birthday),
+        region: like.user.region,
         profileImage: profileImage ? profileImage.imageUrl : null,
       };
     });

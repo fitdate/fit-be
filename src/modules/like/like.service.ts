@@ -124,13 +124,10 @@ export class LikeService {
   async getLikeList(userId: string) {
     const likeList = await this.likeRepository
       .createQueryBuilder('like')
-      .leftJoinAndSelect('like.likedUser', 'likedUser')
-      .leftJoinAndSelect('likedUser.profile', 'likedUserProfile')
-      .leftJoinAndSelect(
-        'likedUserProfile.profileImage',
-        'likedUserProfileImage',
-      )
-      .where('like.user_id = :userId', { userId })
+      .leftJoinAndSelect('like.user', 'user')
+      .leftJoinAndSelect('user.profile', 'userProfile')
+      .leftJoinAndSelect('userProfile.profileImage', 'userProfileImage')
+      .where('like.liked_user_id = :userId', { userId })
       .getMany();
     return likeList;
   }
