@@ -107,6 +107,7 @@ export class AuthService {
         nickname: registerDto.nickname,
         name: registerDto.name,
         birthday: registerDto.birthday,
+        height: registerDto.height,
         gender: registerDto.gender,
         region: registerDto.region,
         phone: registerDto.phone,

@@ -8,6 +8,7 @@ import {
   MinLength,
   IsOptional,
   IsArray,
+  IsNumber,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -45,6 +46,14 @@ export class RegisterDto {
   @IsNotEmpty()
   @IsString()
   name: string;
+
+  @ApiProperty({
+    description: '키',
+    example: 170,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  height: number;
 
   @ApiProperty({
     description: '닉네임',
