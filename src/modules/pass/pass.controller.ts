@@ -1,14 +1,13 @@
 import {
   Controller,
   Post,
-  Body,
   UsePipes,
   ValidationPipe,
+  Param,
 } from '@nestjs/common';
 import { PassService } from './pass.service';
 import { UserId } from '../../common/decorator/get-user.decorator';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { PassDto } from './dto/pass.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('pass')
 @Controller('pass')
@@ -16,33 +15,36 @@ import { PassDto } from './dto/pass.dto';
 export class PassController {
   constructor(private readonly passService: PassService) {}
 
-  @Post('both')
+  @Post('both/:passedUserId')
   @ApiOperation({ summary: '매칭 페이지에서 X버튼을 눌러 둘 다 선택하지 않음' })
+  @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
   @ApiResponse({ status: 200, description: '성공적으로 거절됨' })
   async passBothUsers(
     @UserId() userId: string,
-    @Body() passDto: PassDto,
+    @Param('passedUserId') passedUserId: string,
   ): Promise<void> {
-    await this.passService.passBothUsers(userId, passDto.passedUserId);
+    await this.passService.passBothUsers(userId, passedUserId);
   }
 
-  @Post('match')
+  @Post('match/:passedUserId')
   @ApiOperation({ summary: '호감페이지에서 매칭 요청 거절' })
+  @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
   @ApiResponse({ status: 200, description: '성공적으로 거절됨' })
   async passMatchRequest(
     @UserId() userId: string,
-    @Body() passDto: PassDto,
+    @Param('passedUserId') passedUserId: string,
   ): Promise<void> {
-    await this.passService.passMatchRequest(userId, passDto.passedUserId);
+    await this.passService.passMatchRequest(userId, passedUserId);
   }
 
-  @Post('coffee-chat')
+  @Post('coffee-chat/:passedUserId')
   @ApiOperation({ summary: '호감페이지에서 커피챗 요청 거절' })
+  @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
   @ApiResponse({ status: 200, description: '성공적으로 거절됨' })
   async passCoffeeChatRequest(
     @UserId() userId: string,
-    @Body() passDto: PassDto,
+    @Param('passedUserId') passedUserId: string,
   ): Promise<void> {
-    await this.passService.passCoffeeChatRequest(userId, passDto.passedUserId);
+    await this.passService.passCoffeeChatRequest(userId, passedUserId);
   }
 }
