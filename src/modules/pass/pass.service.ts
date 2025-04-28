@@ -71,35 +71,4 @@ export class PassService {
 
     await this.passRepository.save(pass);
   }
-
-  /**
-   * 사용자가 특정 사용자를 거절했는지 확인합니다.
-   * @param userId 현재 사용자 ID
-   * @param passedUserId 확인할 사용자 ID
-   * @returns 거절 여부
-   */
-  async hasPassedUser(userId: string, passedUserId: string): Promise<boolean> {
-    const pass = await this.passRepository.findOne({
-      where: {
-        userId,
-        passedUserId,
-      },
-    });
-
-    return !!pass;
-  }
-
-  /**
-   * 사용자가 거절한 모든 사용자 ID 목록을 반환합니다.
-   * @param userId 현재 사용자 ID
-   * @returns 거절한 사용자 ID 목록
-   */
-  async getPassedUserIds(userId: string): Promise<string[]> {
-    const passes = await this.passRepository.find({
-      where: { userId },
-      select: ['passedUserId'],
-    });
-
-    return passes.map((pass) => pass.passedUserId);
-  }
 }
