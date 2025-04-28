@@ -18,7 +18,7 @@ import { CursorPaginationUtil } from 'src/common/util/cursor-pagination.util';
 import { RedisService } from '../redis/redis.service';
 import { HashService } from '../auth/hash/hash.service';
 import { UpdateDatingPreferenceDto } from '../dating-preference/dto/update-dating-preference.dto';
-
+import { calculateAge } from 'src/common/util/age-calculator.util';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -159,11 +159,13 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
+    const age = calculateAge(user.birthday);
+
     return {
       nickname: user?.nickname,
       job: user?.job,
       height: user?.height,
-      age: user?.age,
+      age,
       mbti: user?.profile?.mbti,
       likeCount: user?.likeCount,
       profileImage: user?.profile?.profileImage[0]?.imageUrl,
