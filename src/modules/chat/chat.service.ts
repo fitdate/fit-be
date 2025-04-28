@@ -169,7 +169,7 @@ export class ChatService {
    */
   async getRooms(userId: string) {
     const rooms = await this.chatRoomRepository.find({
-      relations: ['users'],
+      relations: ['users', 'users.profile', 'users.profile.profileImage'],
       where: {
         users: { id: userId },
         deletedAt: IsNull(),
@@ -185,6 +185,14 @@ export class ChatService {
         if (!partner) {
           return null;
         }
+
+        const mainImage = partner.profile?.profileImage?.find(
+          (img) => img.isMain,
+        );
+        const firstImage = partner.profile?.profileImage?.[0];
+        const profileImage =
+          mainImage?.imageUrl || firstImage?.imageUrl || null;
+
         return {
           id: room.id,
           name: room.name,
@@ -194,6 +202,7 @@ export class ChatService {
             name: partner.name,
             age: calculateAge(partner.birthday),
             height: partner.height || null,
+            profileImage,
           },
           createdAt: room.createdAt,
           updatedAt: room.updatedAt,
@@ -227,6 +236,8 @@ export class ChatService {
     const query = this.messageRepository
       .createQueryBuilder('message')
       .leftJoinAndSelect('message.user', 'user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
       .leftJoinAndSelect('message.chatRoom', 'chatRoom')
       .orderBy('message.createdAt', 'DESC')
       .take(limit);
@@ -238,24 +249,34 @@ export class ChatService {
     const [messages, total] = await query.getManyAndCount();
 
     return {
-      messages: messages.map((message) => ({
-        id: message.id,
-        content: message.content,
-        isSystem: message.isSystem,
-        createdAt: this.formatTime(message.createdAt),
-        user: message.user
-          ? {
-              id: message.user.id,
-              nickname: message.user.nickname,
-            }
-          : null,
-        chatRoom: message.chatRoom
-          ? {
-              id: message.chatRoom.id,
-              name: message.chatRoom.name,
-            }
-          : null,
-      })),
+      messages: messages.map((message) => {
+        const mainImage = message.user?.profile?.profileImage?.find(
+          (img) => img.isMain,
+        );
+        const firstImage = message.user?.profile?.profileImage?.[0];
+        const profileImage =
+          mainImage?.imageUrl || firstImage?.imageUrl || null;
+
+        return {
+          id: message.id,
+          content: message.content,
+          isSystem: message.isSystem,
+          createdAt: this.formatTime(message.createdAt),
+          user: message.user
+            ? {
+                id: message.user.id,
+                nickname: message.user.nickname,
+                profileImage,
+              }
+            : null,
+          chatRoom: message.chatRoom
+            ? {
+                id: message.chatRoom.id,
+                name: message.chatRoom.name,
+              }
+            : null,
+        };
+      }),
       total,
       hasMore: total > limit,
     };
