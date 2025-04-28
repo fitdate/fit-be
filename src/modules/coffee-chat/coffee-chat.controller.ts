@@ -36,42 +36,11 @@ export class CoffeeChatController {
     return this.coffeeChatService.sendCoffeeChat(userId, sendCoffeeChatDto);
   }
 
-  @ApiOperation({ summary: '커피챗 수락' })
-  @ApiResponse({ status: 200, description: '커피챗 수락 성공' })
-  @ApiResponse({ status: 400, description: '커피챗 수락 실패' })
-  @ApiBody({ type: AcceptCoffeeChatDto })
-  @Post('accept')
-  acceptCoffeeChat(@UserId() userId: string, @Body() acceptCoffeeChatDto: AcceptCoffeeChatDto) {
-    return this.coffeeChatService.acceptCoffeeChat(userId, acceptCoffeeChatDto.senderId);
-  }
-
   @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })
   @ApiResponse({ status: 200, description: '받은 커피챗 리스트 가져오기 성공' })
   @ApiResponse({ status: 400, description: '받은 커피챗 리스트 가져오기 실패' })
   @Get('received')
   getReceivedCoffeeChatList(@UserId() userId: string) {
     return this.coffeeChatService.getReceivedCoffeeChatList(userId);
-  }
-
-  @ApiOperation({ summary: '보낸 커피챗 리스트 가져오기' })
-  @ApiResponse({ status: 200, description: '보낸 커피챗 리스트 가져오기 성공' })
-  @ApiResponse({ status: 400, description: '보낸 커피챗 리스트 가져오기 실패' })
-  @Get('sent')
-  getSentCoffeeChatList(@UserId() userId: string) {
-    return this.coffeeChatService.getSentCoffeeChatList(userId);
-  }
-
-  @ApiOperation({ summary: '성사된 커피챗 리스트 가져오기' })
-  @ApiResponse({
-    status: 200,
-    description: '성사된 커피챗 리스트 가져오기 성공',
-  })
-  @ApiResponse({
-    status: 400,
-    description: '성사된 커피챗 리스트 가져오기 실패',
-  })
-  @Get('accepted')
-  getAcceptedCoffeeChatList(@UserId() userId: string) {
-    return this.coffeeChatService.getAcceptedCoffeeChatList(userId);
   }
 }
