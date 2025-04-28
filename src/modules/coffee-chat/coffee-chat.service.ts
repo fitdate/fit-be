@@ -43,7 +43,9 @@ export class CoffeeChatService {
     return this.dataSource.transaction(async (manager) => {
       // sender: 로그인한 본인, receiver: 상대방(신청받을 유저)
       const sender = await this.userService.getCoffeeChatUserById(userId); // 본인
-      const receiver = await this.userService.getCoffeeChatUserById(sendCoffeeChatDto.receiverId); // 상대방
+      const receiver = await this.userService.getCoffeeChatUserById(
+        sendCoffeeChatDto.receiverId,
+      ); // 상대방
 
       this.logger.log(
         `Retrieved users - Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
@@ -149,6 +151,7 @@ export class CoffeeChatService {
     try {
       await this.notificationService.create(notification);
     } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       this.logger.error(`알림 전송 중 에러 발생: ${error?.message}`);
       throw error;
     }
@@ -227,7 +230,7 @@ export class CoffeeChatService {
       .leftJoinAndSelect('acceptedChat.receiver', 'receiver')
       .leftJoinAndSelect('receiver.profile', 'receiverProfile')
       .leftJoinAndSelect('receiverProfile.profileImage', 'receiverProfileImage')
-      .where('sender.id = :userId OR receiver.id = :userId', { userId })
+      .where('receiver.id = :userId', { userId })
       .orderBy('acceptedChat.acceptedAt', 'DESC')
       .getMany();
 
