@@ -4,11 +4,12 @@ import {
   Body,
   Get,
   BadRequestException,
+  Param,
 } from '@nestjs/common';
 import { CoffeeChatService } from './coffee-chat.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
-import { ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 import { Logger } from '@nestjs/common';
 
@@ -23,19 +24,16 @@ export class CoffeeChatController {
   @ApiResponse({ status: 400, description: '커피챗 보내기 실패' })
   @ApiParam({ name: 'receiverId', description: '커피챗 받는 사람의 ID' })
   @Post('send')
-  sendCoffeeChat(
-    @UserId() userId: string,
-    @Body() sendCoffeeChatDto: SendCoffeeChatDto,
-  ) {
-    this.logger.debug(`Request body: ${JSON.stringify(sendCoffeeChatDto)}`);
+  sendCoffeeChat(@UserId() userId: string, @Param('receiverId') receiverId: string) {
+    this.logger.debug(`Request body: ${JSON.stringify(receiverId)}`);
     this.logger.debug(`User ID: ${userId}`);
 
-    if (!sendCoffeeChatDto.receiverId) {
+    if (!receiverId) {
       this.logger.error('Receiver ID is missing in request body');
       throw new BadRequestException('Receiver ID is required');
     }
 
-    return this.coffeeChatService.sendCoffeeChat(userId, sendCoffeeChatDto);
+    return this.coffeeChatService.sendCoffeeChat(userId, receiverId);
   }
 
   @ApiOperation({ summary: '커피챗 수락' })
@@ -46,14 +44,8 @@ export class CoffeeChatController {
     description: '보내는 사람의 ID',
   })
   @Post('accept')
-  acceptCoffeeChat(
-    @UserId() userId: string,
-    @Body() acceptCoffeeChatDto: AcceptCoffeeChatDto,
-  ) {
-    return this.coffeeChatService.acceptCoffeeChat(
-      userId,
-      acceptCoffeeChatDto.senderId,
-    );
+  acceptCoffeeChat(@UserId() userId: string, @Param('senderId') senderId: string) {
+    return this.coffeeChatService.acceptCoffeeChat(userId, senderId);
   }
 
   @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })

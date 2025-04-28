@@ -12,9 +12,12 @@ import { ChatService } from '../chat/chat.service';
 import { NotificationType } from 'src/common/enum/notification.enum';
 import { NotificationService } from 'src/modules/notification/notification.service';
 import { calculateAge } from 'src/common/util/age-calculator.util';
+import { User } from '../user/entities/user.entity';
+
 @Injectable()
 export class CoffeeChatService {
   private readonly logger = new Logger(CoffeeChatService.name);
+
   constructor(
     @InjectRepository(CoffeeChat)
     private coffeeChatRepository: Repository<CoffeeChat>,
@@ -25,9 +28,10 @@ export class CoffeeChatService {
     private readonly chatService: ChatService,
     private readonly notificationService: NotificationService,
   ) {}
+
   async sendCoffeeChat(
     userId: string,
-    sendCoffeeChatDto: SendCoffeeChatDto,
+    receiverId: string,
   ): Promise<{
     savedCoffeeChat: {
       id: string;
@@ -37,15 +41,28 @@ export class CoffeeChatService {
     };
   }> {
     this.logger.log(
-      `Starting coffee chat request - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
+      `Starting coffee chat request - Sender: ${userId}, Receiver: ${receiverId}`,
     );
 
+    // 중복 요청 방지
+    const existingChat = await this.coffeeChatRepository.findOne({
+      where: {
+        sender: { id: userId },
+        receiver: { id: receiverId },
+        status: CoffeeChatStatus.PENDING,
+      },
+    });
+
+    if (existingChat) {
+      this.logger.warn(
+        `Duplicate coffee chat request detected - Sender: ${userId}, Receiver: ${receiverId}`,
+      );
+      throw new BadRequestException('이미 요청된 커피챗이 존재합니다.');
+    }
+
     return this.dataSource.transaction(async (manager) => {
-      // sender: 로그인한 본인, receiver: 상대방(신청받을 유저)
-      const sender = await this.userService.getCoffeeChatUserById(userId); // 본인
-      const receiver = await this.userService.getCoffeeChatUserById(
-        sendCoffeeChatDto.receiverId,
-      ); // 상대방
+      const sender = await this.userService.getCoffeeChatUserById(userId);
+      const receiver = await this.userService.getCoffeeChatUserById(receiverId);
 
       this.logger.log(
         `Retrieved users - Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
@@ -60,34 +77,19 @@ export class CoffeeChatService {
 
       sender.coffee -= 10;
       await manager.save(sender);
-      this.logger.log(
-        `Deducted coffee from sender ${sender.nickname} - New balance: ${sender.coffee}`,
-      );
 
-      const coffeeChat = manager.create(CoffeeChat, {
+      const coffeeChat = this.coffeeChatRepository.create({
         sender,
-        receiver: receiver,
+        receiver,
         status: CoffeeChatStatus.PENDING,
       });
 
       const savedCoffeeChat = await manager.save(coffeeChat);
+
       this.logger.log(
-        `Created new coffee chat request - ID: ${savedCoffeeChat.id}`,
+        `Coffee chat request saved - ID: ${savedCoffeeChat.id}, Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
       );
 
-      //send message to receiver
-      const chatRoomEntryNotification =
-        await this.chatService.sendChatRoomEntryNotification(
-          savedCoffeeChat.id,
-          userId,
-          receiver.id,
-        );
-      const receiverChatRoomEntryNotification =
-        await this.chatService.sendChatRoomEntryNotification(
-          savedCoffeeChat.id,
-          receiver.id,
-          userId,
-        );
       return {
         savedCoffeeChat: {
           id: savedCoffeeChat.id,
@@ -95,8 +97,6 @@ export class CoffeeChatService {
           receiver: receiver.id,
           status: savedCoffeeChat.status,
         },
-        chatRoomEntryNotification,
-        receiverChatRoomEntryNotification,
       };
     });
   }
@@ -113,29 +113,34 @@ export class CoffeeChatService {
 
     if (!chat || chat.receiver.id !== userId) {
       this.logger.warn(
-        `Invalid coffee chat acceptance attempt - Chat not found or wrong receiver`,
+        `Invalid coffee chat acceptance attempt - Chat ID: ${senderId}, User ID: ${userId}`,
       );
-      throw new Error('상대가 커피챗을 수락하지 않았거나 존재하지 않습니다.');
+      throw new BadRequestException('유효하지 않은 커피챗 요청입니다.');
     }
 
-    this.logger.log(`Found valid coffee chat request - ID: ${chat.id}`);
+    const acceptedChat = await this.dataSource.transaction(async (manager) => {
+      const createdChatRoom = await this.chatService.createMatchingRoom(
+        userId,
+        chat.sender.id,
+      );
 
-    // 메시지 전송 + 채팅방 생성 로직
-    const createdChatRoom = await this.chatService.createMatchingRoom(
-      userId,
-      chat.sender.id,
-    );
+      this.logger.log(
+        `Created chat room for coffee chat - Room ID: ${createdChatRoom.id}`,
+      );
 
-    this.logger.log(
-      `Created chat room for coffee chat - Room ID: ${createdChatRoom.id}`,
-    );
+      const acceptedChat = manager.create(AcceptedCoffeeChat, {
+        sender: chat.sender,
+        receiver: chat.receiver,
+        acceptedAt: new Date(),
+      });
+      await manager.save(acceptedChat);
 
-    // 상태를 ACCEPTED로 업데이트
-    chat.status = CoffeeChatStatus.ACCEPTED;
-    await this.coffeeChatRepository.save(chat);
-    this.logger.log(`Updated coffee chat status to ACCEPTED - ID: ${chat.id}`);
+      await manager.remove(chat);
 
-    // 커피챗 수락 알림 전송
+      return { acceptedChat, createdChatRoom };
+    });
+
+    // 트랜잭션 외부에서 알림 전송
     const notification = {
       type: NotificationType.COFFEE_CHAT,
       receiverId: senderId,
@@ -143,41 +148,31 @@ export class CoffeeChatService {
       content:
         '상대방이 커피챗을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
       data: {
-        chatRoomId: createdChatRoom.id,
+        chatRoomId: acceptedChat.createdChatRoom.id,
         senderId: userId,
       },
     };
 
     try {
       await this.notificationService.create(notification);
+      this.logger.log(
+        `Sent acceptance notification to sender - ID: ${senderId}`,
+      );
     } catch (error) {
-      this.logger.error(`알림 전송 중 에러 발생: ${(error as Error).message}`);
+      this.logger.error(
+        `Error sending notification: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw error;
     }
-    this.logger.log(`Sent acceptance notification to sender - ID: ${senderId}`);
-
-    // 수락한 커피챗 삭제
-    const removedCoffeeChat = await this.coffeeChatRepository.remove(chat);
-    this.logger.log(`Removed pending coffee chat - ID: ${chat.id}`);
-
-    const acceptedChat = this.acceptedCoffeeChatRepository.create({
-      sender: chat.sender,
-      receiver: chat.receiver,
-      acceptedAt: new Date(),
-    });
-    await this.acceptedCoffeeChatRepository.save(acceptedChat);
-    this.logger.log(
-      `Created accepted coffee chat record - ID: ${acceptedChat.id}`,
-    );
 
     return {
       createdChatRoom: {
-        id: createdChatRoom.id,
+        id: acceptedChat.createdChatRoom.id,
         sender: chat.sender.id,
         receiver: chat.receiver.id,
       },
-      removedCoffeeChat,
-      acceptedChat,
+      acceptedChat: acceptedChat.acceptedChat,
     };
   }
 
@@ -206,6 +201,7 @@ export class CoffeeChatService {
       .leftJoinAndSelect('sender.profile', 'senderProfile')
       .leftJoinAndSelect('senderProfile.profileImage', 'senderProfileImage')
       .where('coffeeChat.receiverId = :userId', { userId })
+      .andWhere('coffeeChat.status = :status', { status: CoffeeChatStatus.PENDING })
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
@@ -254,32 +250,27 @@ export class CoffeeChatService {
     return this.coffeeChatReturn(sentCoffeeChatList);
   }
 
+  private createUserSummary(user: User): UserSummary {
+    return {
+      id: user.id,
+      nickname: user.nickname,
+      region: user.region ?? '',
+      likeCount: user.likeCount,
+      age: calculateAge(user.birthday),
+      profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
+    };
+  }
+
   coffeeChatReturn(
     chats: (CoffeeChat | AcceptedCoffeeChat)[],
     includeAcceptedAt = false,
   ): CoffeeChatReturn[] {
-    return chats.map((chat: CoffeeChat | AcceptedCoffeeChat) => {
+    return chats.map((chat) => {
       const sender = chat.sender
-        ? ({
-            id: chat.sender.id,
-            nickname: chat.sender.nickname,
-            region: chat.sender.region,
-            likeCount: chat.sender.likeCount,
-            age: calculateAge(chat.sender.birthday),
-            profileImage:
-              chat.sender.profile?.profileImage?.[0]?.imageUrl ?? null,
-          } as UserSummary)
+        ? this.createUserSummary(chat.sender)
         : undefined;
       const receiver = chat.receiver
-        ? ({
-            id: chat.receiver.id,
-            nickname: chat.receiver.nickname,
-            region: chat.receiver.region,
-            likeCount: chat.receiver.likeCount,
-            age: calculateAge(chat.receiver.birthday),
-            profileImage:
-              chat.receiver.profile?.profileImage?.[0]?.imageUrl ?? null,
-          } as UserSummary)
+        ? this.createUserSummary(chat.receiver)
         : undefined;
       const base = { sender, receiver };
       if (includeAcceptedAt && 'acceptedAt' in chat && chat.acceptedAt) {
