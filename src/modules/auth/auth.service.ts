@@ -97,6 +97,9 @@ export class AuthService {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
 
+    // 비밀번호 해싱
+    const hashedPassword = await this.hashService.hash(registerDto.password);
+
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
@@ -111,7 +114,7 @@ export class AuthService {
       log('Starting user creation');
       const user = await qr.manager.save(User, {
         email: registerDto.email,
-        password: registerDto.password,
+        password: hashedPassword,
         nickname: registerDto.nickname,
         name: registerDto.name,
         birthday: registerDto.birthday,
@@ -366,23 +369,23 @@ export class AuthService {
       );
     }
 
-    // const isPasswordValid = await this.hashService.compare(
-    //   password,
-    //   user.password,
-    // );
+    const isPasswordValid = await this.hashService.compare(
+      password,
+      user.password,
+    );
 
-    // if (!isPasswordValid) {
-    //   throw new UnauthorizedException(
-    //     '이메일 또는 비밀번호가 일치하지 않습니다.',
-    //   );
-    // }
-
-    if (password !== user.password) {
-      this.logger.log(`Password validation failed for email: ${email}`);
+    if (!isPasswordValid) {
       throw new UnauthorizedException(
         '이메일 또는 비밀번호가 일치하지 않습니다.',
       );
     }
+
+    // if (password !== user.password) {
+    //   this.logger.log(`Password validation failed for email: ${email}`);
+    //   throw new UnauthorizedException(
+    //     '이메일 또는 비밀번호가 일치하지 않습니다.',
+    //   );
+    // }
 
     this.logger.log(`Successfully validated user with email: ${email}`);
     return user;
