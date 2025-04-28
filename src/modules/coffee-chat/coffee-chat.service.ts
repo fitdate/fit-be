@@ -208,6 +208,16 @@ export class CoffeeChatService {
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
+    const pendingChatsReceiver = await this.coffeeChatRepository
+      .createQueryBuilder('coffeeChat')
+      .leftJoinAndSelect('coffeeChat.receiver', 'receiver')
+      .leftJoinAndSelect('receiver.profile', 'receiverProfile')
+      .leftJoinAndSelect('receiverProfile.profileImage', 'receiverProfileImage')
+      .where('coffeeChat.senderId = :userId', { userId })
+      .andWhere('coffeeChat.status = :status', { status: CoffeeChatStatus.PENDING })
+      .orderBy('coffeeChat.createdAt', 'DESC')
+      .getMany();
+
     // Accepted chats
     const acceptedChats = await this.acceptedCoffeeChatRepository
       .createQueryBuilder('acceptedChat')
@@ -230,7 +240,7 @@ export class CoffeeChatService {
       status: CoffeeChatStatus.ACCEPTED,
     }));
 
-    const result = [...pendingResult, ...acceptedResult];
+    const result = [...pendingResult, ...pendingChatsReceiver, ...acceptedResult];
     this.logger.log(
       `[받은 커피챗 조회 완료] 사용자 ID: ${userId}, 조회된 커피챗 수: ${result.length}`,
     );
