@@ -133,15 +133,4 @@ export class CoffeeChatService {
     // 두 결과를 합쳐 반환
     return [...pendingChats, ...pendingChatsReceiver];
   }
-
-  private createUserSummary(user: User): UserSummary {
-    return {
-      id: user.id ?? '',
-      nickname: user.nickname,
-      region: user.region ?? '',
-      likeCount: user.likeCount,
-      age: calculateAge(user.birthday),
-      profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
-    };
-  }
 }

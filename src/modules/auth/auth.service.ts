@@ -352,13 +352,21 @@ export class AuthService {
   }
 
   async changePassword(
-    email: string,
+    userId: string,
     newPassword: string,
     confirmPassword: string,
   ) {
     if (newPassword !== confirmPassword) {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
+
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+    }
+
+    const email = user.email;
+
     const hashedPassword = await this.hashService.hash(newPassword);
     await this.userService.updateUserPassword(email, hashedPassword);
     return { message: '비밀번호 변경 성공' };

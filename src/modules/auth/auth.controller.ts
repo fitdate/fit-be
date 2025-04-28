@@ -238,9 +238,12 @@ export class AuthController {
   @ApiParam({ name: 'email', description: '이메일' })
   @ApiParam({ name: 'newPassword', description: '새로운 비밀번호' })
   @ApiParam({ name: 'confirmPassword', description: '새로운 비밀번호 확인' })
-  async changePassword(@Body() changePasswordDto: ChangePasswordDto) {
+  async changePassword(
+    @UserId() userid: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
     return this.authService.changePassword(
-      changePasswordDto.email,
+      userid,
       changePasswordDto.newPassword,
       changePasswordDto.confirmPassword,
     );
