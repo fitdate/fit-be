@@ -32,7 +32,7 @@ export class SparkListService {
 
   async getCoffeeChatList(userId: string) {
     const coffeeChatList =
-      await this.coffeeChatService.getCoffeeChatList(userId);
+      await this.coffeeChatService.getReceivedCoffeeChatList(userId);
     const filteredCoffeeChatList = coffeeChatList.map((coffeeChat) => {
       const profileImage = coffeeChat.receiver.profile?.profileImage?.[0];
       return {
