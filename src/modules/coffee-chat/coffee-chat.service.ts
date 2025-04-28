@@ -205,7 +205,7 @@ export class CoffeeChatService {
       .leftJoinAndSelect('coffeeChat.sender', 'sender')
       .leftJoinAndSelect('sender.profile', 'senderProfile')
       .leftJoinAndSelect('senderProfile.profileImage', 'senderProfileImage')
-      .where('coffeeChat.receiver.id = :userId', { userId })
+      .where('coffeeChat.receiverId = :userId', { userId })
       .orderBy('coffeeChat.createdAt', 'DESC')
       .getMany();
 
