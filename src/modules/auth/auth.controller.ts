@@ -235,7 +235,6 @@ export class AuthController {
   @Patch('change-password')
   @ApiOperation({ summary: '비밀번호 변경' })
   @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
-  @ApiParam({ name: 'email', description: '이메일' })
   @ApiParam({ name: 'newPassword', description: '새로운 비밀번호' })
   @ApiParam({ name: 'confirmPassword', description: '새로운 비밀번호 확인' })
   async changePassword(
