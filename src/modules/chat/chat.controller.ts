@@ -110,8 +110,11 @@ export class ChatController {
   })
   @ApiResponse({ status: 200, description: '채팅 메시지 조회 성공' })
   @Get('messages')
-  async getMessages(@Query('chatRoomId') chatRoomId: string) {
-    return this.chatService.getMessages(chatRoomId);
+  async getMessages(
+    @Query('chatRoomId') chatRoomId: string,
+    @UserId() userId: string,
+  ) {
+    return this.chatService.getMessages(chatRoomId, userId);
   }
 
   @ApiOperation({ summary: '채팅방 나가기' })
