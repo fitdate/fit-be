@@ -360,6 +360,10 @@ export class AuthService {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
 
+    if (!newPassword || !confirmPassword) {
+      throw new UnauthorizedException('새 비밀번호를 입력해주세요.');
+    }
+
     const user = await this.userService.findOne(userId);
     if (!user) {
       throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
@@ -368,6 +372,9 @@ export class AuthService {
     const email = user.email;
 
     const hashedPassword = await this.hashService.hash(newPassword);
+    if (hashedPassword === user.password) {
+      throw new UnauthorizedException('기존 비밀번호와 동일합니다.');
+    }
     await this.userService.updateUserPassword(email, hashedPassword);
     return { message: '비밀번호 변경 성공' };
   }

@@ -21,7 +21,7 @@ import { Response, Request } from 'express';
 import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { RequestWithUser } from './types/request.types';
@@ -235,8 +235,7 @@ export class AuthController {
   @Patch('change-password')
   @ApiOperation({ summary: '비밀번호 변경' })
   @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
-  @ApiParam({ name: 'newPassword', description: '새로운 비밀번호' })
-  @ApiParam({ name: 'confirmPassword', description: '새로운 비밀번호 확인' })
+  @ApiBody({ type: ChangePasswordDto })
   async changePassword(
     @UserId() userid: string,
     @Body() changePasswordDto: ChangePasswordDto,
