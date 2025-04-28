@@ -16,7 +16,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 
-@ApiTags('pass')
+@ApiTags('Pass')
 @Controller('pass')
 @UsePipes(new ValidationPipe({ transform: true }))
 export class PassController {
@@ -77,11 +77,24 @@ export class PassController {
   @Post('coffee-chat/:passedUserId')
   @ApiOperation({ summary: '호감페이지에서 커피챗 요청 거절' })
   @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
-  @ApiResponse({ status: 200, description: '성공적으로 거절됨' })
+  @ApiResponse({
+    status: 200,
+    description: '커피챗 거절 완료 (항상 isSuccess: false 반환)',
+    schema: {
+      type: 'object',
+      properties: {
+        isSuccess: {
+          type: 'boolean',
+          description: '커피챗 거절 성공 여부 (거절 시 항상 false)',
+          example: false,
+        },
+      },
+    },
+  })
   async passCoffeeChatRequest(
     @UserId() userId: string,
     @Param('passedUserId') passedUserId: string,
-  ): Promise<void> {
-    await this.passService.passCoffeeChatRequest(userId, passedUserId);
+  ): Promise<{ isSuccess: boolean }> {
+    return await this.passService.passCoffeeChatRequest(userId, passedUserId);
   }
 }

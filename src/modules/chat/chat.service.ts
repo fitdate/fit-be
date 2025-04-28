@@ -107,7 +107,7 @@ export class ChatService {
    * 커피챗 수락 시 채팅방을 생성하고 알림을 전송합니다.
    * @param userId 현재 로그인한 사용자 ID
    * @param partnerId 매칭된 상대방 ID
-   * @returns 생성된 채팅방 정보
+   * @returns 생성된 채팅방 정보와 성공 상태
    */
   async acceptCoffeeChat(userId: string, partnerId: string) {
     const chatRoom = await this.createMatchingRoom(userId, partnerId);
@@ -125,7 +125,10 @@ export class ChatService {
     };
 
     await this.notificationService.create(notification);
-    return chatRoom;
+    return {
+      ...chatRoom,
+      isSuccess: true,
+    };
   }
 
   /**
