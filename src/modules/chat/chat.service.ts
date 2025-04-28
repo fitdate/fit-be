@@ -6,7 +6,6 @@ import { ChatRoom } from './entities/chat-room.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../../common/enum/notification.enum';
-import { IsNull } from 'typeorm';
 import { calculateAge } from '../../common/util/age-calculator.util';
 
 @Injectable()
@@ -170,16 +169,15 @@ export class ChatService {
   async getRooms(userId: string) {
     this.logger.log(`채팅방 목록 조회 시작 - 사용자 ID: ${userId}`);
 
-    const rooms = await this.chatRoomRepository.find({
-      relations: ['users', 'users.profile', 'users.profile.profileImage'],
-      where: {
-        users: { id: userId },
-        deletedAt: IsNull(),
-      },
-      order: {
-        updatedAt: 'DESC',
-      },
-    });
+    const rooms = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .leftJoinAndSelect('chatRoom.users', 'users')
+      .leftJoinAndSelect('users.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
+      .where('users.id = :userId', { userId })
+      .andWhere('chatRoom.deletedAt IS NULL')
+      .orderBy('chatRoom.updatedAt', 'DESC')
+      .getMany();
 
     this.logger.log(`채팅방 조회 완료 - 총 ${rooms.length}개의 채팅방`);
 
@@ -198,6 +196,7 @@ export class ChatService {
           profileId: partner.profile?.id,
           hasProfileImages: !!partner.profile?.profileImage,
           profileImageCount: partner.profile?.profileImage?.length || 0,
+          profileImage: partner.profile?.profileImage,
         });
 
         const mainImage = partner.profile?.profileImage?.find(
@@ -211,6 +210,11 @@ export class ChatService {
           mainImage: mainImage?.imageUrl,
           firstImage: firstImage?.imageUrl,
           finalImage: profileImage,
+          allImages: partner.profile?.profileImage?.map((img) => ({
+            id: img.id,
+            url: img.imageUrl,
+            isMain: img.isMain,
+          })),
         });
 
         return {
