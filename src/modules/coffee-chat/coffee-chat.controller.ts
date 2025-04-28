@@ -24,7 +24,10 @@ export class CoffeeChatController {
   @ApiResponse({ status: 400, description: '커피챗 보내기 실패' })
   @ApiBody({ type: SendCoffeeChatDto })
   @Post('send')
-  sendCoffeeChat(@UserId() userId: string, @Body() sendCoffeeChatDto: SendCoffeeChatDto) {
+  sendCoffeeChat(
+    @UserId() userId: string,
+    @Body() sendCoffeeChatDto: SendCoffeeChatDto,
+  ) {
     this.logger.debug(`Request body: ${JSON.stringify(sendCoffeeChatDto)}`);
     this.logger.debug(`User ID: ${userId}`);
 

@@ -110,8 +110,25 @@ export class CoffeeChatService {
 
     const pendingChatsReceiver = await this.coffeeChatRepository.find({
       where: { sender: { id: userId }, status: CoffeeChatStatus.PENDING },
+      relations: [
+        'sender',
+        'receiver',
+        'sender.profile',
+        'sender.profile.profileImage',
+      ],
     });
 
     return [...pendingChats, ...pendingChatsReceiver];
+  }
+
+  private createUserSummary(user: User): UserSummary {
+    return {
+      id: user.id ?? '',
+      nickname: user.nickname,
+      region: user.region ?? '',
+      likeCount: user.likeCount,
+      age: calculateAge(user.birthday),
+      profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
+    };
   }
 }
