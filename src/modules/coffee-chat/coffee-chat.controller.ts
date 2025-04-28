@@ -22,7 +22,6 @@ export class CoffeeChatController {
   @ApiResponse({ status: 200, description: '커피챗 보내기 성공' })
   @ApiResponse({ status: 400, description: '커피챗 보내기 실패' })
   @ApiParam({ name: 'receiverId', description: '커피챗 받는 사람의 ID' })
-  @ApiBody({ type: SendCoffeeChatDto })
   @Post('send')
   sendCoffeeChat(
     @UserId() userId: string,

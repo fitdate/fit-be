@@ -198,7 +198,7 @@ export class CoffeeChatService {
     return coffeeChatList;
   }
 
-  async getReceivedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
+  async getReceivedCoffeeChatList(userId: string): Promise<CoffeeChat[]> {
     this.logger.log(`[받은 커피챗 조회] 사용자 ID: ${userId}`);
     const receivedCoffeeChatList = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
@@ -212,7 +212,7 @@ export class CoffeeChatService {
     this.logger.log(
       `[받은 커피챗 조회 완료] 사용자 ID: ${userId}, 조회된 커피챗 수: ${receivedCoffeeChatList.length}`,
     );
-    return this.coffeeChatReturn(receivedCoffeeChatList);
+    return receivedCoffeeChatList;
   }
 
   async getAcceptedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
