@@ -75,6 +75,24 @@ export class ChatController {
     return this.chatService.acceptCoffeeChat(userId, params.partnerId);
   }
 
+  @Post('match/accept/:partnerId')
+  @ApiOperation({ summary: '매칭 수락' })
+  @ApiResponse({
+    status: 200,
+    description: '매칭 수락 성공',
+  })
+  @ApiParam({
+    name: 'partnerId',
+    description: '매칭된 상대방의 ID',
+    example: '',
+  })
+  async acceptMatch(
+    @UserId() userId: string,
+    @Param() params: AcceptCoffeeChatDto,
+  ) {
+    return this.chatService.acceptMatch(userId, params.partnerId);
+  }
+
   @ApiOperation({
     summary: '채팅방 목록 조회',
     description: '사용자의 채팅방 목록을 조회합니다.',
