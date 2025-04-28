@@ -36,13 +36,12 @@ export class SparkListService {
     const filteredCoffeeChatList = coffeeChatList.map((coffeeChat) => {
       const profileImage = coffeeChat.receiver.profile?.profileImage?.[0];
       return {
-        coffeeChatId: coffeeChat.id,
-        receiverId: coffeeChat.receiver.id,
-        receiverNickname: coffeeChat.receiver.nickname,
-        receiverLikeCount: coffeeChat.receiver.likeCount,
-        receiverAge: calculateAge(coffeeChat.receiver.birthday),
-        receiverRegion: coffeeChat.receiver.region,
-        receiverProfileImage: profileImage ? profileImage.imageUrl : null,
+        coffeeChatUserId: coffeeChat.receiver.id,
+        nickname: coffeeChat.receiver.nickname,
+        likeCount: coffeeChat.receiver.likeCount,
+        age: calculateAge(coffeeChat.receiver.birthday),
+        region: coffeeChat.receiver.region,
+        profileImage: profileImage ? profileImage.imageUrl : null,
       };
     });
     return filteredCoffeeChatList;
