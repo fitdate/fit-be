@@ -125,10 +125,7 @@ export class UserService {
   async getCoffeeChatUserById(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: [
-        'profile',
-        'profile.profileImage',
-      ],
+      relations: ['coffeeChats', 'coffeeChatsReceived'],
     });
     if (!user) {
       throw new NotFoundException('User not found');
