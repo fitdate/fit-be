@@ -43,7 +43,9 @@ export class CoffeeChatService {
     return this.dataSource.transaction(async (manager) => {
       // sender: 로그인한 본인, receiver: 상대방(신청받을 유저)
       const sender = await this.userService.getCoffeeChatUserById(userId); // 본인
-      const receiver = await this.userService.getCoffeeChatUserById(sendCoffeeChatDto.receiverId); // 상대방
+      const receiver = await this.userService.getCoffeeChatUserById(
+        sendCoffeeChatDto.receiverId,
+      ); // 상대방
 
       this.logger.log(
         `Retrieved users - Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
@@ -149,7 +151,7 @@ export class CoffeeChatService {
     try {
       await this.notificationService.create(notification);
     } catch (error) {
-      this.logger.error(`알림 전송 중 에러 발생: ${error?.message}`);
+      this.logger.error(`알림 전송 중 에러 발생: ${(error as Error).message}`);
       throw error;
     }
     this.logger.log(`Sent acceptance notification to sender - ID: ${senderId}`);
@@ -197,9 +199,7 @@ export class CoffeeChatService {
   }
 
   async getReceivedCoffeeChatList(userId: string): Promise<CoffeeChatReturn[]> {
-    this.logger.log(
-      `Fetching received coffee chat list for user - ID: ${userId}`,
-    );
+    this.logger.log(`[받은 커피챗 조회] 사용자 ID: ${userId}`);
     const receivedCoffeeChatList = await this.coffeeChatRepository
       .createQueryBuilder('coffeeChat')
       .leftJoinAndSelect('coffeeChat.sender', 'sender')
@@ -210,7 +210,7 @@ export class CoffeeChatService {
       .getMany();
 
     this.logger.log(
-      `Retrieved ${receivedCoffeeChatList.length} pending coffee chats for user ${userId}`,
+      `[받은 커피챗 조회 완료] 사용자 ID: ${userId}, 조회된 커피챗 수: ${receivedCoffeeChatList.length}`,
     );
     return this.coffeeChatReturn(receivedCoffeeChatList);
   }
