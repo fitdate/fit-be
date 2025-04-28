@@ -102,13 +102,17 @@ export class MatchResultService {
 
   private formatUserProfile(user: User): MatchResultUserDto {
     try {
+      const mainImage = user.profile?.profileImage?.find((img) => img.isMain);
+      const firstImage = user.profile?.profileImage?.[0];
+      const profileImage = mainImage?.imageUrl || firstImage?.imageUrl || '';
+
       return {
         id: user.id,
         nickname: user.nickname,
         likeCount: user.likeCount,
         age: calculateAge(user.birthday),
         region: user.region || '',
-        profileImage: user.profile?.profileImage?.[0]?.imageUrl || '',
+        profileImage,
       };
     } catch (error) {
       this.logger.error(
