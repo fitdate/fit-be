@@ -56,9 +56,9 @@ export class SparkListService {
           return null;
         }
 
-        // 모두 선택하기 버튼을 눌렀을 때 두 명의 정보를 처리
-        if (selection.selector.id === userId && selection.selected.id) {
-          const matchedUser = selection.selected;
+        // 로그인한 사용자가 선택받은 경우만 처리
+        if (selection.selected.id === userId) {
+          const matchedUser = selection.selector;
           const profileImage = matchedUser.profile?.profileImage?.[0];
 
           return {
@@ -71,21 +71,7 @@ export class SparkListService {
           };
         }
 
-        // 선택하기 버튼을 눌렀을 때 한 명의 정보를 처리
-        const matchedUser =
-          selection.selector.id === userId
-            ? selection.selected
-            : selection.selector;
-        const profileImage = matchedUser.profile?.profileImage?.[0];
-
-        return {
-          matchedUserId: matchedUser.id,
-          nickname: matchedUser.nickname,
-          likeCount: matchedUser.likeCount,
-          age: calculateAge(matchedUser.birthday),
-          region: matchedUser.region,
-          profileImage: profileImage ? profileImage.imageUrl : null,
-        };
+        return null;
       })
       .filter(Boolean);
 
