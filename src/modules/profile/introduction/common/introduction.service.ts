@@ -3,6 +3,7 @@ import { Introduction } from '../entities/introduction.entity';
 import { Repository, In, ILike } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateManyIntroductionDto } from '../dto/create-many-introduction.dto';
+import { CreateIntroductionDto } from '../dto/create-introduction.dto';
 
 interface CreateManyIntroductionResponse {
   created: Introduction[];
@@ -21,6 +22,21 @@ export class IntroductionService {
     @InjectRepository(Introduction)
     private readonly introductionRepository: Repository<Introduction>,
   ) {}
+
+  async createIntroduction(
+    createDto: CreateIntroductionDto,
+  ): Promise<Introduction> {
+    const existingIntroduction = await this.introductionRepository.findOne({
+      where: { name: createDto.name },
+    });
+
+    if (existingIntroduction) {
+      return existingIntroduction;
+    }
+
+    const newIntroduction = this.introductionRepository.create(createDto);
+    return this.introductionRepository.save(newIntroduction);
+  }
 
   async createManyIntroductionFromSeed(
     introductions: IntroductionInput[],

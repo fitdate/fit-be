@@ -28,7 +28,10 @@ import { RequestWithUser } from './types/request.types';
 import { EmailAuthService } from './services/email-auth.service';
 import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
 import { CreateInterestCategoryDto } from '../profile/interest-category/dto/create-interest-category.dto';
-
+import { FeedbackService } from '../profile/feedback/common/feedback.service';
+import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
+import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
+import { IntroductionService } from '../profile/introduction/common/introduction.service';
 @Injectable()
 export class AuthService {
   protected readonly logger = new Logger(AuthService.name);
@@ -44,6 +47,8 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly emailAuthService: EmailAuthService,
     private readonly interestCategoryService: InterestCategoryService,
+    private readonly feedbackService: FeedbackService,
+    private readonly introductionService: IntroductionService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -199,23 +204,49 @@ export class AuthService {
       // 5. 피드백 저장
       if (registerDto.selfintro?.length) {
         log('Starting feedback save');
-        const feedbacks = registerDto.selfintro.map((feedback) => ({
+        
+        // 피드백 이름으로 Feedback 찾기 또는 생성하기
+        const feedbacks = await Promise.all(
+          registerDto.selfintro.map(async (feedbackName) => {
+            const existingFeedback = await this.feedbackService.searchFeedbacks(feedbackName);
+            if (existingFeedback.length > 0) {
+              return existingFeedback[0];
+            }
+
+            log(`Creating new feedback: ${feedbackName}`);
+            const createDto: CreateFeedbackDto = { name: feedbackName };
+            return this.feedbackService.createFeedbackCategory(createDto);
+          })
+        )
+        const userFeedbacks = feedbacks.map((feedback) => ({
           profile: { id: profile.id },
-          feedbackId: feedback,
+          feedback: { id: feedback.id },
         }));
-        await qr.manager.save(UserFeedback, feedbacks);
-        log(`User feedback saved successfully for user: ${user.id}`);
+        await qr.manager.save(UserFeedback, userFeedbacks);
+        log(`User feedbacks saved successfully for user: ${user.id}`);
       }
 
       // 6. 자기소개 저장
       if (registerDto.listening?.length) {
         log('Starting introduction save');
-        const introductions = registerDto.listening.map((intro) => ({
+        const introductions = await Promise.all(
+          registerDto.listening.map(async (introductionName) => {
+            const existingIntroduction = await this.introductionService.searchIntroductions(introductionName);
+            if (existingIntroduction.length > 0) {
+              return existingIntroduction[0];
+            }
+
+            log(`Creating new introduction: ${introductionName}`);
+            const createDto: CreateIntroductionDto = { name: introductionName };
+            return this.introductionService.createIntroduction(createDto);
+          })
+        )
+        const userIntroductions = introductions.map((introduction) => ({
           profile: { id: profile.id },
-          introductionId: intro,
+          introduction: { id: introduction.id },
         }));
-        await qr.manager.save(UserIntroduction, introductions);
-        log(`User introduction saved successfully for user: ${user.id}`);
+        await qr.manager.save(UserIntroduction, userIntroductions);
+        log(`User introductions saved successfully for user: ${user.id}`);
       }
 
       // 7. 관심사 저장

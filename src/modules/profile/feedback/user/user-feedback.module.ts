@@ -6,7 +6,6 @@ import { FeedbackModule } from '../common/feedback.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserFeedback]), FeedbackModule],
-  controllers: [],
   providers: [UserFeedbackService],
   exports: [UserFeedbackService],
 })

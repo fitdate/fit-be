@@ -3,6 +3,7 @@ import { Feedback } from '../entities/feedback.entity';
 import { Repository, In, ILike } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateManyFeedbackDto } from '../dto/create-many-feedback.dto';
+import { CreateFeedbackDto } from '../dto/create-feedback.dto';
 
 interface CreateManyFeedbackResponse {
   created: Feedback[];
@@ -21,6 +22,21 @@ export class FeedbackService {
     @InjectRepository(Feedback)
     private readonly feedbackRepository: Repository<Feedback>,
   ) {}
+
+  async createFeedbackCategory(
+    createDto: CreateFeedbackDto,
+  ): Promise<Feedback> {
+    const existingCategory = await this.feedbackRepository.findOne({
+      where: { name: createDto.name },
+    });
+
+    if (existingCategory) {
+      return existingCategory;
+    }
+
+    const newCategory = this.feedbackRepository.create(createDto);
+    return this.feedbackRepository.save(newCategory);
+  }
 
   async createManyFeedbackFromSeed(
     feedbacks: FeedbackInput[],

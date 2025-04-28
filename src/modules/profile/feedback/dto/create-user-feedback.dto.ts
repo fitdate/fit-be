@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsUUID } from 'class-validator';
+import { IsArray, IsString, IsUUID } from 'class-validator';
 
 export class CreateUserFeedbackDto {
   @ApiProperty({
@@ -17,4 +17,13 @@ export class CreateUserFeedbackDto {
   @IsArray()
   @IsUUID('4', { each: true })
   feedbackIds: string[];
+
+  @ApiProperty({
+    description: '피드백 이름 목록',
+    example: ['좋은 매너', '친절한 서비스'],
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  feedbackNames: string[];
 }

@@ -1,25 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserIntroduction } from '../entities/user-introduction.entity';
 import { CreateUserIntroductionDto } from '../dto/create-user-introduction.dto';
-
+import { IntroductionService } from '../common/introduction.service';
 @Injectable()
 export class UserIntroductionService {
   constructor(
     @InjectRepository(UserIntroduction)
     private readonly userIntroductionRepository: Repository<UserIntroduction>,
+    private readonly introductionService: IntroductionService,
   ) {}
 
   async createUserIntroduction(
     dto: CreateUserIntroductionDto,
   ): Promise<UserIntroduction[]> {
-    const userIntroductions = dto.introductionIds.map((introductionId) =>
-      this.userIntroductionRepository.create({
-        introduction: { id: introductionId },
+    const userIntroductions: UserIntroduction[] = [];
+
+    for (const name of dto.introductionNames) {
+      let introduction = (await this.introductionService.searchIntroductions(name))[0];
+      if (!introduction) {
+        introduction = await this.introductionService.createIntroduction({ name });
+      }
+      const userIntroduction = this.userIntroductionRepository.create({
+        introduction: { id: introduction.id },
         profile: { id: dto.profileId },
-      }),
-    );
+      });
+
+      userIntroductions.push(userIntroduction);
+    }
 
     return this.userIntroductionRepository.save(userIntroductions);
   }
@@ -27,19 +36,30 @@ export class UserIntroductionService {
   async updateUserIntroduction(
     dto: CreateUserIntroductionDto,
   ): Promise<UserIntroduction[]> {
-    const existingUserIntroductions =
-      await this.userIntroductionRepository.find({
-        where: { profile: { id: dto.profileId } },
-        relations: ['introduction'],
-      });
+    const introductions = await this.introductionService.findAllIntroduction();
+
+    const foundNames = introductions.map((introduction) => introduction.name);
+    const missingNames = dto.introductionNames.filter(
+      (name) => !foundNames.includes(name),
+    );
+
+    if (missingNames.length > 0) {
+      throw new NotFoundException(
+        `The following introductions do not exist: ${missingNames.join(', ')}`,
+      );
+    }
+
+    const existingUserIntroductions = await this.userIntroductionRepository.find({
+      where: { profile: { id: dto.profileId } },
+      relations: ['introduction'],
+    });
 
     const existingIntroductionIds = existingUserIntroductions.map(
       (userIntroduction) => userIntroduction.introduction.id,
     );
 
     const introductionsToRemove = existingUserIntroductions.filter(
-      (userIntroduction) =>
-        !dto.introductionIds.includes(userIntroduction.introduction.id),
+      (userIntroduction) => !dto.introductionIds.some(id => id === userIntroduction.introduction.id),
     );
 
     if (introductionsToRemove.length > 0) {
@@ -51,9 +71,9 @@ export class UserIntroductionService {
     );
 
     if (introductionsToAdd.length > 0) {
-      const newIntroductions = introductionsToAdd.map((introductionId) =>
+      const newIntroductions = introductionsToAdd.map((id) =>
         this.userIntroductionRepository.create({
-          introduction: { id: introductionId },
+          introduction: { id },
           profile: { id: dto.profileId },
         }),
       );

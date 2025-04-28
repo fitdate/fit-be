@@ -1,3 +1,4 @@
+import { FeedbackModule } from './../profile/feedback/common/feedback.module';
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -17,6 +18,7 @@ import { TokenService } from './services/token.service';
 import { SocialAuthService } from './services/social-auth.service';
 import { EmailAuthService } from './services/email-auth.service';
 import { InterestCategoryModule } from '../profile/interest-category/common/interest-category.module';
+import { IntroductionModule } from '../profile/introduction/common/introduction.module';
 @Module({
   imports: [
     UserModule,
@@ -28,6 +30,8 @@ import { InterestCategoryModule } from '../profile/interest-category/common/inte
     S3Module,
     ProfileImageModule,
     InterestCategoryModule,
+    FeedbackModule,
+    IntroductionModule,
   ],
   controllers: [AuthController],
   providers: [
