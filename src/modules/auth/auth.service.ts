@@ -303,11 +303,11 @@ export class AuthService {
       log('Transaction committed successfully');
 
       // 회원가입 성공 시 Redis에서 인증 상태 삭제
-      const verifiedKey = `email-verified:${registerDto.email}`;
-      await this.redisService.del(verifiedKey);
-      log(
-        `Email verification status deleted from Redis for: ${registerDto.email}`,
-      );
+      // const verifiedKey = `email-verified:${registerDto.email}`;
+      // await this.redisService.del(verifiedKey);
+      // log(
+      //   `Email verification status deleted from Redis for: ${registerDto.email}`,
+      // );
 
       return { user, profile };
     } catch (error) {
