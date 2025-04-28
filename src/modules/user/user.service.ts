@@ -165,6 +165,7 @@ export class UserService {
       height: user?.height,
       age: user?.age,
       mbti: user?.profile?.mbti,
+      likeCount: user?.likeCount,
       profileImage: user?.profile?.profileImage[0]?.imageUrl,
       userFeedbacks: user?.profile?.userFeedbacks.map((feedback) => feedback.feedback.name),
       userIntroductions: user?.profile?.userIntroductions.map((introduction) => introduction.introduction.name),
