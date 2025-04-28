@@ -9,7 +9,7 @@ import {
 import { CoffeeChatService } from './coffee-chat.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
-import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 import { Logger } from '@nestjs/common';
 
@@ -22,18 +22,18 @@ export class CoffeeChatController {
   @ApiOperation({ summary: '커피챗 보내기' })
   @ApiResponse({ status: 200, description: '커피챗 보내기 성공' })
   @ApiResponse({ status: 400, description: '커피챗 보내기 실패' })
-  @ApiParam({ name: 'receiverId', description: '커피챗 받는 사람의 ID' })
+  @ApiBody({ type: SendCoffeeChatDto })
   @Post('send')
-  sendCoffeeChat(@UserId() userId: string, @Param('receiverId') receiverId: string) {
-    this.logger.debug(`Request body: ${JSON.stringify(receiverId)}`);
+  sendCoffeeChat(@UserId() userId: string, @Body() sendCoffeeChatDto: SendCoffeeChatDto) {
+    this.logger.debug(`Request body: ${JSON.stringify(sendCoffeeChatDto)}`);
     this.logger.debug(`User ID: ${userId}`);
 
-    if (!receiverId) {
+    if (!sendCoffeeChatDto.receiverId) {
       this.logger.error('Receiver ID is missing in request body');
       throw new BadRequestException('Receiver ID is required');
     }
 
-    return this.coffeeChatService.sendCoffeeChat(userId, receiverId);
+    return this.coffeeChatService.sendCoffeeChat(userId, sendCoffeeChatDto.receiverId);
   }
 
   @ApiOperation({ summary: '커피챗 수락' })

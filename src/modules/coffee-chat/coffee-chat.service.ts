@@ -31,7 +31,7 @@ export class CoffeeChatService {
 
   async sendCoffeeChat(
     userId: string,
-    receiverId: string,
+    sendCoffeeChatDto: SendCoffeeChatDto,
   ): Promise<{
     savedCoffeeChat: {
       id: string;
@@ -41,28 +41,30 @@ export class CoffeeChatService {
     };
   }> {
     this.logger.log(
-      `Starting coffee chat request - Sender: ${userId}, Receiver: ${receiverId}`,
+      `Starting coffee chat request - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
     );
 
     // 중복 요청 방지
     const existingChat = await this.coffeeChatRepository.findOne({
       where: {
         sender: { id: userId },
-        receiver: { id: receiverId },
+        receiver: { id: sendCoffeeChatDto.receiverId },
         status: CoffeeChatStatus.PENDING,
       },
     });
 
     if (existingChat) {
       this.logger.warn(
-        `Duplicate coffee chat request detected - Sender: ${userId}, Receiver: ${receiverId}`,
+        `Duplicate coffee chat request detected - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
       );
       throw new BadRequestException('이미 요청된 커피챗이 존재합니다.');
     }
 
     return this.dataSource.transaction(async (manager) => {
       const sender = await this.userService.getCoffeeChatUserById(userId);
-      const receiver = await this.userService.getCoffeeChatUserById(receiverId);
+      const receiver = await this.userService.getCoffeeChatUserById(
+        sendCoffeeChatDto.receiverId,
+      );
 
       this.logger.log(
         `Retrieved users - Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
