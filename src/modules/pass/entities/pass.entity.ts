@@ -1,21 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { BaseTable } from '../../../common/entity/base-table.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 
-@Entity()
+@Entity('passes')
 export class Pass extends BaseTable {
-  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, (user) => user.passes)
-  @JoinColumn({ name: 'user_id' })
+  @Column()
+  userId: string;
+
+  @Column()
+  passedUserId: string;
+
+  @Column({ type: 'enum', enum: ['MATCH', 'COFFEE_CHAT', 'BOTH'] })
+  passType: 'MATCH' | 'COFFEE_CHAT' | 'BOTH';
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, (user) => user.passedBy)
-  @JoinColumn({ name: 'passed_user_id' })
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'passedUserId' })
   passedUser: User;
 }

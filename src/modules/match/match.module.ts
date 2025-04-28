@@ -11,6 +11,7 @@ import { User } from '../user/entities/user.entity';
 import { MatchSelection } from './entities/match-selection.entity';
 import { MatchResultService } from './match-result.service';
 import { MatchResultController } from './match-result.controller';
+import { PassModule } from '../pass/pass.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { MatchResultController } from './match-result.controller';
     ]),
     NotificationModule,
     UserModule,
+    PassModule,
   ],
   controllers: [MatchController, MatchResultController],
   providers: [MatchService, MatchResultService],
