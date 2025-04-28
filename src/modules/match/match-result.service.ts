@@ -51,7 +51,7 @@ export class MatchResultService {
           'selectedProfile.profileImage',
           'selectedProfileImage',
         )
-        .where('match.selector_id = :userId OR match.selected_id = :userId', {
+        .where('match.userId = :userId OR match.partnerId = :userId', {
           userId,
         })
         .orderBy('match.createdAt', 'DESC')
