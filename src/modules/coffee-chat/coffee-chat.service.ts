@@ -146,8 +146,12 @@ export class CoffeeChatService {
       },
     };
 
-    const sentNotification =
+    try {
       await this.notificationService.create(notification);
+    } catch (error) {
+      this.logger.error(`알림 전송 중 에러 발생: ${error?.message}`);
+      throw error;
+    }
     this.logger.log(`Sent acceptance notification to sender - ID: ${senderId}`);
 
     // 수락한 커피챗 삭제
@@ -170,7 +174,6 @@ export class CoffeeChatService {
         sender: chat.sender.id,
         receiver: chat.receiver.id,
       },
-      sentNotification,
       removedCoffeeChat,
       acceptedChat,
     };
