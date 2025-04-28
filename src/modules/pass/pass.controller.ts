@@ -1,10 +1,19 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { PassService } from './pass.service';
 import { UserId } from '../../common/decorator/get-user.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('pass')
 @Controller('pass')
+@UsePipes(new ValidationPipe({ transform: true }))
 export class PassController {
   constructor(private readonly passService: PassService) {}
 
@@ -40,15 +49,15 @@ export class PassController {
 
   @Get('check/:passedUserId')
   @ApiOperation({ summary: '특정 사용자를 거절했는지 확인' })
-  @ApiResponse({ status: 200, description: '거절 여부 반환' })
+  @ApiResponse({
+    status: 200,
+    description: '거절 여부 반환',
+    type: Boolean,
+  })
   async checkPassStatus(
     @UserId() userId: string,
     @Param('passedUserId') passedUserId: string,
-  ): Promise<{ hasPassed: boolean }> {
-    const hasPassed = await this.passService.hasPassedUser(
-      userId,
-      passedUserId,
-    );
-    return { hasPassed };
+  ): Promise<boolean> {
+    return await this.passService.hasPassedUser(userId, passedUserId);
   }
 }
