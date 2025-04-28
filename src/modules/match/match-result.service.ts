@@ -37,22 +37,27 @@ export class MatchResultService {
         `사용자(${userId})의 매칭 결과 조회 시작 - 페이지: ${page}, 페이지당 항목 수: ${limit}`,
       );
 
-      const [matches, total] = await this.matchSelectionRepository.findAndCount(
-        {
-          where: [{ selector: { id: userId } }, { selected: { id: userId } }],
-          relations: [
-            'selector',
-            'selector.profile',
-            'selector.profile.profileImage',
-            'selected',
-            'selected.profile',
-            'selected.profile.profileImage',
-          ],
-          order: { createdAt: 'DESC' },
-          skip: (page - 1) * limit,
-          take: limit,
-        },
-      );
+      const [matches, total] = await this.matchSelectionRepository
+        .createQueryBuilder('match')
+        .leftJoinAndSelect('match.selector', 'selector')
+        .leftJoinAndSelect('selector.profile', 'selectorProfile')
+        .leftJoinAndSelect(
+          'selectorProfile.profileImage',
+          'selectorProfileImage',
+        )
+        .leftJoinAndSelect('match.selected', 'selected')
+        .leftJoinAndSelect('selected.profile', 'selectedProfile')
+        .leftJoinAndSelect(
+          'selectedProfile.profileImage',
+          'selectedProfileImage',
+        )
+        .where('match.selector_id = :userId OR match.selected_id = :userId', {
+          userId,
+        })
+        .orderBy('match.createdAt', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
 
       this.logger.log(
         `매칭 결과 조회 완료 - 총 ${total}개의 결과 중 ${matches.length}개 조회`,

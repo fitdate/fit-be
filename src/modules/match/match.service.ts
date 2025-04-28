@@ -387,36 +387,6 @@ export class MatchService {
     }
   }
 
-  // async getUserMatchList(userId: string) {
-  //   this.logger.debug(`[getUserMatchList] 시작 - userId: ${userId}`);
-
-  //   const matchList = await this.matchRepository
-  //     .createQueryBuilder('match')
-  //     .leftJoinAndSelect('match.user1', 'user1')
-  //     .leftJoinAndSelect('match.user2', 'user2')
-  //     .leftJoinAndSelect('user1.profile', 'user1Profile')
-  //     .leftJoinAndSelect('user2.profile', 'user2Profile')
-  //     .leftJoinAndSelect('user1Profile.profileImage', 'user1ProfileImage')
-  //     .leftJoinAndSelect('user2Profile.profileImage', 'user2ProfileImage')
-  //     .where('match.user1_id = :userId OR match.user2_id = :userId', { userId })
-  //     .getMany();
-
-  //   this.logger.debug(
-  //     `[getUserMatchList] 매치 리스트 개수: ${matchList.length}`,
-  //   );
-
-  //   matchList.forEach((match, index) => {
-  //     this.logger.debug(`[getUserMatchList] 매치 ${index + 1} 정보:`);
-  //     this.logger.debug(`- 매치 ID: ${match.id}`);
-  //     this.logger.debug(
-  //       `- user1 ID: ${match.user1.id}, 프로필 존재: ${!!match.user1.profile}`,
-  //     );
-  //     this.logger.debug(
-  //       `- user2 ID: ${match.user2.id}, 프로필 존재: ${!!match.user2.profile}`,
-  //     );
-  //   });
-  // }
-
   /**
    * 특정 사용자를 선택한 사람들의 정보를 가져옵니다.
    * @param selectedUserId 선택된 사용자 ID
