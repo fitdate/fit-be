@@ -61,12 +61,12 @@ export class AuthService {
     log(`Attempting to register new user with email: ${registerDto.email}`);
 
     // 이메일 인증 여부 확인
-    const isEmailVerified = await this.emailAuthService.checkEmailVerification(
-      registerDto.email,
-    );
-    if (!isEmailVerified) {
-      throw new UnauthorizedException('이메일 인증이 필요합니다.');
-    }
+    // const isEmailVerified = await this.emailAuthService.checkEmailVerification(
+    //   registerDto.email,
+    // );
+    // if (!isEmailVerified) {
+    //   throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    // }
 
     // 기존 유저 확인
     const existingUser = await this.userService.findUserByEmail(
@@ -207,11 +207,12 @@ export class AuthService {
       // 5. 피드백 저장
       if (registerDto.selfintro?.length) {
         log('Starting feedback save');
-        
+
         // 피드백 이름으로 Feedback 찾기 또는 생성하기
         const feedbacks = await Promise.all(
           registerDto.selfintro.map(async (feedbackName) => {
-            const existingFeedback = await this.feedbackService.searchFeedbacks(feedbackName);
+            const existingFeedback =
+              await this.feedbackService.searchFeedbacks(feedbackName);
             if (existingFeedback.length > 0) {
               return existingFeedback[0];
             }
@@ -219,8 +220,8 @@ export class AuthService {
             log(`Creating new feedback: ${feedbackName}`);
             const createDto: CreateFeedbackDto = { name: feedbackName };
             return this.feedbackService.createFeedbackCategory(createDto);
-          })
-        )
+          }),
+        );
         const userFeedbacks = feedbacks.map((feedback) => ({
           profile: { id: profile.id },
           feedback: { id: feedback.id },
@@ -234,7 +235,10 @@ export class AuthService {
         log('Starting introduction save');
         const introductions = await Promise.all(
           registerDto.listening.map(async (introductionName) => {
-            const existingIntroduction = await this.introductionService.searchIntroductions(introductionName);
+            const existingIntroduction =
+              await this.introductionService.searchIntroductions(
+                introductionName,
+              );
             if (existingIntroduction.length > 0) {
               return existingIntroduction[0];
             }
@@ -242,8 +246,8 @@ export class AuthService {
             log(`Creating new introduction: ${introductionName}`);
             const createDto: CreateIntroductionDto = { name: introductionName };
             return this.introductionService.createIntroduction(createDto);
-          })
-        )
+          }),
+        );
         const userIntroductions = introductions.map((introduction) => ({
           profile: { id: profile.id },
           introduction: { id: introduction.id },
