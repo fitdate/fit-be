@@ -139,9 +139,16 @@ export class UserService {
         'profile.userIntroductions',
         'profile.userFeedbacks',
         'profile.interestCategory',
+        'profile.interestCategory.interestCategory',
         'profile.profileImage',
       ],
     });
+
+    this.logger.debug(
+      `user.profile.interestCategory: ${JSON.stringify(
+        user?.profile?.interestCategory,
+      )}`,
+    );
 
     if (!user) {
       throw new NotFoundException('User not found');
