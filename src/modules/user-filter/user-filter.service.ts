@@ -53,6 +53,7 @@ export class UserFilterService {
   async getFilteredUsers(userId: string) {
     const filter = await this.getUserFilter(userId);
     const filterDto = {
+      region: filter?.region,
       ageMin: filter?.minAge ?? 20,
       ageMax: filter?.maxAge ?? 60,
       minLikes: filter?.minLikeCount ?? 0,

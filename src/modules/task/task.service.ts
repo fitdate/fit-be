@@ -17,8 +17,6 @@ export class TaskService {
   @Cron(DAILY_COFFEE_CHAT_AM_10)
   handleDailyTask() {
     this.logger.log('매일 오전 10시 커피챗 알림 보내기');
-
-    // todo: 커피챗 서비스 사용하기
     // 사용자들에게 커피챗 알림 보내기기
     this.sseService.sendNotification('실제 유저 넣기', {
       type: NotificationType.SYSTEM,
@@ -34,7 +32,6 @@ export class TaskService {
   @Cron(DAILY_PRE_COFFEE_CHAT_AM_9_55)
   handlePreCoffeeChatTask() {
     this.logger.log('매일 오전 9시 55분 커피챗 알림 보내기');
-    // todo: 커피챗 서비스 사용하기
     // 사용자들에게 커피챗 시작 전 5분 알림 보내기
     this.sseService.sendNotification('실제 유저 넣기', {
       type: NotificationType.SYSTEM,

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { RedisService } from '../redis/redis.service';
-import { FestivalDto } from './dto/festival.dto';
+import { RedisService } from '../../redis/redis.service';
+import { FestivalDto } from '../dto/festival.dto';
 
 @Injectable()
 export class UserRequestFestivalService {

@@ -7,7 +7,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 import { FestivalDto } from './dto/festival.dto';
 import { FestivalResponse } from './types/festival.types';
 import { format } from 'date-fns';
-import { NaverSearchService } from './naver-search.service';
+import { NaverSearchService } from './service/naver-search.service';
 import { AllConfig } from 'src/common/config/config.types';
 import { FestivalItem } from './types/festival.types';
 import { addMonths, isWithinInterval, parse } from 'date-fns';

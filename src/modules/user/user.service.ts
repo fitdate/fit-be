@@ -176,9 +176,15 @@ export class UserService {
       mbti: user?.profile?.mbti,
       likeCount: user?.likeCount,
       profileImage: user?.profile?.profileImage[0]?.imageUrl,
-      userFeedbacks: user?.profile?.userFeedbacks.map((feedback) => feedback.feedback.name),
-      userIntroductions: user?.profile?.userIntroductions.map((introduction) => introduction.introduction.name),
-      interestCategory: user?.profile?.interestCategory.map((interest) => interest.interestCategory.name),
+      userFeedbacks: user?.profile?.userFeedbacks.map(
+        (feedback) => feedback.feedback.name,
+      ),
+      userIntroductions: user?.profile?.userIntroductions.map(
+        (introduction) => introduction.introduction.name,
+      ),
+      interestCategory: user?.profile?.interestCategory.map(
+        (interest) => interest.interestCategory.name,
+      ),
     };
   }
 
@@ -189,9 +195,9 @@ export class UserService {
 
     const socialUser = {
       ...createUserSocialDto,
-      password: `SOCIAL_LOGIN_${timestamp}`, //소셜 로그인 임시 비밀번호
-      nickname: `닉네임을 입력해주세요`, // 임시 닉네임 생성
-      isProfileComplete: false, // 프로필 미완성 상태로 시작
+      password: `SOCIAL_LOGIN_${timestamp}`,
+      nickname: `닉네임을 입력해주세요`,
+      isProfileComplete: false,
     };
 
     return this.userRepository.save(socialUser);
@@ -220,25 +226,16 @@ export class UserService {
       where: { email },
       relations: ['profile'],
     });
-    // if (!user) {
-    //   throw new NotFoundException('존재하지 않는 이메일입니다.');
-    // }
     return user;
   }
 
   async findUserByNickname(nickname: string) {
     const user = await this.userRepository.findOne({ where: { nickname } });
-    // if (!user) {
-    //   throw new NotFoundException('존재하지 않는 닉네임입니다.');
-    // }
     return user;
   }
 
   async findUserByPhone(phone: string) {
     const user = await this.userRepository.findOne({ where: { phone } });
-    // if (!user) {
-    //   throw new NotFoundException('존재하지 않는 전화번호입니다.');
-    // }
     return user;
   }
 

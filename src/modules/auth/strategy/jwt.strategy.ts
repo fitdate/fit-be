@@ -60,8 +60,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // payload의 sub를 유지하면서 사용자 정보를 추가
     return {
       ...payload,
-      sub: payload.sub,  // sub 필드 명시적으로 유지
-      user: user
+      sub: payload.sub,
+      user: user,
     };
   }
 }

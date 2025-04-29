@@ -29,4 +29,7 @@ export class UserFilter {
   @Column({ default: 0 })
   @Min(0)
   minLikeCount: number;
+
+  @Column({ nullable: true })
+  region: string;
 }

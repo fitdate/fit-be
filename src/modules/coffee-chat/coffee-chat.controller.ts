@@ -4,13 +4,11 @@ import {
   Body,
   Get,
   BadRequestException,
-  Param,
 } from '@nestjs/common';
 import { CoffeeChatService } from './coffee-chat.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
-import { ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
-import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
+import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 
 @Controller('coffee-chat')

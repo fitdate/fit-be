@@ -1,7 +1,7 @@
 import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { UserFilterService } from './user-filter.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { Public } from 'src/common/decorator/public.decorator';
 
@@ -39,12 +39,12 @@ export class UserFilterController {
   @ApiResponse({
     status: 200,
     description: '유저 필터 업데이트 성공',
-    schema: { default: { minAge: 20, maxAge: 60, minLikeCount: 0 } },
+    schema: {
+      default: { minAge: 20, maxAge: 60, minLikeCount: 0, region: '' },
+    },
   })
   @ApiResponse({ status: 400, description: '유저 필터 업데이트 실패' })
-  @ApiParam({ name: 'minAge', description: '최소 나이' })
-  @ApiParam({ name: 'maxAge', description: '최대 나이' })
-  @ApiParam({ name: 'minLikeCount', description: '최소 좋아요 수' })
+  @ApiBody({ type: UserFilterDto })
   @Patch('user-filter')
   updateUserFilter(
     @UserId() userId: string,

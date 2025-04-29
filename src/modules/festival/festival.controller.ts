@@ -4,7 +4,7 @@ import { FestivalDto } from './dto/festival.dto';
 import { ApiQuery, ApiOperation } from '@nestjs/swagger';
 import { FestivalRegionDto } from './dto/region.dto';
 import { RegionCode } from './enum/festival-region.enum';
-import { UserRequestFestivalService } from './user-request-festival.service';
+import { UserRequestFestivalService } from './service/user-request-festival.service';
 @Controller('festival')
 export class FestivalController {
   constructor(

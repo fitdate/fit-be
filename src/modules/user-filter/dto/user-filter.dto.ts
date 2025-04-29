@@ -1,7 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, Min, Max } from 'class-validator';
+import { IsNumber, Min, Max, IsString, IsOptional } from 'class-validator';
 
 export class UserFilterDto {
+  @ApiProperty({
+    description: '지역',
+    example: '서울',
+  })
+  @IsString()
+  @IsOptional()
+  region?: string;
+
   // @ApiProperty({
   //   description: '최대 거리',
   //   example: 100,

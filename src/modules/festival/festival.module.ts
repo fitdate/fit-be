@@ -4,9 +4,9 @@ import { FestivalController } from './festival.controller';
 import { LocationModule } from '../location/location.module';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { NaverSearchService } from './naver-search.service';
+import { NaverSearchService } from './service/naver-search.service';
 import { RedisService } from '../redis/redis.service';
-import { UserRequestFestivalService } from './user-request-festival.service';
+import { UserRequestFestivalService } from './service/user-request-festival.service';
 @Module({
   imports: [
     LocationModule,
