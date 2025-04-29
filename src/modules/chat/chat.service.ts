@@ -201,20 +201,52 @@ export class ChatService {
       throw new Error('채팅방 접근 권한이 없습니다.');
     }
 
-    const messages = await this.messageRepository.find({
-      where: { chatRoom: { id: chatRoomId } },
-      relations: ['user'],
-      order: { createdAt: 'DESC' },
-      take: 50,
-    });
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .innerJoinAndSelect('chatRoom.users', 'users')
+      .leftJoinAndSelect('users.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
+      .where('chatRoom.id = :chatRoomId', { chatRoomId })
+      .getOne();
 
-    return messages.reverse().map((message) => ({
-      id: message.id,
-      content: message.content,
-      userId: message.user.id,
-      userName: message.user.name,
-      createdAt: message.createdAt,
-    }));
+    if (!chatRoom) {
+      throw new Error('채팅방을 찾을 수 없습니다.');
+    }
+
+    const messages = await this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.user', 'user')
+      .where('message.chatRoomId = :chatRoomId', { chatRoomId })
+      .orderBy('message.createdAt', 'DESC')
+      .take(50)
+      .getMany();
+
+    const partner = chatRoom.users.find((user) => user.id !== userId);
+    if (!partner) {
+      throw new Error('상대방 정보를 찾을 수 없습니다.');
+    }
+
+    const partnerMainImage = partner.profile?.profileImage?.find(
+      (img) => img.isMain,
+    );
+    const partnerFirstImage = partner.profile?.profileImage?.[0];
+    const partnerProfileImage =
+      partnerMainImage?.imageUrl || partnerFirstImage?.imageUrl || null;
+
+    return {
+      chatRoomId,
+      partner: {
+        id: partner.id,
+        profileImage: partnerProfileImage,
+      },
+      messages: messages.reverse().map((message) => ({
+        id: message.id,
+        content: message.content,
+        userId: message.user.id,
+        isMine: message.user.id !== partner.id,
+        createdAt: message.createdAt,
+      })),
+    };
   }
 
   // 채팅방 나가기
