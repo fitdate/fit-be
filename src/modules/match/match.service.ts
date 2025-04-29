@@ -232,6 +232,8 @@ export class MatchService {
     await this.notificationService.create({
       receiverId: selectedUserId,
       type: NotificationType.MATCH,
+      title: '매칭 성공',
+      content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
       data: {
         matchId,
         selectedUserId,
@@ -280,8 +282,8 @@ export class MatchService {
         this.notificationService.create({
           receiverId: firstSelectedUserId,
           type: NotificationType.MATCH,
-          // title: '매칭 성공',
-          // content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
+          title: '매칭 성공',
+          content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
           data: {
             matchId,
             selectedUserId: firstSelectedUserId,
@@ -291,8 +293,8 @@ export class MatchService {
         this.notificationService.create({
           receiverId: secondSelectedUserId,
           type: NotificationType.MATCH,
-          // title: '매칭 성공',
-          // content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
+          title: '매칭 성공',
+          content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
           data: {
             matchId,
             selectedUserId: secondSelectedUserId,
