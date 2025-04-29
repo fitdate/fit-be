@@ -24,13 +24,13 @@ export class PaymentService {
     private readonly configService: ConfigService,
   ) {}
 
-  // 새로운 결제 정보 생성
+  // 결제 정보 생성
   async createPayment(paymentData: Partial<Payment>): Promise<Payment> {
     const payment = this.paymentRepository.create(paymentData);
     return this.paymentRepository.save(payment);
   }
 
-  // 토스페이먼츠 결제 확인 처리
+  // 토스페이먼츠 결제 확인
   async confirmPayment(
     paymentKey: string,
     orderId: string,
@@ -121,10 +121,10 @@ export class PaymentService {
     ];
 
     const mockPayments = users.flatMap((user) => {
-      const paymentCount = Math.floor(Math.random() * 5) + 1; // 1~5개의 결제
+      const paymentCount = Math.floor(Math.random() * 5) + 1;
       return Array.from({ length: paymentCount }, () => ({
         user,
-        amount: Math.floor(Math.random() * 100000) + 10000, // 10,000원 ~ 110,000원
+        amount: Math.floor(Math.random() * 100000) + 10000,
         paymentMethod:
           paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
         status: statuses[Math.floor(Math.random() * statuses.length)],
@@ -141,7 +141,7 @@ export class PaymentService {
     return this.paymentRepository.save(mockPayments);
   }
 
-  // 결제 통계 데이터 생성
+  // 결제 통계 데이터 조회
   async getPaymentStatistics(): Promise<PaymentStatistics> {
     const payments = await this.paymentRepository.find({
       where: { status: 'completed' },

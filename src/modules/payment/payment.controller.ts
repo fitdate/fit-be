@@ -32,7 +32,7 @@ export class PaymentController {
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiResponse({ status: 500, description: '서버 에러' })
   @Post('confirm')
-  // 토스페이먼츠 결제 확인 처리
+  // 토스페이먼츠 결제 확인
   async confirmPayment(
     @Query() confirmPaymentDto: ConfirmPaymentDto,
     @Req() req: Request,

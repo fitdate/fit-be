@@ -27,6 +27,7 @@ export class AdminController {
   @ApiOperation({ summary: '성별 통계 데이터 조회' })
   @ApiResponse({ status: 200, description: '성별 통계 데이터 반환' })
   @Get('statistics/gender')
+  // 성별 통계 데이터 조회
   async getGenderStatistics(): Promise<GenderStatistics> {
     return this.adminService.getGenderStatistics();
   }
@@ -34,6 +35,7 @@ export class AdminController {
   @ApiOperation({ summary: '연령대별 통계 데이터 조회' })
   @ApiResponse({ status: 200, description: '연령대별 통계 데이터 반환' })
   @Get('statistics/age')
+  // 연령대별 통계 데이터 조회
   async getAgeGroupStatistics(): Promise<AgeGroupStatistics> {
     return this.adminService.getAgeGroupStatistics();
   }
@@ -41,6 +43,7 @@ export class AdminController {
   @ApiOperation({ summary: '지역별 통계 데이터 조회' })
   @ApiResponse({ status: 200, description: '지역별 통계 데이터 반환' })
   @Get('statistics/location')
+  // 지역별 통계 데이터 조회
   async getLocationStatistics(): Promise<LocationStatistics> {
     return this.adminService.getLocationStatistics();
   }
@@ -48,6 +51,7 @@ export class AdminController {
   @ApiOperation({ summary: '결제 통계 데이터 조회' })
   @ApiResponse({ status: 200, description: '결제 통계 데이터 반환' })
   @Get('statistics/payment')
+  // 결제 통계 데이터 조회
   async getPaymentStatistics(): Promise<PaymentStatistics> {
     return this.paymentService.getPaymentStatistics();
   }
@@ -61,6 +65,7 @@ export class AdminController {
     description: '조회할 상위 결제자 수',
   })
   @Get('statistics/top-payers')
+  // 상위 결제자 목록 조회
   async getTopPayingUsers(
     @Query('limit') limit?: number,
   ): Promise<TopPayingUser[]> {
@@ -70,6 +75,7 @@ export class AdminController {
   @ApiOperation({ summary: '테스트용 모의 결제 데이터 생성' })
   @ApiResponse({ status: 201, description: '생성된 모의 결제 데이터 반환' })
   @Post('mock/payments')
+  // 테스트용 모의 결제 데이터 생성
   async generateMockPayments(): Promise<Payment[]> {
     return this.paymentService.generateMockPayments();
   }
