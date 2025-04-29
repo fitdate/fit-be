@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { AllConfig } from 'src/common/config/config.types';
@@ -371,19 +377,18 @@ export class AuthService {
       throw new BadRequestException('새 비밀번호가 일치하지 않습니다.');
     }
 
-    const hashedOldPassword = await this.hashService.hash(oldPassword);
-    const isPasswordValid = await this.userService.checkUserPassword(
-      userId,
-      hashedOldPassword,
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    const isPasswordValid = await this.hashService.compare(
+      oldPassword,
+      user.password,
     );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('기존 비밀번호가 일치하지 않습니다.');
-    }
-
-    const user = await this.userService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
     const hashedPassword = await this.hashService.hash(newPassword);
