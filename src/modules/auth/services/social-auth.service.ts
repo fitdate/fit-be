@@ -29,6 +29,11 @@ export class SocialAuthService {
     JwtTokenResponse & {
       isProfileComplete: boolean;
       redirectUrl: string;
+      user: {
+        id: string;
+        email: string;
+        role: string;
+      };
     }
   > {
     let user = await this.userService.findUserByEmail(userData.email);
@@ -84,6 +89,11 @@ export class SocialAuthService {
       ...tokenResponse,
       isProfileComplete,
       redirectUrl: redirectPath,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 

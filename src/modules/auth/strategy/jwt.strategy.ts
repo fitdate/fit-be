@@ -8,12 +8,20 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserService } from '../../user/user.service';
 import { RedisService } from '../../redis/redis.service';
 
-const cookieExtractor = (req: Request) => {
-  if (!req || !req.cookies) {
-    throw new UnauthorizedException('쿠키를 찾을 수 없습니다');
+interface RequestWithCookies extends Request {
+  cookies: {
+    accessToken?: string;
+    refreshToken?: string;
+    [key: string]: string | undefined;
+  };
+}
+
+const cookieExtractor = (req: RequestWithCookies) => {
+  if (!req) {
+    throw new UnauthorizedException('Request 객체를 찾을 수 없습니다');
   }
 
-  const token = req.cookies.accessToken as string;
+  const token = req.cookies?.accessToken;
   if (!token) {
     throw new UnauthorizedException('액세스 토큰이 없습니다');
   }
@@ -44,7 +52,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: TokenPayload, req: Request) {
-    const token = cookieExtractor(req);
+    const token = cookieExtractor(req as RequestWithCookies);
 
     if (payload.type !== 'access') {
       throw new UnauthorizedException('잘못된 토큰 타입입니다');

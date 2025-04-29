@@ -55,7 +55,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
       }
       const name = naverProfile.displayName;
 
-      const user = await this.socialAuthService.processSocialLogin(
+      const result = await this.socialAuthService.processSocialLogin(
         {
           email,
           name,
@@ -65,7 +65,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
       );
 
       return {
-        ...user,
+        ...result.user,
         accessToken,
         refreshToken,
       };

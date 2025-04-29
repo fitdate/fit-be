@@ -43,7 +43,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       }
 
       // 로그인 처리: 없으면 등록 or 기존 유저 반환
-      const user = await this.socialAuthService.processSocialLogin(
+      const result = await this.socialAuthService.processSocialLogin(
         {
           email: profile.emails[0].value,
           name: profile.displayName,
@@ -53,7 +53,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       );
 
       return {
-        ...user,
+        ...result.user,
         accessToken,
         refreshToken,
       };

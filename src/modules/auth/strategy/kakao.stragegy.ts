@@ -66,7 +66,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
         kakaoProfile._json.properties?.nickname ||
         '';
 
-      const user = await this.socialAuthService.processSocialLogin(
+      const result = await this.socialAuthService.processSocialLogin(
         {
           email,
           name,
@@ -76,7 +76,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
       );
 
       return {
-        ...user,
+        ...result.user,
         accessToken,
         refreshToken,
       };
