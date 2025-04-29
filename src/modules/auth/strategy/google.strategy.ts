@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from '../types/oatuth.types';
 import { AllConfig } from 'src/common/config/config.types';
 import { SocialAuthService } from '../services/social-auth.service';
+import { Request } from 'express';
+
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   private readonly logger = new Logger(GoogleStrategy.name);
@@ -27,24 +29,28 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: Profile) {
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: Profile,
+    req: Request,
+  ) {
     try {
       // 이메일 정보 확인
       if (!profile.emails || profile.emails.length === 0) {
         this.logger.error('이메일 정보를 가져올 수 없습니다.');
         throw new Error('이메일 정보를 가져올 수 없습니다.');
       }
-      const email = profile.emails[0].value;
-      const familyName = profile?.name?.familyName ?? '';
-      const givenName = profile?.name?.givenName ?? '';
-      const authProvider = AuthProvider.GOOGLE;
 
       // 로그인 처리: 없으면 등록 or 기존 유저 반환
-      const user = await this.socialAuthService.processSocialLogin({
-        email,
-        name: `${familyName}${givenName}`,
-        authProvider,
-      });
+      const user = await this.socialAuthService.processSocialLogin(
+        {
+          email: profile.emails[0].value,
+          name: profile.displayName,
+          authProvider: AuthProvider.GOOGLE,
+        },
+        req,
+      );
 
       return {
         ...user,

@@ -5,6 +5,7 @@ import { Strategy, Profile } from 'passport-kakao';
 import { AllConfig } from 'src/common/config/config.types';
 import { AuthProvider } from '../types/oatuth.types';
 import { SocialAuthService } from '../services/social-auth.service';
+import { Request } from 'express';
 
 interface KakaoProfile extends Profile {
   _json: {
@@ -44,7 +45,12 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: Profile) {
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: Profile,
+    req: Request,
+  ) {
     try {
       const kakaoProfile = profile as KakaoProfile;
       const email =
@@ -60,11 +66,14 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
         kakaoProfile._json.properties?.nickname ||
         '';
 
-      const user = await this.socialAuthService.processSocialLogin({
-        email,
-        name,
-        authProvider: AuthProvider.KAKAO,
-      });
+      const user = await this.socialAuthService.processSocialLogin(
+        {
+          email,
+          name,
+          authProvider: AuthProvider.KAKAO,
+        },
+        req,
+      );
 
       return {
         ...user,

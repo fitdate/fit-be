@@ -5,6 +5,7 @@ import { Profile, Strategy } from 'passport-naver';
 import { AllConfig } from 'src/common/config/config.types';
 import { AuthProvider } from '../types/oatuth.types';
 import { SocialAuthService } from '../services/social-auth.service';
+import { Request } from 'express';
 
 interface NaverProfile extends Profile {
   emails: { value: string; verified: boolean }[];
@@ -37,7 +38,12 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: Profile) {
+  async validate(
+    accessToken: string,
+    refreshToken: string,
+    profile: Profile,
+    req: Request,
+  ) {
     try {
       const naverProfile = profile as NaverProfile;
       const email =
@@ -49,11 +55,14 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
       }
       const name = naverProfile.displayName;
 
-      const user = await this.socialAuthService.processSocialLogin({
-        email,
-        name,
-        authProvider: AuthProvider.NAVER,
-      });
+      const user = await this.socialAuthService.processSocialLogin(
+        {
+          email,
+          name,
+          authProvider: AuthProvider.NAVER,
+        },
+        req,
+      );
 
       return {
         ...user,
