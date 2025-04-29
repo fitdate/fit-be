@@ -6,7 +6,6 @@ import {
   Param,
   Delete,
   Req,
-  OnModuleDestroy,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -23,9 +22,10 @@ import { Notification } from './entities/notification.entity';
 @ApiTags('Notification')
 @ApiBearerAuth()
 @Controller('notification')
-export class NotificationController implements OnModuleDestroy {
+export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
+  // 알림 생성
   @ApiOperation({
     summary: '알림 생성',
     description:
@@ -41,6 +41,7 @@ export class NotificationController implements OnModuleDestroy {
     return this.notificationService.create(createNotificationDto);
   }
 
+  // 알림 목록 조회
   @ApiOperation({ summary: '알림 목록 조회' })
   @ApiResponse({
     status: 200,
@@ -56,6 +57,7 @@ export class NotificationController implements OnModuleDestroy {
     return this.notificationService.findAll(userId.toString());
   }
 
+  // 알림 읽음 처리
   @ApiOperation({ summary: '알림 읽음 표시' })
   @ApiResponse({
     status: 200,
@@ -67,6 +69,7 @@ export class NotificationController implements OnModuleDestroy {
     return this.notificationService.markAsRead(id);
   }
 
+  // 알림 삭제
   @ApiOperation({ summary: '알림 삭제' })
   @ApiResponse({ status: 200, description: '알림이 삭제되었습니다.' })
   @Delete(':id')
@@ -74,6 +77,7 @@ export class NotificationController implements OnModuleDestroy {
     return this.notificationService.remove(id);
   }
 
+  // 전체 알림 삭제
   @ApiOperation({ summary: '전체 알림 삭제' })
   @ApiResponse({ status: 200, description: '모든 알림이 삭제되었습니다.' })
   @Delete()
@@ -83,9 +87,5 @@ export class NotificationController implements OnModuleDestroy {
       throw new Error('사용자 정보를 찾을 수 없습니다.');
     }
     return this.notificationService.removeAll(userId.toString());
-  }
-
-  onModuleDestroy() {
-    this.notificationService.onModuleDestroy();
   }
 }
