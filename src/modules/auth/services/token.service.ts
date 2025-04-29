@@ -50,7 +50,7 @@ export class TokenService {
     this.logger.debug(`Generated tokenId: ${tokenId}`);
 
     // 3️⃣ Access/Refresh Token 발급
-    const accessToken = await this.generateAccessToken(userId, userRole);
+    const accessToken = this.generateAccessToken(userId, userRole);
     this.logger.debug(`Generated access token for user: ${userId}`);
 
     const refreshToken = await this.generateAndStoreRefreshToken(
@@ -68,6 +68,19 @@ export class TokenService {
       ),
     );
 
+    // 5️⃣ Access Token Redis에 저장
+    const accessTokenTtl =
+      this.configService.getOrThrow('jwt.accessTokenTtl', {
+        infer: true,
+      }) || '30m';
+    await this.redisService.set(
+      `access_token:${accessToken}`,
+      userId,
+      parseTimeToSeconds(accessTokenTtl),
+    );
+
+    this.logger.debug(`Stored access token in Redis for user: ${userId}`);
+
     return {
       accessToken,
       refreshToken,
@@ -76,10 +89,7 @@ export class TokenService {
   }
 
   // Access Token 생성
-  private async generateAccessToken(
-    userId: string,
-    userRole: UserRole,
-  ): Promise<string> {
+  private generateAccessToken(userId: string, userRole: UserRole): string {
     this.logger.debug(`Generating access token for user: ${userId}`);
     const accessTokenSecret = this.configService.getOrThrow(
       'jwt.accessTokenSecret',
@@ -111,10 +121,6 @@ export class TokenService {
         expiresIn: accessTokenExpiresIn,
       },
     );
-
-    // Redis에 토큰 저장
-    const ttlSeconds = parseTimeToSeconds(accessTokenExpiresIn);
-    await this.redisService.set(`access_token:${token}`, userId, ttlSeconds);
 
     return token;
   }
