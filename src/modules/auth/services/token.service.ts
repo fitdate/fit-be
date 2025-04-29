@@ -42,44 +42,58 @@ export class TokenService {
     refreshToken: string;
     tokenId: string;
   }> {
-    // 1️⃣ 먼저 기존 세션 제거!
+    this.logger.debug(`[Token Generation] Starting for user: ${userId}`);
+
+    // 1️⃣ 기존 세션 제거
     await this.invalidateAllSessions(userId);
+    this.logger.debug(`[Token Generation] Invalidated existing sessions for user: ${userId}`);
 
-    // 2️⃣ 새 tokenId 만들고 저장
+    // 2️⃣ 새 tokenId 생성
     const tokenId = uuidv4();
-    this.logger.debug(`Generated tokenId: ${tokenId}`);
+    this.logger.debug(`[Token Generation] Generated tokenId: ${tokenId}`);
 
-    // 3️⃣ Access/Refresh Token 발급
+    // 3️⃣ Access Token 생성 및 Redis 저장
     const accessToken = this.generateAccessToken(userId, userRole);
-    this.logger.debug(`Generated access token for user: ${userId}`);
-
-    const refreshToken = await this.generateAndStoreRefreshToken(
-      userId,
-      tokenId,
-    );
-    this.logger.debug(`Generated and stored refresh token for user: ${userId}`);
-
-    // 4️⃣ Session 메타데이터 저장
-    await this.redisService.set(
-      `session:${userId}`,
-      JSON.stringify(metadata),
-      parseTimeToSeconds(
-        this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d',
-      ),
-    );
-
-    // 5️⃣ Access Token Redis에 저장
-    const accessTokenTtl =
-      this.configService.getOrThrow('jwt.accessTokenTtl', {
-        infer: true,
-      }) || '30m';
+    const accessTokenTtl = this.configService.getOrThrow('jwt.accessTokenTtl', {
+      infer: true,
+    }) || '30m';
     await this.redisService.set(
       `access_token:${accessToken}`,
       userId,
       parseTimeToSeconds(accessTokenTtl),
     );
+    this.logger.debug(`[Token Generation] Stored access token in Redis: ${accessToken}`);
 
-    this.logger.debug(`Stored access token in Redis for user: ${userId}`);
+    // 4️⃣ Refresh Token 생성 및 Redis 저장
+    const refreshToken = await this.generateAndStoreRefreshToken(
+      userId,
+      tokenId,
+    );
+    this.logger.debug(`[Token Generation] Generated and stored refresh token: ${refreshToken}`);
+
+    // 5️⃣ 세션 메타데이터 저장
+    const refreshTokenTtl = this.configService.getOrThrow('jwt.refreshTokenTtl', {
+      infer: true,
+    }) || '7d';
+    await this.redisService.set(
+      `session:${userId}`,
+      JSON.stringify(metadata),
+      parseTimeToSeconds(refreshTokenTtl),
+    );
+    this.logger.debug(`[Token Generation] Stored session metadata for user: ${userId}`);
+
+    // 6️⃣ Redis 저장 확인
+    const storedAccessToken = await this.redisService.get(
+      `access_token:${accessToken}`,
+    );
+    const storedRefreshToken = await this.redisService.get(`refresh:${userId}`);
+    const storedSession = await this.redisService.get(`session:${userId}`);
+
+    this.logger.debug(`[Token Generation] Redis verification:`, {
+      accessTokenExists: !!storedAccessToken,
+      refreshTokenExists: !!storedRefreshToken,
+      sessionExists: !!storedSession,
+    });
 
     return {
       accessToken,

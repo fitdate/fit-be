@@ -58,19 +58,32 @@ export class ActiveInterceptor implements NestInterceptor {
     const user = request.user;
 
     if (!user?.sub) {
+      this.logger.debug('[Token Validation] No user found in request');
       return next.handle();
     }
 
+    this.logger.debug('[Token Validation] Checking token validity for user:', {
+      userId: user.sub,
+      token: user.token,
+    });
+
     // Redis에서 토큰 유효성 검증
     const isValid = await this.redisService.isAccessTokenValid(user.token);
+    this.logger.debug('[Token Validation] Redis validation result:', {
+      isValid,
+      userId: user.sub,
+    });
+
     if (!isValid) {
       this.logger.debug(
-        `Token invalid for user ${user.sub}, attempting refresh`,
+        `[Token Validation] Token invalid for user ${user.sub}, attempting refresh`,
       );
 
       const refreshToken = request.cookies?.refreshToken;
       if (!refreshToken || !user.tokenId) {
-        this.logger.warn(`No refresh token found for user ${user.sub}`);
+        this.logger.warn(
+          `[Token Validation] No refresh token found for user ${user.sub}`,
+        );
         throw new UnauthorizedException(
           '세션이 만료되었습니다. 다시 로그인해주세요.',
         );
@@ -82,12 +95,22 @@ export class ActiveInterceptor implements NestInterceptor {
           userAgent: request.headers['user-agent'] || 'unknown',
         };
 
+        this.logger.debug('[Token Validation] Attempting token rotation:', {
+          userId: user.sub,
+          tokenId: user.tokenId,
+        });
+
         const newTokens = await this.tokenService.rotateTokens(
           user.sub,
           user.tokenId,
           user.role as any,
           metadata,
         );
+
+        this.logger.debug('[Token Validation] Token rotation successful:', {
+          userId: user.sub,
+          newAccessToken: newTokens.accessToken,
+        });
 
         // 새로운 토큰을 쿠키에 설정
         const accessTokenTtl =
@@ -118,10 +141,10 @@ export class ActiveInterceptor implements NestInterceptor {
         });
 
         this.logger.debug(
-          `Tokens rotated for user ${user.sub} from IP: ${metadata.ip}`,
+          `[Token Validation] New tokens set in cookies for user ${user.sub}`,
         );
       } catch (error) {
-        this.logger.error('Token rotation failed:', error);
+        this.logger.error('[Token Validation] Token rotation failed:', error);
         throw new UnauthorizedException(
           '세션이 만료되었습니다. 다시 로그인해주세요.',
         );
