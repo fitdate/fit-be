@@ -34,11 +34,11 @@ export class PassController {
       type: 'object',
       properties: {
         passedUserId1: {
-          type: 'string',
+          type: 'uuid',
           description: '첫 번째 거절할 사용자 ID',
         },
         passedUserId2: {
-          type: 'string',
+          type: 'uuid',
           description: '두 번째 거절할 사용자 ID',
         },
       },

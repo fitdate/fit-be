@@ -14,6 +14,7 @@ import { UserId } from 'src/common/decorator/get-user.decorator';
 export class LikeController {
   constructor(private readonly likeService: LikeService) {}
 
+  // 사용자 좋아요 토글
   @Post(':likedUserId')
   @ApiOperation({ summary: '사용자 좋아요' })
   @ApiResponse({ status: 201, description: '좋아요 성공' })
@@ -26,6 +27,7 @@ export class LikeController {
     await this.likeService.toggleLike(userId, likedUserId);
   }
 
+  // 좋아요 상태 확인
   @Get(':likedUserId/status')
   @ApiOperation({ summary: '좋아요 상태 확인' })
   @ApiResponse({ status: 200, description: '좋아요 상태 반환' })
@@ -37,6 +39,7 @@ export class LikeController {
     return this.likeService.checkLikeStatus(userId, likedUserId);
   }
 
+  // 좋아요 목록 조회
   @Get(':likedUserId/list')
   @ApiOperation({ summary: '좋아요 목록 조회' })
   @ApiResponse({ status: 200, description: '좋아요 목록 조회 성공' })
