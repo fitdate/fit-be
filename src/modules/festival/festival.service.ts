@@ -60,28 +60,36 @@ export class FestivalService {
 
   private async updateRegionFestivals(regionCode: string) {
     const redisKey = `festivals:${regionCode}`;
-    const existingData = await this.redisService.get(redisKey);
-    const existingFestivals = existingData
-      ? (JSON.parse(existingData) as FestivalDto[])
-      : [];
 
-    // 해당 지역의 새로운 축제 데이터만 가져오기
+    // 기존 데이터 가져오기
+    const existingFestivals = await this.redisService.zrange(redisKey, 0, -1);
+    let festivals = existingFestivals.map(
+      (data) => JSON.parse(data) as FestivalDto,
+    );
+
+    // 30일 이내 종료되는 축제만 필터링
+    festivals = festivals.filter((festival) =>
+      this.isWithinOneMonth(festival.endDate),
+    );
+
+    // 새로운 축제 데이터 가져오기
     const newFestivals = await this.getNewFestivalsForRegion(regionCode);
+    const mergedFestivals = this.mergeAndSortFestivals(festivals, newFestivals);
 
-    // 기존 데이터와 새 데이터 병합 및 정렬
-    const mergedFestivals = this.mergeAndSortFestivals(
-      existingFestivals,
-      newFestivals,
-    );
+    // Redis Sorted Set 업데이트
+    await this.redisService.del(redisKey); // 기존 데이터 삭제
+    if (mergedFestivals.length > 0) {
+      for (const festival of mergedFestivals) {
+        await this.redisService.zadd(
+          redisKey,
+          new Date(festival.startDate).getTime(),
+          JSON.stringify(festival),
+        );
+      }
+    }
 
-    // Redis 업데이트
-    await this.redisService.set(
-      redisKey,
-      JSON.stringify(mergedFestivals),
-      2592000,
-    );
     this.logger.debug(
-      `[updateRegionFestivals] 지역 ${regionCode} 캐시 업데이트 완료`,
+      `[updateRegionFestivals] 지역 ${regionCode} 캐시 업데이트 완료. 총 ${mergedFestivals.length}개의 축제`,
     );
   }
 
@@ -157,16 +165,9 @@ export class FestivalService {
     }
 
     // 종료된 축제 제거
-    const activeFestivals = uniqueFestivals.filter((festival) =>
+    return uniqueFestivals.filter((festival) =>
       this.isWithinOneMonth(festival.endDate),
     );
-
-    // 최신순 정렬
-    return activeFestivals.sort((a, b) => {
-      const dateA = new Date(a.startDate);
-      const dateB = new Date(b.startDate);
-      return dateB.getTime() - dateA.getTime();
-    });
   }
 
   // 네이버 검색 URL 생성 로직
@@ -209,10 +210,17 @@ export class FestivalService {
     const parsedEndDate = parse(endDate, 'yyyyMMdd', new Date());
     const today = new Date();
     const oneMonthLater = addMonths(today, 1);
-    return isWithinInterval(parsedEndDate, {
+
+    const isWithin = isWithinInterval(parsedEndDate, {
       start: today,
       end: oneMonthLater,
     });
+
+    this.logger.debug(
+      `[isWithinOneMonth] Checking date: ${endDate}, Today: ${format(today, 'yyyy-MM-dd')}, One month later: ${format(oneMonthLater, 'yyyy-MM-dd')}, Is within: ${isWithin}`,
+    );
+
+    return isWithin;
   }
 
   // 전체 축제 조회
@@ -334,5 +342,11 @@ export class FestivalService {
       );
       throw new NotFoundException('축제 정보를 가져오는 데 실패했습니다.');
     }
+  }
+
+  async getFestivalsByRegion(regionCode: string): Promise<FestivalDto[]> {
+    const redisKey = `festivals:${regionCode}`;
+    const data = await this.redisService.zrange(redisKey, 0, -1);
+    return data.map((item) => JSON.parse(item) as FestivalDto);
   }
 }
