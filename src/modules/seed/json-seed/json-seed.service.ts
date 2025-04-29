@@ -4,6 +4,7 @@ import * as fs from 'fs';
 
 @Injectable()
 export class JsonSeedService {
+  // 시드 파일 읽기
   readSeed<T>(filePath: string): T[] {
     try {
       const absolutePath = join(process.cwd(), filePath);
@@ -19,6 +20,7 @@ export class JsonSeedService {
     }
   }
 
+  // 시드 파일 읽기 (변환)
   readSeedWithTransform<T, R>(
     filePath: string,
     transformFn: (data: T) => R,
@@ -27,6 +29,7 @@ export class JsonSeedService {
     return rawData.map(transformFn);
   }
 
+  // 시드 파일 쓰기
   writeSeed<T>(filePath: string, data: T[]) {
     try {
       const absolutePath = join(process.cwd(), filePath);

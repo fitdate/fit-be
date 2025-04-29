@@ -28,6 +28,7 @@ export class NaverSearchService {
     );
   }
 
+  // 축제 링크 조회(첫번째째)
   async getTopFestivalLink(festivalTitle: string): Promise<string | null> {
     const url = 'https://openapi.naver.com/v1/search/webkr.json';
 
@@ -39,14 +40,14 @@ export class NaverSearchService {
         },
         params: {
           query: festivalTitle,
-          display: 1, // 1개만! 제일 위에 있는 결과
+          display: 1,
         },
         timeout: 5000,
       });
 
       const items = response.data.items;
       if (items && items.length > 0) {
-        return items[0].link; // 제일 상단에 있는 웹사이트 링크
+        return items[0].link;
       }
       return null;
     } catch (error) {

@@ -23,6 +23,7 @@ export class InterestCategoryService {
     private readonly interestCategoryRepository: Repository<InterestCategory>,
   ) {}
 
+  // 시드 데이터로 관심사 생성
   async createManyInterestCategoryFromSeed(
     interestCategories: InterestCategoryInput[],
   ): Promise<CreateManyInterestCategoryResponse> {
@@ -34,6 +35,7 @@ export class InterestCategoryService {
     });
   }
 
+  // 여러 관심사 생성
   async createManyInterestCategory(
     createManyInterestCategoryDto: CreateManyInterestCategoryDto,
   ): Promise<CreateManyInterestCategoryResponse> {
@@ -91,6 +93,7 @@ export class InterestCategoryService {
     };
   }
 
+  // 관심사 생성
   async createInterestCategory(
     createDto: CreateInterestCategoryDto,
   ): Promise<InterestCategory> {
@@ -106,6 +109,7 @@ export class InterestCategoryService {
     return this.interestCategoryRepository.save(newCategory);
   }
 
+  // 모든 관심사 조회
   async findAllInterestCategory(): Promise<InterestCategory[]> {
     this.logger.debug('Fetching all interest categories');
     const interestCategories = await this.interestCategoryRepository.find();
@@ -113,6 +117,7 @@ export class InterestCategoryService {
     return interestCategories;
   }
 
+  // 관심사 검색
   async searchInterestCategories(name: string): Promise<InterestCategory[]> {
     this.logger.debug(`Searching interest categories with name: ${name}`);
     const interestCategories = await this.interestCategoryRepository.find({
@@ -130,6 +135,7 @@ export class InterestCategoryService {
     return interestCategories;
   }
 
+  // 여러 관심사 조회
   async findManyInterestCategories(ids: number[]): Promise<InterestCategory[]> {
     this.logger.debug(
       `Fetching interest categories with IDs: ${ids.join(', ')}`,

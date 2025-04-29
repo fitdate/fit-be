@@ -32,10 +32,12 @@ export class UserService {
     private readonly hashService: HashService,
   ) {}
 
+  // 사용자 생성
   createUser(createUserDto: CreateUserDto) {
     return this.userRepository.save(createUserDto);
   }
 
+  // 사용자 업데이트
   updateUser(id: string, updateUserDto: UpdateUserDto) {
     const isProfileComplete = this.isProfileDataComplete(updateUserDto);
 
@@ -47,6 +49,7 @@ export class UserService {
     return this.userRepository.update({ id }, data);
   }
 
+  // 사용자 비밀번호 업데이트
   updateUserPassword(email: string, password: string) {
     return this.userRepository.update({ email }, { password });
   }
@@ -84,6 +87,7 @@ export class UserService {
     return { message: '비밀번호 변경 성공' };
   }
 
+  // 프로필 데이터 완료 여부 확인
   private isProfileDataComplete(data: UpdateUserDto): boolean {
     const requiredFields = [
       'nickname',
@@ -99,6 +103,7 @@ export class UserService {
     });
   }
 
+  // 모든 사용자 정보 조회
   async getAllUserInfo() {
     return this.userRepository.find({
       relations: [
@@ -115,6 +120,7 @@ export class UserService {
     });
   }
 
+  // 커피 조회
   async getCoffeById(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -125,10 +131,12 @@ export class UserService {
     return user.coffee;
   }
 
+  // 커피 업데이트
   async updateCoffee(userId: string, coffee: number) {
     return this.userRepository.update({ id: userId }, { coffee });
   }
 
+  // 커피챗 사용자 조회
   async getCoffeeChatUserById(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -140,6 +148,7 @@ export class UserService {
     return user;
   }
 
+  // 사용자 정보 조회
   async getUserInfo(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -188,6 +197,7 @@ export class UserService {
     };
   }
 
+  // 소셜 사용자 생성
   async createSocialUser(
     createUserSocialDto: CreateUserSocialDto,
   ): Promise<User> {
@@ -221,6 +231,7 @@ export class UserService {
     return this.findOne(id);
   }
 
+  // 이메일로 사용자 조회
   async findUserByEmail(email: string) {
     const user = await this.userRepository.findOne({
       where: { email },
@@ -229,16 +240,19 @@ export class UserService {
     return user;
   }
 
+  // 닉네임으로 사용자 조회
   async findUserByNickname(nickname: string) {
     const user = await this.userRepository.findOne({ where: { nickname } });
     return user;
   }
 
+  // 전화번호로 사용자 조회
   async findUserByPhone(phone: string) {
     const user = await this.userRepository.findOne({ where: { phone } });
     return user;
   }
 
+  // 사용자 조회
   async findOne(id: string) {
     const user = await this.userRepository.findOne({
       where: { id },
@@ -260,6 +274,7 @@ export class UserService {
     return user;
   }
 
+  // 사용자 저장
   async saveUser(userName: string, socketId: string) {
     const user = this.userRepository.create({
       nickname: userName,
@@ -267,6 +282,8 @@ export class UserService {
     });
     return this.userRepository.save(user);
   }
+
+  // 데이팅 프리퍼런스 조회
   async getDatingPreference(
     currentUserId: string,
     datingPreferenceDto: UpdateDatingPreferenceDto,
@@ -286,10 +303,12 @@ export class UserService {
       .createQueryBuilder('user')
       .select([
         'user.id',
-        'user.age',
+        'user.nickname',
+        'user.birthday',
         'user.height',
         'user.region',
         'user.gender',
+        'user.likeCount',
       ])
       .where('user.id != :userId', { userId: currentUserId })
       .andWhere('user.deletedAt IS NULL')
@@ -335,6 +354,7 @@ export class UserService {
     return { users, nextCursor };
   }
 
+  // 필터링된 사용자 조회
   async getFilteredUsers(
     currentUserId: string,
     filteredUsersDto: FilteredUsersDto,
@@ -401,7 +421,6 @@ export class UserService {
 
     const users = await qb.getMany();
 
-    // 결과 유저 id, gender 로깅
     this.logger.debug(
       `쿼리 결과 유저 목록: ${users
         .map((u) => `id: ${u.id}, gender: ${u.gender}`)

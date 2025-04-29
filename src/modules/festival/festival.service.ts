@@ -25,12 +25,12 @@ export class FestivalService {
     private readonly redisService: RedisService,
   ) {}
 
-  // Cron 작업: 1시간마다 실행
+  // Cron
   @Cron('0 9-17 * * 1-5') // 월~금, 9시~17시 매 정각 실행
   async handleCron() {
     this.logger.debug('[handleCron] 1시간마다 getFestivalByRegion 실행 시작');
     try {
-      const regionCodes = REGION_VALUES; // 지역 코드 배열 가져오기
+      const regionCodes = REGION_VALUES;
       this.logger.debug(
         `[handleCron] 지역 코드: ${JSON.stringify(regionCodes)}`,
       );
@@ -80,7 +80,7 @@ export class FestivalService {
     }
   }
 
-  // endDate가 오늘부터 1달 이내인지 확인하는 로직
+  // endDate가 오늘부터 1달
   private isWithinOneMonth(endDate: string): boolean {
     const parsedEndDate = parse(endDate, 'yyyyMMdd', new Date());
     const today = new Date();
@@ -91,6 +91,7 @@ export class FestivalService {
     });
   }
 
+  // 전체 축제 조회
   async getFestivals(): Promise<Record<string, FestivalDto[]>> {
     try {
       this.logger.debug('[getFestivals] 전체 축제 조회 시작');
@@ -140,7 +141,6 @@ export class FestivalService {
       }
 
       try {
-        // 데이터 가져오기 및 처리
         const settledResults = await Promise.allSettled(
           allFestivals.map((festival) =>
             this.getFestivalWithNaverSearchUrl(festival),
@@ -167,14 +167,14 @@ export class FestivalService {
           return acc;
         }, {});
 
-        // Redis에 저장 (30일 TTL)
+        // Redis에 저장
         for (const [areaCode, festivals] of Object.entries(groupedResults)) {
-          const redisKey = `festivals:${areaCode}`; // Redis 키 생성
+          const redisKey = `festivals:${areaCode}`;
           await this.redisService.set(
             redisKey,
             JSON.stringify(festivals),
             2592000,
-          ); // 30일 TTL
+          );
           this.logger.debug(`[getFestivals] Redis에 저장 완료: ${redisKey}`);
         }
 
@@ -184,7 +184,6 @@ export class FestivalService {
 
         return groupedResults;
       } catch (error) {
-        // 오류 발생 시 로그를 남기고 예외를 던짐
         this.logger.error(
           `[getFestivals] 데이터 조회 중 오류 발생: ${
             error instanceof Error ? error.message : error

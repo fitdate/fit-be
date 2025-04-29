@@ -34,6 +34,8 @@ export class S3Service {
     });
     this.logger.log('S3 클라이언트 초기화 완료');
   }
+
+  // URL에서 키 추출
   extractKeyFromUrl(url: string): string {
     const urlSplit = url.split('.amazonaws.com/');
     if (urlSplit.length !== 2) {
@@ -42,6 +44,7 @@ export class S3Service {
     return urlSplit[1];
   }
 
+  // 파일 업로드
   async uploadFile(
     folderName: string,
     file: MulterFile,
@@ -79,6 +82,7 @@ export class S3Service {
     }
   }
 
+  // 여러 파일 업로드
   async uploadFiles(
     folderName: string,
     files: MulterFile[],
@@ -121,6 +125,7 @@ export class S3Service {
     }
   }
 
+  // 여러 파일 업데이트
   async updateFiles(
     files: MulterFile[],
     bucketName: string,
@@ -172,6 +177,8 @@ export class S3Service {
       );
     }
   }
+
+  // 파일 삭제
   async deleteFile(fileKey: string, bucketName: string) {
     this.logger.log(`${fileKey} 파일 삭제 시작`);
     if (!fileKey) {
@@ -195,6 +202,7 @@ export class S3Service {
     }
   }
 
+  // 여러 파일 삭제
   async deleteFiles(fileKeys: string[], bucketName: string) {
     this.logger.log(`${fileKeys.join(', ')} 파일 삭제 시작`);
     if (!fileKeys || fileKeys.length === 0) {
@@ -220,6 +228,7 @@ export class S3Service {
     }
   }
 
+  // 파일 URL 조회
   getFileUrls(fileKeys: string[]) {
     const bucketName = this.configService.getOrThrow('aws.bucketName', {
       infer: true,

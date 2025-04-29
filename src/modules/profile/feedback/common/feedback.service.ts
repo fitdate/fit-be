@@ -23,6 +23,7 @@ export class FeedbackService {
     private readonly feedbackRepository: Repository<Feedback>,
   ) {}
 
+  // 피드백 카테고리 생성
   async createFeedbackCategory(
     createDto: CreateFeedbackDto,
   ): Promise<Feedback> {
@@ -38,6 +39,7 @@ export class FeedbackService {
     return this.feedbackRepository.save(newCategory);
   }
 
+  // 시드 데이터로 피드백 생성
   async createManyFeedbackFromSeed(
     feedbacks: FeedbackInput[],
   ): Promise<CreateManyFeedbackResponse> {
@@ -45,6 +47,7 @@ export class FeedbackService {
     return this.createManyFeedback({ feedbacks });
   }
 
+  // 여러 피드백 생성
   async createManyFeedback(
     createManyFeedbackDto: CreateManyFeedbackDto,
   ): Promise<CreateManyFeedbackResponse> {
@@ -90,11 +93,13 @@ export class FeedbackService {
     };
   }
 
+  // 모든 피드백 조회
   async findAllFeedback(): Promise<Feedback[]> {
     this.logger.debug('Finding all feedback');
     return this.feedbackRepository.find();
   }
 
+  // 피드백 검색
   async searchFeedbacks(name: string): Promise<Feedback[]> {
     this.logger.debug(`Searching feedbacks with name: ${name}`);
     const feedbacks = await this.feedbackRepository.find({
@@ -110,6 +115,7 @@ export class FeedbackService {
     return feedbacks;
   }
 
+  // 여러 피드백 조회
   async findManyFeedbacks(ids: number[]): Promise<Feedback[]> {
     this.logger.debug(`Fetching feedbacks with IDs: ${ids.join(', ')}`);
     const feedbacks = await this.feedbackRepository.find({

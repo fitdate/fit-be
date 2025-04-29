@@ -17,6 +17,7 @@ export class AdminIntroductionService {
     private readonly introductionRepository: Repository<Introduction>,
   ) {}
 
+  // (관리자) 소개 생성
   async createIntroduction(
     createIntroductionDto: CreateIntroductionDto,
   ): Promise<IntroductionResponseDto> {
@@ -38,10 +39,12 @@ export class AdminIntroductionService {
     };
   }
 
+  // (관리자) 모든 소개 조회
   async findAllIntroduction(): Promise<Introduction[]> {
     return this.introductionRepository.find();
   }
 
+  // (관리자) 소개 조회
   async findOneIntroduction(id: string): Promise<Introduction> {
     const introduction = await this.introductionRepository.findOne({
       where: { id },
@@ -54,6 +57,7 @@ export class AdminIntroductionService {
     return introduction;
   }
 
+  // (관리자) 소개 업데이트
   async updateIntroduction(
     id: string,
     updateIntroductionDto: UpdateIntroductionDto,
@@ -82,6 +86,7 @@ export class AdminIntroductionService {
     };
   }
 
+  // (관리자) 소개 삭제
   async deleteIntroduction(id: string): Promise<IntroductionResponseDto> {
     const introduction = await this.findOneIntroduction(id);
     await this.introductionRepository.delete(id);

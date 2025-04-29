@@ -16,6 +16,7 @@ export class UserFilterService {
     private readonly userService: UserService,
   ) {}
 
+  // 사용자 필터 조회
   async getUserFilter(userId: string) {
     this.logger.debug(`사용자 ${userId}의 필터 설정을 조회합니다.`);
     const filter = await this.userFilterRepository.findOne({
@@ -29,6 +30,7 @@ export class UserFilterService {
     return filter;
   }
 
+  // 익명 사용자의 사용자 목록 조회
   async getUsersForanonymousUser() {
     this.logger.debug(`익명 사용자의 사용자 목록을 조회합니다.`);
     const { users, nextCursor } = await this.userService.getUserList({
@@ -50,6 +52,7 @@ export class UserFilterService {
     };
   }
 
+  // 필터링된 사용자 조회
   async getFilteredUsers(userId: string) {
     const filter = await this.getUserFilter(userId);
     const filterDto = {
@@ -84,6 +87,7 @@ export class UserFilterService {
     };
   }
 
+  // 필터 업데이트
   async updateFilter(userId: string, dto: UserFilterDto) {
     this.logger.debug(
       `사용자 ${userId}의 필터 설정을 업데이트합니다: ${JSON.stringify(dto)}`,

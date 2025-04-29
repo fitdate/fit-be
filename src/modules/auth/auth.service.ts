@@ -12,7 +12,7 @@ import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { Response, Request } from 'express';
 import { User } from '../user/entities/user.entity';
-import { JwtTokenResponse, LoginResponse } from './types/auth.types';
+import { LoginResponse } from './types/auth.types';
 import { Profile } from '../profile/entities/profile.entity';
 import { DataSource } from 'typeorm';
 import { InternalServerErrorException } from '@nestjs/common';
@@ -51,6 +51,7 @@ export class AuthService {
     private readonly introductionService: IntroductionService,
   ) {}
 
+  // 회원가입
   async register(registerDto: RegisterDto) {
     const logBuffer: string[] = [];
     const log = (message: string) => {
@@ -260,10 +261,8 @@ export class AuthService {
       if (registerDto.interests?.length) {
         log('Starting interests save');
 
-        // 관심사 이름으로 InterestCategory 찾기 또는 생성하기
         const interestCategories = await Promise.all(
           registerDto.interests.map(async (interestName) => {
-            // 관심사 이름으로 검색
             const existingCategories =
               await this.interestCategoryService.searchInterestCategories(
                 interestName,
@@ -273,7 +272,6 @@ export class AuthService {
               return existingCategories[0];
             }
 
-            // 관심사 이름이 없으면 새로 생성
             log(`Creating new interest category: ${interestName}`);
             const createDto: CreateInterestCategoryDto = { name: interestName };
             return this.interestCategoryService.createInterestCategory(
@@ -282,13 +280,11 @@ export class AuthService {
           }),
         );
 
-        // UserInterestCategory와 연결
         const userInterestCategories = interestCategories.map((category) => ({
           profile: { id: profile.id },
           interestCategory: { id: category.id },
         }));
 
-        // 저장
         await qr.manager.save(UserInterestCategory, userInterestCategories);
         log(`User interests saved successfully for user: ${user.id}`);
       }
@@ -331,6 +327,7 @@ export class AuthService {
     }
   }
 
+  // 닉네임 중복 확인
   async checkNickname(nickname: string) {
     const user = await this.userService.findUserByNickname(nickname);
     if (user) {
@@ -338,6 +335,7 @@ export class AuthService {
     }
   }
 
+  // 이메일 중복 확인
   async checkEmail(sendVerificationEmailDto: SendVerificationEmailDto) {
     console.log(sendVerificationEmailDto);
     this.logger.log(
@@ -351,6 +349,7 @@ export class AuthService {
     }
   }
 
+  // 비밀번호 변경
   async changePassword(
     userId: string,
     oldPassword: string,
@@ -389,6 +388,7 @@ export class AuthService {
     return { message: '비밀번호 변경 성공' };
   }
 
+  // 이메일 로그인 유효성 검사
   async validate(email: string, password: string): Promise<User> {
     this.logger.log(`Validating user with email: ${email}`);
     const user = await this.userService.findUserByEmail(email);
@@ -413,16 +413,16 @@ export class AuthService {
     return user;
   }
 
-  async login(
-    loginDto: EmailLoginDto,
-    origin?: string,
-  ): Promise<JwtTokenResponse> {
-    this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
-    const { email, password } = loginDto;
-    const user = await this.validate(email, password);
+  // async login(
+  //   loginDto: EmailLoginDto,
+  //   origin?: string,
+  // ): Promise<JwtTokenResponse> {
+  //   this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
+  //   const { email, password } = loginDto;
+  //   const user = await this.validate(email, password);
 
-    return this.tokenService.generateAndSetTokens(user.id, user.role, origin);
-  }
+  //   return this.tokenService.generateAndSetTokens(user.id, user.role, origin);
+  // }
 
   //이메일 로그인
   async handleEmailLogin(
@@ -482,6 +482,7 @@ export class AuthService {
     }
   }
 
+  // 이메일 인증 코드 전송
   async sendVerificationEmail(
     sendVerificationEmailDto: SendVerificationEmailDto,
   ): Promise<{ success: boolean }> {
@@ -490,16 +491,19 @@ export class AuthService {
     );
   }
 
+  // 이메일 인증 코드 검증
   async verifyEmail(
     verifyEmailDto: VerifyEmailDto,
   ): Promise<{ verified: boolean; email: string }> {
     return this.emailAuthService.verifyEmail(verifyEmailDto);
   }
 
+  // 이메일 인증 상태 확인
   async checkEmailVerification(email: string): Promise<boolean> {
     return this.emailAuthService.checkEmailVerification(email);
   }
 
+  // 회원 탈퇴
   async deleteAccount(userId: string) {
     const logBuffer: string[] = [];
     const log = (message: string) => {
@@ -611,6 +615,7 @@ export class AuthService {
     }
   }
 
+  // 활동 상태 확인 및 갱신
   async checkAndRefreshActivity(userId: string): Promise<boolean> {
     try {
       // 토큰 유효성 검사

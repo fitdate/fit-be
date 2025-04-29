@@ -19,6 +19,7 @@ export class SocialAuthService {
     private readonly tokenService: TokenService,
   ) {}
 
+  // 소셜 로그인
   async processSocialLogin(
     userData: SocialUserInfo,
     origin?: string,
@@ -76,6 +77,7 @@ export class SocialAuthService {
     };
   }
 
+  // 구글 콜백
   async handleGoogleCallback(
     user: { email: string; name?: string },
     req: Request,
@@ -84,6 +86,7 @@ export class SocialAuthService {
     return this.handleSocialCallback(user, AuthProvider.GOOGLE, req, res);
   }
 
+  // 카카오 콜백
   async handleKakaoCallback(
     user: { email: string; name?: string },
     req: Request,
@@ -92,6 +95,7 @@ export class SocialAuthService {
     return this.handleSocialCallback(user, AuthProvider.KAKAO, req, res);
   }
 
+  // 소셜 콜백
   async handleSocialCallback(
     user: { email: string; name?: string },
     authProvider: AuthProvider,
@@ -136,6 +140,7 @@ export class SocialAuthService {
     }
   }
 
+  // 쿠키 옵션 생성
   private createCookieOptions(maxAge: number, origin?: string) {
     let domain: string | undefined;
 

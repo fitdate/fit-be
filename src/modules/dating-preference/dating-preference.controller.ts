@@ -2,7 +2,7 @@ import { DatingPreferenceService } from './dating-preference.service';
 import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { UpdateDatingPreferenceDto } from './dto/update-dating-preference.dto';
 import { UserId } from 'src/common/decorator/get-user.decorator';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 @Controller('dating-preference')
 export class DatingPreferenceController {
   constructor(
@@ -43,9 +43,7 @@ export class DatingPreferenceController {
     status: 200,
     description: '소개받을 이성 설정을 성공적으로 업데이트했습니다.',
   })
-  @ApiParam({
-    name: 'updateDatingPreferenceDto',
-    description: '소개받을 이성 설정 업데이트 정보',
+  @ApiBody({
     type: UpdateDatingPreferenceDto,
   })
   @Patch('dating-preference')

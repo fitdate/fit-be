@@ -1,9 +1,14 @@
-import { Injectable, ExecutionContext, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { PUBLIC_KEY } from '../../../common/decorator/public.decorator';
 import { OPTIONAL_KEY } from '../../../common/decorator/optional-user.decorator';
-
+import { Request } from 'express';
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   private readonly logger = new Logger(JwtAuthGuard.name);
@@ -30,21 +35,33 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     this.logger.debug(`Request cookies: ${JSON.stringify(request.cookies)}`);
     this.logger.debug(`Request headers: ${JSON.stringify(request.headers)}`);
 
     return super.canActivate(context);
   }
 
-  handleRequest(err: any, user: any, info: any) {
-    this.logger.debug(`Auth error: ${err}`);
-    this.logger.debug(`Auth user: ${JSON.stringify(user)}`);
-    this.logger.debug(`Auth info: ${info}`);
+  handleRequest(
+    err: Error | null,
+    user: any,
+    info: { message: string } | undefined,
+    context: ExecutionContext,
+  ): any {
+    this.logger.debug(`[인증 처리] 오류: ${err?.message || '없음'}`);
+    this.logger.debug(
+      `[인증 처리] 사용자 정보: ${JSON.stringify(user) || '없음'}`,
+    );
+    this.logger.debug(`[인증 처리] 추가 정보: ${info?.message || '없음'}`);
 
     if (err) {
-      this.logger.error(`Authentication failed: ${err}`);
+      this.logger.error(`[인증 실패] 상세 오류: ${err.message}`);
       throw err;
+    }
+
+    if (!user && !this.reflector.get(OPTIONAL_KEY, context.getHandler())) {
+      this.logger.error('[인증 실패] 사용자 정보가 없습니다');
+      throw new UnauthorizedException('인증이 필요합니다');
     }
 
     return user;

@@ -15,6 +15,7 @@ export class DatingPreferenceService {
     private readonly userService: UserService,
   ) {}
 
+  // 데이팅 선호 조건 조회
   async getDatingPreference(userId: string) {
     this.logger.debug(
       `사용자 ${userId}의 데이팅 프리퍼런스 설정을 조회합니다.`,
@@ -28,6 +29,7 @@ export class DatingPreferenceService {
     return datingPreference;
   }
 
+  // 데이팅 선호 조건 목록 조회
   async getDatingPreferenceList(userId: string) {
     const datingPreference = await this.getDatingPreference(userId);
     const datingPreferenceDto = {
@@ -62,6 +64,7 @@ export class DatingPreferenceService {
     };
   }
 
+  // 데이팅 선호 조건 업데이트
   async updateDatingPreference(
     userId: string,
     updateDatingPreferenceDto: UpdateDatingPreferenceDto,

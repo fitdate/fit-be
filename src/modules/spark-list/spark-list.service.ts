@@ -14,6 +14,7 @@ export class SparkListService {
     private readonly matchService: MatchService,
   ) {}
 
+  // 좋아요 목록 조회
   async getLikeList(userId: string) {
     const likeList = await this.likeService.getLikeList(userId);
     const filteredLikeList = likeList.map((like) => {
@@ -30,6 +31,7 @@ export class SparkListService {
     return filteredLikeList;
   }
 
+  // 커피챗 목록 조회
   async getCoffeeChatList(userId: string) {
     const coffeeChatList =
       await this.coffeeChatService.getReceivedCoffeeChatList(userId);
@@ -48,6 +50,7 @@ export class SparkListService {
     return filteredCoffeeChatList;
   }
 
+  // 매칭 목록 조회
   async getMatchList(userId: string) {
     const selectorsList = await this.matchService.getSelectorsList(userId);
 
@@ -80,6 +83,7 @@ export class SparkListService {
     return matchList;
   }
 
+  // 호감 목록 조회
   async getSparkList(userId: string) {
     const likeList = await this.getLikeList(userId);
     const coffeeChatList = await this.getCoffeeChatList(userId);

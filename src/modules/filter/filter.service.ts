@@ -23,26 +23,29 @@ export class FilterService {
 
   constructor() {}
 
+  // 소개 매핑
   private mapToUserIntroduction(intro: UserIntroEntity): UserIntroduction {
     this.logger.debug(`소개 매핑: ${JSON.stringify(intro)}`);
     const introWithContent = intro.introduction as IntroductionWithContent;
     return {
-      id: intro.id, // UUID는 문자열로 유지
-      introductionId: intro.introduction?.id || '', // UUID 문자열로 유지
+      id: intro.id,
+      introductionId: intro.introduction?.id || '',
       content: introWithContent?.content || '',
     };
   }
 
+  // 피드백 매핑
   private mapToUserFeedback(feedback: UserFeedbackEntity): UserFeedback {
     this.logger.debug(`피드백 매핑: ${JSON.stringify(feedback)}`);
     const feedbackWithContent = feedback.feedback as FeedbackWithContent;
     return {
-      id: feedback.id, // UUID는 문자열로 유지
-      feedbackId: feedback.feedback?.id || '', // UUID 문자열로 유지
+      id: feedback.id,
+      feedbackId: feedback.feedback?.id || '',
       content: feedbackWithContent?.content || '',
     };
   }
 
+  // 관심사 매핑
   private mapToInterestCategory(
     interest: UserInterestCategory,
   ): InterestCategory {
@@ -50,12 +53,13 @@ export class FilterService {
     const categoryWithName =
       interest.interestCategory as InterestCategoryWithName;
     return {
-      id: interest.id, // UUID는 문자열로 유지
-      interestCategoryId: interest.interestCategory?.id || '', // UUID 문자열로 유지
+      id: interest.id,
+      interestCategoryId: interest.interestCategory?.id || '',
       name: categoryWithName?.name || '',
     };
   }
 
+  // MBTI 호환성 계산
   calculateMbtiCompatibility(mbti1: string, mbti2: string): number {
     this.logger.debug(`MBTI 호환성 계산: ${mbti1} vs ${mbti2}`);
     const compatibilityMatrix = MBTI_RECOMMEND_LIST;
@@ -74,6 +78,7 @@ export class FilterService {
     return 50;
   }
 
+  // 소개 호환성 계산
   calculateIntroductionMatch(
     intro1: UserIntroduction[],
     intro2: UserIntroduction[],
@@ -85,6 +90,7 @@ export class FilterService {
     return (matchCount / Math.max(intro1.length, intro2.length)) * 100;
   }
 
+  // 피드백 호환성 계산
   calculateFeedbackMatch(
     feedback1: UserFeedback[],
     feedback2: UserFeedback[],
@@ -96,6 +102,7 @@ export class FilterService {
     return (matchCount / Math.max(feedback1.length, feedback2.length)) * 100;
   }
 
+  // 관심사 호환성 계산
   calculateInterestMatch(
     interests1: InterestCategory[],
     interests2: InterestCategory[],
@@ -107,6 +114,7 @@ export class FilterService {
     return (matchCount / Math.max(interests1.length, interests2.length)) * 100;
   }
 
+  // 지역 호환성 계산
   calculateRegionMatch(region1: string, region2: string): number {
     if (region1 === region2) return 100;
     const [r1] = region1.split(' ');
@@ -114,6 +122,7 @@ export class FilterService {
     return r1 === r2 ? 70 : 30;
   }
 
+  // 호환성 점수 계산
   addCompatibilityScores(users: User[], currentUser: User): UserWithScore[] {
     this.logger.debug(`호환성 점수 계산 시작 - 현재 사용자: ${currentUser.id}`);
     const scoredUsers = users.map((user) => {

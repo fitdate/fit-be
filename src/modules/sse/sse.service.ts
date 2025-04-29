@@ -13,6 +13,7 @@ export class SseService {
     this.clients = new Map<string, Subject<MessageEvent>>();
   }
 
+  // 클라이언트 추가
   addClient(userId: string): Subject<MessageEvent> {
     const subject = new Subject<MessageEvent>();
     this.clients.set(userId, subject);
@@ -20,6 +21,7 @@ export class SseService {
     return subject;
   }
 
+  // 클라이언트 제거
   removeClient(userId: string) {
     const client = this.clients.get(userId);
     if (client) {
@@ -29,11 +31,13 @@ export class SseService {
     }
   }
 
+  // 클라이언트 조회
   getClients() {
     this.logger.log(`Clients: ${JSON.stringify(this.clients)}`);
     return this.clients;
   }
 
+  // 알림 전송
   sendNotification(userId: string, notification: Notification) {
     const client = this.clients.get(userId);
     if (client) {

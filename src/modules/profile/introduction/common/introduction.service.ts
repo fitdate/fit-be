@@ -23,6 +23,7 @@ export class IntroductionService {
     private readonly introductionRepository: Repository<Introduction>,
   ) {}
 
+  // 소개 생성
   async createIntroduction(
     createDto: CreateIntroductionDto,
   ): Promise<Introduction> {
@@ -38,6 +39,7 @@ export class IntroductionService {
     return this.introductionRepository.save(newIntroduction);
   }
 
+  // 시드 데이터로 소개 생성
   async createManyIntroductionFromSeed(
     introductions: IntroductionInput[],
   ): Promise<CreateManyIntroductionResponse> {
@@ -47,6 +49,7 @@ export class IntroductionService {
     return this.createManyIntroduction({ introductions });
   }
 
+  // 여러 소개 생성
   async createManyIntroduction(
     createManyIntroductionDto: CreateManyIntroductionDto,
   ): Promise<CreateManyIntroductionResponse> {
@@ -96,6 +99,7 @@ export class IntroductionService {
     };
   }
 
+  // 모든 소개 조회
   async findAllIntroduction(): Promise<Introduction[]> {
     this.logger.debug('Fetching all introductions');
     const introductions = await this.introductionRepository.find();
@@ -103,6 +107,7 @@ export class IntroductionService {
     return introductions;
   }
 
+  // 소개 검색
   async searchIntroductions(name: string): Promise<Introduction[]> {
     this.logger.debug(`Searching introductions with name: ${name}`);
     const introductions = await this.introductionRepository.find({
@@ -120,6 +125,7 @@ export class IntroductionService {
     return introductions;
   }
 
+  // 여러 소개 조회
   async findManyIntroductions(ids: number[]): Promise<Introduction[]> {
     this.logger.debug(`Fetching introductions with IDs: ${ids.join(', ')}`);
     const introductions = await this.introductionRepository.find({

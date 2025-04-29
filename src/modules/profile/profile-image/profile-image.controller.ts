@@ -21,6 +21,7 @@ import { UserId } from 'src/common/decorator/get-user.decorator';
 import { Public } from 'src/common/decorator/public.decorator';
 import { MulterFile } from 'src/modules/s3/types/multer.types';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ProfileImageFilePipe } from './pipe/profile-image.pipe';
 
 @ApiTags('Profile Image')
 @Controller('profile-image')
@@ -45,7 +46,26 @@ export class ProfileImageController {
     },
   })
   @UseInterceptors(FileInterceptor('file'))
-  async uploadProfileImage(@UploadedFile() file: MulterFile) {
+  async uploadProfileImage(
+    @UploadedFile(
+      new ProfileImageFilePipe({
+        maxSize: 5, // 5MB
+        allowedMimeTypes: [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+          'image/gif',
+        ],
+        resize: {
+          width: 800,
+          height: 800,
+        },
+        quality: 90,
+      }),
+    )
+    file: MulterFile,
+  ) {
     if (!file) {
       throw new BadRequestException('업로드할 파일이 없습니다');
     }

@@ -17,6 +17,7 @@ export class EmailAuthService {
     private readonly mailerService: MailerService,
   ) {}
 
+  // 이메일 인증 코드 전송
   async sendVerificationEmail(
     sendVerificationEmailDto: SendVerificationEmailDto,
   ): Promise<{ success: boolean }> {
@@ -41,6 +42,7 @@ export class EmailAuthService {
     return { success: true };
   }
 
+  // 이메일 인증 코드 검증
   async verifyEmail(
     verifyEmailDto: VerifyEmailDto,
   ): Promise<{ verified: boolean; email: string }> {
@@ -91,6 +93,7 @@ export class EmailAuthService {
     }
   }
 
+  // 이메일 인증 상태 확인
   async checkEmailVerification(email: string): Promise<boolean> {
     this.logger.log(`Checking email verification status for: ${email}`);
     const verifiedKey = `email-verified:${email}`;

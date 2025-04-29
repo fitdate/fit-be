@@ -12,15 +12,20 @@ export class UserIntroductionService {
     private readonly introductionService: IntroductionService,
   ) {}
 
+  // 사용자 소개 생성
   async createUserIntroduction(
     dto: CreateUserIntroductionDto,
   ): Promise<UserIntroduction[]> {
     const userIntroductions: UserIntroduction[] = [];
 
     for (const name of dto.introductionNames) {
-      let introduction = (await this.introductionService.searchIntroductions(name))[0];
+      let introduction = (
+        await this.introductionService.searchIntroductions(name)
+      )[0];
       if (!introduction) {
-        introduction = await this.introductionService.createIntroduction({ name });
+        introduction = await this.introductionService.createIntroduction({
+          name,
+        });
       }
       const userIntroduction = this.userIntroductionRepository.create({
         introduction: { id: introduction.id },
@@ -33,6 +38,7 @@ export class UserIntroductionService {
     return this.userIntroductionRepository.save(userIntroductions);
   }
 
+  // 사용자 소개 업데이트
   async updateUserIntroduction(
     dto: CreateUserIntroductionDto,
   ): Promise<UserIntroduction[]> {
@@ -49,17 +55,21 @@ export class UserIntroductionService {
       );
     }
 
-    const existingUserIntroductions = await this.userIntroductionRepository.find({
-      where: { profile: { id: dto.profileId } },
-      relations: ['introduction'],
-    });
+    const existingUserIntroductions =
+      await this.userIntroductionRepository.find({
+        where: { profile: { id: dto.profileId } },
+        relations: ['introduction'],
+      });
 
     const existingIntroductionIds = existingUserIntroductions.map(
       (userIntroduction) => userIntroduction.introduction.id,
     );
 
     const introductionsToRemove = existingUserIntroductions.filter(
-      (userIntroduction) => !dto.introductionIds.some(id => id === userIntroduction.introduction.id),
+      (userIntroduction) =>
+        !dto.introductionIds.some(
+          (id) => id === userIntroduction.introduction.id,
+        ),
     );
 
     if (introductionsToRemove.length > 0) {

@@ -13,18 +13,17 @@ export class UserInterestCategoryService {
     private readonly interestCategoryService: InterestCategoryService,
   ) {}
 
+  // 사용자 관심사 생성
   async createUserInterestCategory(
     dto: CreateUserInterestCategoryDto,
   ): Promise<UserInterestCategory[]> {
     const userInterestCategories: UserInterestCategory[] = [];
 
     for (const name of dto.interestCategoryNames) {
-      // 관심사 이름으로 InterestCategory 찾기
       let interestCategory = (
         await this.interestCategoryService.searchInterestCategories(name)
       )[0];
 
-      // 없으면 새로 생성
       if (!interestCategory) {
         interestCategory =
           await this.interestCategoryService.createInterestCategory({
@@ -32,7 +31,6 @@ export class UserInterestCategoryService {
           });
       }
 
-      // UserInterestCategory 생성
       const userInterestCategory = this.userInterestCategoryRepository.create({
         interestCategory: { id: interestCategory.id },
         profile: { id: dto.profileId },
@@ -41,18 +39,16 @@ export class UserInterestCategoryService {
       userInterestCategories.push(userInterestCategory);
     }
 
-    // 저장
     return this.userInterestCategoryRepository.save(userInterestCategories);
   }
 
+  // 사용자 관심사 업데이트
   async updateUserInterestCategory(
     dto: CreateUserInterestCategoryDto,
   ): Promise<UserInterestCategory[]> {
-    // Find all interest categories by their names
     const interestCategories =
       await this.interestCategoryService.findAllInterestCategory();
 
-    // Check if all requested categories exist
     const foundNames = interestCategories.map((cat) => cat.name);
     const missingNames = dto.interestCategoryNames.filter(
       (name) => !foundNames.includes(name),

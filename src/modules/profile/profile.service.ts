@@ -28,6 +28,7 @@ export class ProfileService {
     private readonly interestCategoryService: UserInterestCategoryService,
   ) {}
 
+  // 프로필 생성
   async create(dto: { createProfileDto: CreateProfileDto }) {
     const existingProfile = await this.profileRepository.findOne({
       where: { user: { id: dto.createProfileDto.userId } },
@@ -46,11 +47,13 @@ export class ProfileService {
     return profile;
   }
 
+  // 프로필 업데이트
   async update(id: string, dto: UpdateProfileDto) {
     const profile = await this.getProfileById(id);
     return this.profileRepository.save({ ...profile, ...dto });
   }
 
+  // 프로필 조회
   async getProfileById(id: string) {
     const profile = await this.profileRepository.findOne({
       where: { id },
@@ -70,6 +73,7 @@ export class ProfileService {
     return profile;
   }
 
+  // 프로필 조회 (유저 ID)
   async getProfileByUserId(userId: string) {
     const profile = await this.profileRepository.findOne({
       where: { user: { id: userId } },
@@ -89,6 +93,7 @@ export class ProfileService {
     return profile;
   }
 
+  // 프로필 생성 (전체)
   async createFullProfile(
     userId: string,
     dto: {
@@ -123,6 +128,7 @@ export class ProfileService {
     return this.getProfileById(profile.id);
   }
 
+  // 프로필 업데이트 (전체)
   async updateFullProfile(
     userId: string,
     dto: {
@@ -165,6 +171,7 @@ export class ProfileService {
     return this.getProfileById(profile.id);
   }
 
+  // 모든 프로필 조회
   async findAll(): Promise<Profile[]> {
     return this.profileRepository.find({
       relations: [

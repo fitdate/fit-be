@@ -12,6 +12,7 @@ export class MailerService {
     private readonly mailer: NestMailerService,
   ) {}
 
+  // 이메일 인증 코드 전송
   async sendEmailVerification(email: string, token?: string): Promise<void> {
     this.logger.log(`Sending email verification to: ${email}`);
     try {
@@ -50,6 +51,7 @@ export class MailerService {
     }
   }
 
+  // 이메일 인증 코드 생성
   generateEmailVerificationCode(): string {
     this.logger.debug('Generating 6-digit verification code');
     try {

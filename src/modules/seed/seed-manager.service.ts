@@ -31,6 +31,7 @@ export class SeedManagerService {
     };
   }
 
+  // 시드 초기화
   async seedInitialize(): Promise<void> {
     const config =
       this.configService.getOrThrow<Record<SeedKey, boolean>>('seedInitialize');
@@ -68,6 +69,7 @@ export class SeedManagerService {
     this.logger.log('Seed initialization completed');
   }
 
+  // 데이터 추출
   async extractDataFromDb(): Promise<void> {
     this.logger.debug('Starting data extraction from database');
 

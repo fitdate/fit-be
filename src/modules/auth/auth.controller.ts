@@ -225,6 +225,7 @@ export class AuthController {
     }
   }
 
+  // 회원 탈퇴
   @ApiOperation({ summary: '회원 탈퇴' })
   @ApiResponse({ status: 200, description: '회원 탈퇴 성공' })
   @Delete('delete-account')
@@ -232,6 +233,7 @@ export class AuthController {
     return this.authService.deleteAccount(userId);
   }
 
+  // 비밀번호 변경
   @Patch('change-password')
   @ApiOperation({ summary: '비밀번호 변경' })
   @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })

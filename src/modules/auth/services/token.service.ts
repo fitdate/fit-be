@@ -19,6 +19,7 @@ export class TokenService {
     private readonly redisService: RedisService,
   ) {}
 
+  // 토큰 생성
   async generateTokens(
     userId: string,
     userRole: UserRole,
@@ -30,15 +31,12 @@ export class TokenService {
     this.logger.debug(
       `Generating tokens for user: ${userId}, role: ${userRole}`,
     );
-    // 토큰 ID 생성 (UUID)
     const tokenId = uuidv4();
     this.logger.debug(`Generated tokenId: ${tokenId}`);
 
-    // Access Token 생성
     const accessToken = this.generateAccessToken(userId, userRole);
     this.logger.debug(`Generated access token for user: ${userId}`);
 
-    // Refresh Token 생성 및 Redis 저장
     const refreshToken = await this.generateAndStoreRefreshToken(
       userId,
       tokenId,
@@ -52,6 +50,7 @@ export class TokenService {
     };
   }
 
+  // Access Token 생성
   private generateAccessToken(userId: string, userRole: UserRole): string {
     this.logger.debug(`Generating access token for user: ${userId}`);
     const accessTokenSecret = this.configService.getOrThrow(
@@ -86,6 +85,7 @@ export class TokenService {
     );
   }
 
+  // Refresh Token 생성 및 Redis 저장
   private async generateAndStoreRefreshToken(
     userId: string,
     tokenId: string,
@@ -112,7 +112,6 @@ export class TokenService {
       hasSecret: !!refreshTokenSecret,
     });
 
-    // Refresh Token 생성
     const refreshToken = this.jwtService.sign(
       {
         sub: userId,
@@ -125,7 +124,6 @@ export class TokenService {
       },
     );
 
-    // Redis에 토큰 ID 저장
     const ttlSeconds = parseTimeToSeconds(refreshTokenExpiresIn);
     const redisKey = `refresh:${userId}:${tokenId}`;
     this.logger.debug(`Storing refresh token in Redis:`, {
@@ -139,6 +137,7 @@ export class TokenService {
     return refreshToken;
   }
 
+  // Refresh Token 유효성 검사
   async validateRefreshToken(
     userId: string,
     tokenId: string,
@@ -159,6 +158,7 @@ export class TokenService {
     return isValid;
   }
 
+  // Refresh Token 삭제
   async revokeRefreshToken(userId: string, tokenId: string): Promise<void> {
     this.logger.debug(
       `Revoking refresh token for user: ${userId}, tokenId: ${tokenId}`,
@@ -168,6 +168,7 @@ export class TokenService {
     this.logger.debug(`Successfully revoked refresh token`);
   }
 
+  // Refresh Token 롤링링
   async rotateRefreshToken(
     userId: string,
     oldTokenId: string,
@@ -177,7 +178,6 @@ export class TokenService {
         `Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`,
       );
 
-      // 이전 토큰 유효성 검사
       const isValid = await this.validateRefreshToken(userId, oldTokenId);
       if (!isValid) {
         this.logger.warn(
@@ -186,11 +186,9 @@ export class TokenService {
         throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
       }
 
-      // 이전 토큰 삭제
       await this.revokeRefreshToken(userId, oldTokenId);
       this.logger.debug(`Successfully revoked old refresh token`);
 
-      // 새로운 토큰 발급
       const newTokens = await this.generateTokens(userId, UserRole.USER);
       this.logger.debug(
         `Successfully generated new tokens for user: ${userId}`,
@@ -207,6 +205,7 @@ export class TokenService {
     }
   }
 
+  // 쿠키 옵션 생성
   createCookieOptions(maxAge: number, origin?: string): CookieOptions {
     this.logger.debug(
       `Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`,
@@ -242,6 +241,7 @@ export class TokenService {
     return options;
   }
 
+  // 로그아웃 쿠키 옵션 생성
   getLogoutCookieOptions(origin?: string): {
     accessOptions: CookieOptions;
     refreshOptions: CookieOptions;
@@ -255,6 +255,7 @@ export class TokenService {
     return options;
   }
 
+  // 토큰 생성 및 설정
   async generateAndSetTokens(
     userId: string,
     userRole: UserRole,

@@ -47,6 +47,7 @@ export class ProfileImageService {
     this.logger.log('S3 클라이언트 초기화 완료');
   }
 
+  // 프로필 이미지 삭제
   async deleteProfileImage(id: string) {
     this.logger.log(`프로필 이미지 삭제 시작: ${id}`);
     const queryRunner = this.dataSource.createQueryRunner();
@@ -95,14 +96,13 @@ export class ProfileImageService {
     }
   }
 
+  // 메인 이미지 설정
   async setMainImage(profileId: string, imageId: string) {
-    // 모든 이미지의 isMain을 false로 설정
     await this.profileImageRepository.update(
       { profile: { id: profileId } },
       { isMain: false },
     );
 
-    // 선택한 이미지를 메인으로 설정
     await this.profileImageRepository.update(
       { id: imageId, profile: { id: profileId } },
       { isMain: true },
@@ -113,10 +113,10 @@ export class ProfileImageService {
     });
   }
 
+  // 프로필 이미지 조회
   async getProfileImages(userId: string) {
     this.logger.log(`사용자 ID ${userId}의 프로필 이미지 조회 시작`);
     try {
-      // 프로필 찾기
       const profile = await this.profileRepository.findOne({
         where: { user: { id: userId } },
       });
@@ -127,10 +127,9 @@ export class ProfileImageService {
         );
       }
 
-      // 프로필 이미지들 가져오기
       const images = await this.profileImageRepository.find({
         where: { profile: { id: profile.id } },
-        order: { isMain: 'DESC' }, // 메인 이미지가 먼저 오도록 정렬
+        order: { isMain: 'DESC' },
       });
 
       this.logger.log(`프로필 이미지 조회 완료: ${images.length}개`);
@@ -183,7 +182,6 @@ export class ProfileImageService {
     const region = this.configService.getOrThrow('aws.region', { infer: true });
 
     try {
-      // fileKey가 이미 'temp/uuid.jpg' 형식이므로 그대로 사용
       const fileName = fileKey.split('/').pop();
       if (!fileName) {
         throw new BadRequestException('잘못된 파일 경로입니다.');
@@ -224,6 +222,7 @@ export class ProfileImageService {
     }
   }
 
+  // 이미지 청크 처리
   async processImagesInChunks(
     images: string[],
     profileId: string,

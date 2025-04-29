@@ -12,6 +12,7 @@ export class UserFeedbackService {
     private readonly feedbackService: FeedbackService,
   ) {}
 
+  // 사용자 피드백 생성
   async createUserFeedback(
     dto: CreateUserFeedbackDto,
   ): Promise<UserFeedback[]> {
@@ -29,11 +30,12 @@ export class UserFeedbackService {
         profile: { id: dto.profileId },
       });
 
-      userFeedbacks.push(userFeedback)
+      userFeedbacks.push(userFeedback);
     }
     return this.userFeedbackRepository.save(userFeedbacks);
   }
 
+  // 사용자 피드백 업데이트
   async updateUserFeedback(
     dto: CreateUserFeedbackDto,
   ): Promise<UserFeedback[]> {
@@ -60,7 +62,8 @@ export class UserFeedbackService {
     );
 
     const feedbacksToRemove = existingUserFeedbacks.filter(
-      (userFeedback) => !dto.feedbackIds.some(id => id === userFeedback.feedback.id),
+      (userFeedback) =>
+        !dto.feedbackIds.some((id) => id === userFeedback.feedback.id),
     );
 
     if (feedbacksToRemove.length > 0) {

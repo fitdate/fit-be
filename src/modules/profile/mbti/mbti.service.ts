@@ -17,6 +17,7 @@ export class MbtiService {
     private readonly mbtiRepository: Repository<Mbti>,
   ) {}
 
+  // 사용자 MBTI 생성
   async createUserMbti(
     profileId: string,
     dto: CreateUserMbtiDto,
@@ -41,6 +42,7 @@ export class MbtiService {
     return this.mbtiRepository.save(mbti);
   }
 
+  // 사용자 MBTI 조회
   async getUserMbti(profileId: string): Promise<Mbti> {
     const mbti = await this.mbtiRepository.findOne({
       where: { profile: { id: profileId } },
@@ -53,6 +55,7 @@ export class MbtiService {
     return mbti;
   }
 
+  // 사용자 MBTI 추천 목록 조회
   getUserMbtiRecommendList(mbti: MbtiType): MbtiRecommendResponse {
     return {
       recommendations: MBTI_RECOMMEND_LIST[mbti],
