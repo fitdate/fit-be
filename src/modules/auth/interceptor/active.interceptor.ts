@@ -57,31 +57,31 @@ export class ActiveInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse<ResponseWithCookie>();
     const user = request.user;
 
-    // 쿠키 디버깅
-    this.logger.debug('Request cookies:', request.cookies);
-    this.logger.debug('Request headers:', request.headers);
-    this.logger.debug('User:', user);
-
-    if (!user?.sub || !user?.token) {
-      return next.handle(); // 인증 정보 없음
+    if (!user?.sub) {
+      return next.handle();
     }
 
+    // Redis에서 토큰 유효성 검증
     const isValid = await this.redisService.isAccessTokenValid(user.token);
     if (!isValid) {
-      // refresh token으로 새로운 토큰 쌍 발급
+      this.logger.debug(
+        `Token invalid for user ${user.sub}, attempting refresh`,
+      );
+
       const refreshToken = request.cookies?.refreshToken;
       if (!refreshToken || !user.tokenId) {
+        this.logger.warn(`No refresh token found for user ${user.sub}`);
         throw new UnauthorizedException(
           '세션이 만료되었습니다. 다시 로그인해주세요.',
         );
       }
 
-      const metadata: TokenMetadata = {
-        ip: request.ip || request.socket.remoteAddress || 'unknown',
-        userAgent: request.headers['user-agent'] || 'unknown',
-      };
-
       try {
+        const metadata: TokenMetadata = {
+          ip: request.ip || request.socket.remoteAddress || 'unknown',
+          userAgent: request.headers['user-agent'] || 'unknown',
+        };
+
         const newTokens = await this.tokenService.rotateTokens(
           user.sub,
           user.tokenId,
@@ -100,29 +100,26 @@ export class ActiveInterceptor implements NestInterceptor {
         const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
         const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
-        if (response?.cookie) {
-          // IP와 User-Agent 정보를 포함한 쿠키 옵션
-          const cookieOptions = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax' as const,
-            domain: '.fit-date.co.kr',
-            path: '/',
-          };
+        const cookieOptions = {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax' as const,
+          domain: '.fit-date.co.kr',
+          path: '/',
+        };
 
-          response.cookie('accessToken', newTokens.accessToken, {
-            ...cookieOptions,
-            maxAge: accessTokenMaxAge,
-          });
-          response.cookie('refreshToken', newTokens.refreshToken, {
-            ...cookieOptions,
-            maxAge: refreshTokenMaxAge,
-          });
+        response.cookie('accessToken', newTokens.accessToken, {
+          ...cookieOptions,
+          maxAge: accessTokenMaxAge,
+        });
+        response.cookie('refreshToken', newTokens.refreshToken, {
+          ...cookieOptions,
+          maxAge: refreshTokenMaxAge,
+        });
 
-          this.logger.debug(
-            `New tokens issued for user ${user.sub} from IP: ${metadata.ip}, User-Agent: ${metadata.userAgent}`,
-          );
-        }
+        this.logger.debug(
+          `Tokens rotated for user ${user.sub} from IP: ${metadata.ip}`,
+        );
       } catch (error) {
         this.logger.error('Token rotation failed:', error);
         throw new UnauthorizedException(
