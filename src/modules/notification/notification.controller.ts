@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { Notification } from './entities/notification.entity';
 
@@ -36,6 +37,7 @@ export class NotificationController {
     description: '알림이 생성되었습니다.',
     type: Notification,
   })
+  @ApiBody({ required: false })
   @Post()
   create(@Body() createNotificationDto: CreateNotificationDto) {
     return this.notificationService.create(createNotificationDto);
