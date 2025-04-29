@@ -30,7 +30,6 @@ import { MulterFile } from 'src/modules/s3/types/multer.types';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { SocialAuthService } from './services/social-auth.service';
 import { AuthProvider } from './types/oatuth.types';
-import { SuccessResponseDto } from './dto/success-response.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -237,12 +236,8 @@ export class AuthController {
   // 비밀번호 변경
   @Patch('change-password')
   @ApiOperation({ summary: '비밀번호 변경' })
-  @ApiResponse({
-    status: 200,
-    description: '비밀번호 변경 성공',
-    type: SuccessResponseDto,
-  })
-  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
+  @ApiBody({ type: ChangePasswordDto, description: '비밀번호 변경 정보' })
   async changePassword(
     @UserId() userid: string,
     @Body() changePasswordDto: ChangePasswordDto,
