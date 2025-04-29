@@ -224,20 +224,21 @@ export class MatchService {
       throw new NotFoundException('매치를 찾을 수 없습니다.');
     }
 
-    const selectedUser = await this.userService.findOne(selectedUserId);
-    if (!selectedUser) {
-      throw new NotFoundException('선택된 사용자를 찾을 수 없습니다.');
+    const currentUser = await this.userService.findOne(currentUserId);
+    if (!currentUser) {
+      throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
     }
 
     await this.notificationService.create({
       receiverId: selectedUserId,
       type: NotificationType.MATCH,
-      title: '새로운 매칭 요청',
-      content: `${selectedUser.nickname}님이 매칭을 선택했습니다.`,
+      title: '매칭 성공',
+      content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
       data: {
         matchId,
         selectedUserId,
         currentUserId,
+        currentUserNickname: currentUser.nickname,
       },
     });
   }

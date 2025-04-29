@@ -68,8 +68,6 @@ export class LikeService {
       await this.notificationService.create({
         type: NotificationType.LIKE,
         receiverId: likedUser.id,
-        title: '새로운 좋아요',
-        content: `${user.nickname}님이 회원님을 좋아합니다.`,
         data: {
           senderId: user.id,
           senderNickname: user.nickname,

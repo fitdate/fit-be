@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Query,
-  Param,
-  Body,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserId } from '../../common/decorator/get-user.decorator';
@@ -121,9 +113,9 @@ export class ChatController {
       '채팅방의 메시지를 최신순으로 조회합니다. 최신 50개의 메시지를 반환합니다.',
   })
   @ApiResponse({ status: 200, description: '채팅 메시지 조회 성공' })
-  @Get('messages')
+  @Get('chatRooms/:chatRoomId/messages')
   async getMessages(
-    @Query('chatRoomId') chatRoomId: string,
+    @Param('chatRoomId') chatRoomId: string,
     @UserId() userId: string,
   ) {
     return this.chatService.getMessages(chatRoomId, userId);
