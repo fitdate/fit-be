@@ -21,8 +21,8 @@ export class MailerService {
 
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-          <h2 style="color: #333;">이메일 인증</h2>
-          <p>안녕하세요! 회원가입을 완료하려면 아래 6자리 인증 코드를 입력해주세요.</p>
+          <h2 style="color: #333;">Fit-date 이메일 인증</h2>
+          <p>안녕하세요! Fit-date 회원가입을 완료하려면 아래 6자리 인증 코드를 입력해주세요.</p>
           <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; text-align: center; padding: 20px; background-color: #f5f5f5; border-radius: 4px; margin: 20px 0;">${verificationCode}</div>
           <p>위 인증 코드를 회원가입 페이지에 입력하시면 인증이 완료됩니다.</p>
           <p>감사합니다.</p>
