@@ -4,7 +4,9 @@ import { IsNotEmpty, IsString } from 'class-validator';
 export class ChangePasswordDto {
   @ApiProperty({
     description: '기존 비밀번호',
-    example: 'oldPassword',
+    example: 'oldPassword123!',
+    type: String,
+    required: true,
   })
   @IsNotEmpty()
   @IsString()
@@ -12,7 +14,9 @@ export class ChangePasswordDto {
 
   @ApiProperty({
     description: '새 비밀번호',
-    example: 'newPassword',
+    example: 'newPassword123!',
+    type: String,
+    required: true,
   })
   @IsNotEmpty()
   @IsString()
@@ -20,7 +24,9 @@ export class ChangePasswordDto {
 
   @ApiProperty({
     description: '새 비밀번호 확인',
-    example: 'newPassword',
+    example: 'newPassword123!',
+    type: String,
+    required: true,
   })
   @IsNotEmpty()
   @IsString()
