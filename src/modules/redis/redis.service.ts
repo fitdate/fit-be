@@ -95,6 +95,14 @@ export class RedisService
     return await this.redisClient.del(key);
   }
 
+  async delMultiple(...keys: string[]): Promise<number> {
+    return await this.redisClient.del(...keys);
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    return await this.redisClient.keys(pattern);
+  }
+
   // Sorted Set 추가
   async zadd(key: string, score: number, value: string): Promise<number> {
     return await this.redisClient.zadd(key, score, value);

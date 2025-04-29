@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
@@ -8,6 +8,11 @@ import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { v4 as uuidv4 } from 'uuid';
 import { CookieOptions } from 'express';
 import { JwtTokenResponse } from '../types/auth.types';
+
+interface TokenMetadata {
+  ip: string;
+  userAgent: string;
+}
 
 @Injectable()
 export class TokenService {
@@ -19,21 +24,32 @@ export class TokenService {
     private readonly redisService: RedisService,
   ) {}
 
+  // 모든 세션 무효화
+  async invalidateAllSessions(userId: string): Promise<void> {
+    await this.redisService.delMultiple(
+      `refresh:${userId}`,
+      `session:${userId}`,
+    );
+  }
+
   // 토큰 생성
   async generateTokens(
     userId: string,
     userRole: UserRole,
+    metadata: TokenMetadata,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
     tokenId: string;
   }> {
-    this.logger.debug(
-      `Generating tokens for user: ${userId}, role: ${userRole}`,
-    );
+    // 1️⃣ 먼저 기존 세션 제거!
+    await this.invalidateAllSessions(userId);
+
+    // 2️⃣ 새 tokenId 만들고 저장
     const tokenId = uuidv4();
     this.logger.debug(`Generated tokenId: ${tokenId}`);
 
+    // 3️⃣ Access/Refresh Token 발급
     const accessToken = await this.generateAccessToken(userId, userRole);
     this.logger.debug(`Generated access token for user: ${userId}`);
 
@@ -42,6 +58,15 @@ export class TokenService {
       tokenId,
     );
     this.logger.debug(`Generated and stored refresh token for user: ${userId}`);
+
+    // 4️⃣ Session 메타데이터 저장
+    await this.redisService.set(
+      `session:${userId}`,
+      JSON.stringify(metadata),
+      parseTimeToSeconds(
+        this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d',
+      ),
+    );
 
     return {
       accessToken,
@@ -134,7 +159,7 @@ export class TokenService {
     );
 
     const ttlSeconds = parseTimeToSeconds(refreshTokenExpiresIn);
-    const redisKey = `refresh:${userId}:${tokenId}`;
+    const redisKey = `refresh:${userId}`;
     this.logger.debug(`Storing refresh token in Redis:`, {
       key: redisKey,
       ttlSeconds,
@@ -144,6 +169,75 @@ export class TokenService {
     this.logger.debug(`Successfully stored refresh token in Redis`);
 
     return refreshToken;
+  }
+
+  // Refresh Token 유효성 검사
+  async validateRefreshToken(
+    userId: string,
+    tokenId: string,
+    metadata: TokenMetadata,
+  ): Promise<boolean> {
+    const redisKey = `refresh:${userId}`;
+    const storedTokenId = await this.redisService.get(redisKey);
+    if (storedTokenId !== tokenId) {
+      return false;
+    }
+
+    // 세션 메타데이터 검증
+    const sessionKey = `session:${userId}`;
+    const storedMetadata = await this.redisService.get(sessionKey);
+    if (!storedMetadata) {
+      return false;
+    }
+
+    const parsedMetadata = JSON.parse(storedMetadata) as TokenMetadata;
+    if (
+      parsedMetadata.ip !== metadata.ip ||
+      parsedMetadata.userAgent !== metadata.userAgent
+    ) {
+      this.logger.warn(
+        `Session metadata mismatch for user ${userId}. Expected: ${JSON.stringify(metadata)}, Got: ${JSON.stringify(parsedMetadata)}`,
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  // Refresh Token 삭제
+  async deleteRefreshToken(userId: string): Promise<void> {
+    await this.redisService.delMultiple(
+      `refresh:${userId}`,
+      `session:${userId}`,
+    );
+  }
+
+  // Refresh Token으로 새로운 토큰 쌍 발급
+  async rotateTokens(
+    userId: string,
+    oldTokenId: string,
+    userRole: UserRole,
+    metadata: TokenMetadata,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    tokenId: string;
+  }> {
+    // 기존 refresh token 검증
+    const isValid = await this.validateRefreshToken(
+      userId,
+      oldTokenId,
+      metadata,
+    );
+    if (!isValid) {
+      throw new UnauthorizedException('유효하지 않은 refresh token입니다');
+    }
+
+    // 기존 refresh token 삭제
+    await this.deleteRefreshToken(userId);
+
+    // 새로운 토큰 쌍 발급
+    return this.generateTokens(userId, userRole, metadata);
   }
 
   // 토큰 유효성 검사
@@ -223,11 +317,13 @@ export class TokenService {
   async generateAndSetTokens(
     userId: string,
     userRole: UserRole,
+    metadata: TokenMetadata,
     origin?: string,
   ): Promise<JwtTokenResponse> {
     const { accessToken, refreshToken } = await this.generateTokens(
       userId,
       userRole,
+      metadata,
     );
 
     const accessTokenTtl =

@@ -38,6 +38,7 @@ import { FeedbackService } from '../profile/feedback/common/feedback.service';
 import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
 import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
+import { TokenMetadata } from './types/token-payload.types';
 @Injectable()
 export class AuthService {
   protected readonly logger = new Logger(AuthService.name);
@@ -425,17 +426,6 @@ export class AuthService {
     return user;
   }
 
-  // async login(
-  //   loginDto: EmailLoginDto,
-  //   origin?: string,
-  // ): Promise<JwtTokenResponse> {
-  //   this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
-  //   const { email, password } = loginDto;
-  //   const user = await this.validate(email, password);
-
-  //   return this.tokenService.generateAndSetTokens(user.id, user.role, origin);
-  // }
-
   //이메일 로그인
   async handleEmailLogin(
     loginDto: EmailLoginDto,
@@ -445,9 +435,15 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
 
+    const metadata: TokenMetadata = {
+      ip: req.ip || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    };
+
     const tokens = await this.tokenService.generateAndSetTokens(
       user.id,
       user.role,
+      metadata,
       req.headers.origin,
     );
 
@@ -480,9 +476,8 @@ export class AuthService {
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
 
       const userId = req.user?.sub;
-      const tokenId = (req.user as { tokenId?: string })?.tokenId;
-      if (userId && tokenId) {
-        await this.tokenService.revokeRefreshToken(userId, tokenId);
+      if (userId) {
+        await this.tokenService.deleteRefreshToken(userId);
       }
 
       return {
@@ -630,17 +625,28 @@ export class AuthService {
   // 활동 상태 확인 및 갱신
   async checkAndRefreshActivity(userId: string): Promise<boolean> {
     try {
+      const metadata: TokenMetadata = {
+        ip: 'unknown',
+        userAgent: 'unknown',
+      };
+
       // 토큰 유효성 검사
       const isValid = await this.tokenService.validateRefreshToken(
         userId,
         userId,
+        metadata,
       );
       if (!isValid) {
         return false;
       }
 
       // 토큰 갱신
-      await this.tokenService.rotateRefreshToken(userId, userId);
+      await this.tokenService.rotateTokens(
+        userId,
+        userId,
+        UserRole.USER,
+        metadata,
+      );
       return true;
     } catch (error) {
       this.logger.error(`Activity check failed for user ${userId}:`, error);
