@@ -17,10 +17,27 @@ interface RequestWithCookies extends Request {
 }
 
 const cookieExtractor = (req: RequestWithCookies) => {
-  if (!req?.cookies?.accessToken) {
-    throw new UnauthorizedException('액세스 토큰이 없습니다');
+  // 1. req.cookies에서 먼저 시도
+  if (req?.cookies?.accessToken) {
+    return req.cookies.accessToken;
   }
-  return req.cookies.accessToken;
+
+  // 2. req.headers.cookie에서 시도
+  const cookieHeader = req?.headers?.cookie;
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    if (cookies.accessToken) {
+      return cookies.accessToken;
+    }
+  }
+
+  throw new UnauthorizedException('액세스 토큰이 없습니다');
 };
 
 export class JwtAuthGuard extends AuthGuard('jwt') {}
