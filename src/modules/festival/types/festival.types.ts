@@ -17,3 +17,20 @@ export interface FestivalResponse {
     };
   };
 }
+
+export interface FestivalApiResponse {
+  response: {
+    body: {
+      items: {
+        item: Array<{
+          title: string;
+          eventstartdate: string;
+          eventenddate: string;
+          addr1: string;
+          areacode: string;
+          firstimage2: string;
+        }>;
+      };
+    };
+  };
+}
