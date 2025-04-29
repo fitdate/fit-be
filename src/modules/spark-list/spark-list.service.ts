@@ -17,17 +17,19 @@ export class SparkListService {
   // 좋아요 목록 조회
   async getLikeList(userId: string) {
     const likeList = await this.likeService.getLikeList(userId);
-    const filteredLikeList = likeList.map((like) => {
-      const profileImage = like.user.profile?.profileImage?.[0];
-      return {
-        likedUserId: like.user.id,
-        nickname: like.user.nickname,
-        likeCount: like.user.likeCount,
-        age: calculateAge(like.user.birthday),
-        region: like.user.region,
-        profileImage: profileImage ? profileImage.imageUrl : null,
-      };
-    });
+    const filteredLikeList = likeList
+      .filter((like) => like.user.id !== userId)
+      .map((like) => {
+        const profileImage = like.user.profile?.profileImage?.[0];
+        return {
+          likedUserId: like.user.id,
+          nickname: like.user.nickname,
+          likeCount: like.user.likeCount,
+          age: calculateAge(like.user.birthday),
+          region: like.user.region,
+          profileImage: profileImage ? profileImage.imageUrl : null,
+        };
+      });
     return filteredLikeList;
   }
 
@@ -35,18 +37,20 @@ export class SparkListService {
   async getCoffeeChatList(userId: string) {
     const coffeeChatList =
       await this.coffeeChatService.getReceivedCoffeeChatList(userId);
-    const filteredCoffeeChatList = coffeeChatList.map((coffeeChat) => {
-      const profileImage = coffeeChat.sender.profile?.profileImage?.[0];
-      return {
-        coffeeChatUserId: coffeeChat.sender.id,
-        nickname: coffeeChat.sender.nickname,
-        likeCount: coffeeChat.sender.likeCount,
-        age: calculateAge(coffeeChat.sender.birthday),
-        region: coffeeChat.sender.region,
-        profileImage: profileImage ? profileImage.imageUrl : null,
-        isSuccess: true,
-      };
-    });
+    const filteredCoffeeChatList = coffeeChatList
+      .filter((coffeeChat) => coffeeChat.sender.id !== userId)
+      .map((coffeeChat) => {
+        const profileImage = coffeeChat.sender.profile?.profileImage?.[0];
+        return {
+          coffeeChatUserId: coffeeChat.sender.id,
+          nickname: coffeeChat.sender.nickname,
+          likeCount: coffeeChat.sender.likeCount,
+          age: calculateAge(coffeeChat.sender.birthday),
+          region: coffeeChat.sender.region,
+          profileImage: profileImage ? profileImage.imageUrl : null,
+          isSuccess: true,
+        };
+      });
     return filteredCoffeeChatList;
   }
 
@@ -63,6 +67,8 @@ export class SparkListService {
         // 로그인한 사용자가 선택받은 경우만 처리
         if (selection.selected.id === userId) {
           const matchedUser = selection.selector;
+          if (matchedUser.id === userId) return null;
+
           const profileImage = matchedUser.profile?.profileImage?.[0];
 
           return {
