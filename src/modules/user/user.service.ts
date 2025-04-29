@@ -47,8 +47,8 @@ export class UserService {
     return this.userRepository.update({ id }, data);
   }
 
-  updateUserPassword(id: string, password: string) {
-    return this.userRepository.update({ id }, { password });
+  updateUserPassword(email: string, password: string) {
+    return this.userRepository.update({ email }, { password });
   }
 
   async getUserCoffee(userId: string) {
@@ -73,7 +73,7 @@ export class UserService {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
     user.password = newPassword;
-    await this.updateUserPassword(user.id, newPassword);
+    await this.updateUserPassword(user.email, newPassword);
     return { message: '비밀번호 변경 성공' };
   }
 
