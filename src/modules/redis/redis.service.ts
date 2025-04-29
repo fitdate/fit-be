@@ -78,4 +78,22 @@ export class RedisService
   async del(key: string): Promise<number> {
     return await this.redisClient.del(key);
   }
+
+  // Sorted Set 추가
+  async zadd(key: string, score: number, value: string): Promise<number> {
+    return await this.redisClient.zadd(key, score, value);
+  }
+
+  // Sorted Set 범위 조회
+  async zrange(key: string, start: number, end: number): Promise<string[]> {
+    return await this.redisClient.zrange(key, start, end);
+  }
+  // Sorted Set 전체 삭제
+  async zremrangebyrank(
+    key: string,
+    start: number,
+    end: number,
+  ): Promise<number> {
+    return await this.redisClient.zremrangebyrank(key, start, end);
+  }
 }
