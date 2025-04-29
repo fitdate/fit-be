@@ -21,7 +21,7 @@ import { Response, Request } from 'express';
 import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { RequestWithUser } from './types/request.types';
@@ -242,6 +242,7 @@ export class AuthController {
   ) {
     return this.authService.changePassword(
       userid,
+      changePasswordDto.oldPassword,
       changePasswordDto.newPassword,
       changePasswordDto.confirmPassword,
     );

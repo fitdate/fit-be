@@ -51,6 +51,13 @@ export class UserService {
     return this.userRepository.update({ email }, { password });
   }
 
+  async checkUserPassword(userId: string, password: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    return user?.password === password;
+  }
+
   async getUserCoffee(userId: string) {
     const user = await this.userRepository.findOne({
       where: { id: userId },

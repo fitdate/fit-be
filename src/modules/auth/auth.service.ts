@@ -353,9 +353,19 @@ export class AuthService {
 
   async changePassword(
     userId: string,
+    oldPassword: string,
     newPassword: string,
     confirmPassword: string,
   ) {
+    const isPasswordValid = await this.userService.checkUserPassword(
+      userId,
+      oldPassword,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('기존 비밀번호가 일치하지 않습니다.');
+    }
+
     if (newPassword !== confirmPassword) {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
