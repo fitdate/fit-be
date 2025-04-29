@@ -225,7 +225,7 @@ export class ChatService {
     });
 
     if (!chatRoom) {
-      throw new Error('채팅방을 찾을 수 없습니다.');
+      return { success: false, message: '채팅방을 찾을 수 없습니다.' };
     }
 
     const user = await this.userRepository.findOne({
@@ -233,24 +233,26 @@ export class ChatService {
     });
 
     if (!user) {
-      throw new Error('사용자를 찾을 수 없습니다.');
+      return { success: false, message: '사용자를 찾을 수 없습니다.' };
     }
 
+    // 사용자가 채팅방에 있는지 확인
     const isUserInRoom = chatRoom.users.some((u) => u.id === userId);
-
     if (!isUserInRoom) {
-      throw new Error('채팅방에 참여하고 있지 않습니다.');
+      return { success: false, message: '채팅방에 참여하고 있지 않습니다.' };
     }
 
+    // 사용자를 채팅방에서 제거
     chatRoom.users = chatRoom.users.filter((u) => u.id !== userId);
-
     await this.chatRoomRepository.save(chatRoom);
+
+    // 시스템 메시지 저장
     await this.saveSystemMessage(
       `${user.name}님이 채팅방을 나갔습니다.`,
       chatRoomId,
     );
 
-    return { success: true };
+    return { success: true, message: '채팅방을 나갔습니다.' };
   }
 
   // 채팅 메시지 저장
@@ -296,7 +298,7 @@ export class ChatService {
     return this.messageRepository.save(message);
   }
 
-  // 채팅방 입장 알림 전송
+  // 채팅방 입장
   async sendChatRoomEntryNotification(
     chatRoomId: string,
     currentUserId: string,
