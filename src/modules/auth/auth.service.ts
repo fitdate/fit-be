@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { AllConfig } from 'src/common/config/config.types';
@@ -356,36 +356,43 @@ export class AuthService {
     newPassword: string,
     confirmPassword: string,
   ) {
+    // 비밀번호 유효성 검사
+    if (!newPassword || !confirmPassword) {
+      throw new BadRequestException('새 비밀번호를 입력해주세요.');
+    }
+
+    if (newPassword.length < 8 || newPassword.length > 16) {
+      throw new BadRequestException(
+        '비밀번호는 8자 이상 16자 이하이어야 합니다.',
+      );
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('새 비밀번호가 일치하지 않습니다.');
+    }
+
+    const hashedOldPassword = await this.hashService.hash(oldPassword);
     const isPasswordValid = await this.userService.checkUserPassword(
       userId,
-      oldPassword,
+      hashedOldPassword,
     );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('기존 비밀번호가 일치하지 않습니다.');
     }
 
-    if (newPassword !== confirmPassword) {
-      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
-    }
-
-    if (!newPassword || !confirmPassword) {
-      throw new UnauthorizedException('새 비밀번호를 입력해주세요.');
-    }
-
     const user = await this.userService.findOne(userId);
     if (!user) {
-      throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
-
-    const email = user.email;
 
     const hashedPassword = await this.hashService.hash(newPassword);
     if (hashedPassword === user.password) {
-      throw new UnauthorizedException('기존 비밀번호와 동일합니다.');
+      throw new BadRequestException('기존 비밀번호와 동일합니다.');
     }
-    await this.userService.updateUserPassword(email, hashedPassword);
-    return { message: '비밀번호 변경 성공' };
+
+    await this.userService.updateUserPassword(user.email, hashedPassword);
+    return { message: '비밀번호가 성공적으로 변경되었습니다.' };
   }
 
   // 이메일 로그인 유효성 검사
