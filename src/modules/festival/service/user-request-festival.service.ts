@@ -7,9 +7,22 @@ export class UserRequestFestivalService {
   private readonly logger = new Logger(UserRequestFestivalService.name);
 
   constructor(private readonly redisService: RedisService) {}
+
+  private sortFestivalsByStartDate(festivals: FestivalDto[]): FestivalDto[] {
+    return [...festivals].sort((a, b) => {
+      const dateA = new Date(
+        a.startDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
+      );
+      const dateB = new Date(
+        b.startDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
+      );
+      return dateB.getTime() - dateA.getTime();
+    });
+  }
+
   async getFestivalsByAreaName(region: string): Promise<FestivalDto[]> {
     try {
-      const redisKey = `festivals:${region}`; // Redis 키 생성
+      const redisKey = `festivals:${region}`;
       this.logger.debug(
         `[getFestivalsByAreaName] Redis에서 데이터 조회: ${redisKey}`,
       );
@@ -25,12 +38,13 @@ export class UserRequestFestivalService {
         );
       }
 
-      // Redis에서 가져온 데이터를 JSON 파싱
       const festivals = JSON.parse(cachedData) as FestivalDto[];
+      const sortedFestivals = this.sortFestivalsByStartDate(festivals);
+
       this.logger.debug(
-        `[getFestivalsByAreaName] Redis에서 데이터 조회 성공: ${redisKey}`,
+        `[getFestivalsByAreaName] Redis에서 데이터 조회 성공: ${redisKey}, 총 ${sortedFestivals.length}개의 축제`,
       );
-      return festivals;
+      return sortedFestivals;
     } catch (error) {
       this.logger.error(
         `[getFestivalsByAreaName] 데이터 조회 중 오류 발생: ${
