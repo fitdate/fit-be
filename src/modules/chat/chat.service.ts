@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -10,8 +10,6 @@ import { calculateAge } from '../../common/util/age-calculator.util';
 
 @Injectable()
 export class ChatService {
-  private readonly logger = new Logger(ChatService.name);
-
   constructor(
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
@@ -22,12 +20,7 @@ export class ChatService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  /**
-   * 매칭 결과 페이지에서 매칭 성공 시 새로운 채팅방을 생성하고 참여자를 추가합니다.
-   * @param userId 현재 로그인한 사용자 ID
-   * @param partnerId 매칭된 상대방 ID
-   * @returns 생성된 채팅방 정보
-   */
+  // 매칭 결과 페이지에서 매칭 성공 시 새로운 채팅방 생성
   async createMatchingRoom(userId: string, partnerId: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     const partner = await this.userRepository.findOne({
@@ -38,14 +31,7 @@ export class ChatService {
       throw new Error('사용자를 찾을 수 없습니다.');
     }
 
-    const existingRoom = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .innerJoin('chatRoom.users', 'user1', 'user1.id = :userId', { userId })
-      .innerJoin('chatRoom.users', 'user2', 'user2.id = :partnerId', {
-        partnerId,
-      })
-      .getOne();
-
+    const existingRoom = await this.findExistingRoom(userId, partnerId);
     if (existingRoom) {
       return existingRoom;
     }
@@ -56,28 +42,26 @@ export class ChatService {
     });
 
     const savedRoom = await this.chatRoomRepository.save(chatRoom);
-
     await this.sendChatRoomEntryNotification(savedRoom.id, userId, partnerId);
     await this.sendChatRoomEntryNotification(savedRoom.id, partnerId, userId);
 
     return savedRoom;
   }
 
-  /**
-   * 두 사용자 간의 채팅방을 찾거나 생성합니다.
-   * @param userId 현재 로그인한 사용자 ID
-   * @param partnerId 상대방 ID
-   * @returns 채팅방 정보
-   */
-  private async getOrCreateRoom(userId: string, partnerId: string) {
-    const existingRoom = await this.chatRoomRepository
+  // 두 사용자 간의 기존 채팅방 조회
+  private async findExistingRoom(userId: string, partnerId: string) {
+    return this.chatRoomRepository
       .createQueryBuilder('chatRoom')
       .innerJoin('chatRoom.users', 'user1', 'user1.id = :userId', { userId })
       .innerJoin('chatRoom.users', 'user2', 'user2.id = :partnerId', {
         partnerId,
       })
       .getOne();
+  }
 
+  // 두 사용자 간의 채팅방 조회 또는 생성
+  private async getOrCreateRoom(userId: string, partnerId: string) {
+    const existingRoom = await this.findExistingRoom(userId, partnerId);
     if (existingRoom) {
       await this.sendChatRoomEntryNotification(
         existingRoom.id,
@@ -86,95 +70,80 @@ export class ChatService {
       );
       return existingRoom;
     }
-
     return this.createMatchingRoom(userId, partnerId);
   }
 
-  /**
-   * 채팅 페이지에서 대화방 버튼 클릭 시 두 사용자 간의 채팅방을 찾거나 생성합니다.
-   * @param userId 현재 로그인한 사용자 ID
-   * @param partnerId 상대방 ID
-   * @returns 채팅방 정보
-   */
+  // 채팅 페이지에서 대화방 버튼 클릭 시 채팅방 조회 또는 생성
   async findOrCreateChatRoom(userId: string, partnerId: string) {
     const chatRoom = await this.getOrCreateRoom(userId, partnerId);
-
     await this.sendChatRoomEntryNotification(chatRoom.id, userId, partnerId);
     return chatRoom;
   }
 
-  /**
-   * 커피챗 수락 시 채팅방을 생성하고 알림을 전송합니다.
-   * @param userId 현재 로그인한 사용자 ID
-   * @param partnerId 매칭된 상대방 ID
-   * @returns 생성된 채팅방 정보와 성공 상태
-   */
+  // 커피챗 수락 시 채팅방 생성 및 알림 전송
   async acceptCoffeeChat(userId: string, partnerId: string) {
     const chatRoom = await this.createMatchingRoom(userId, partnerId);
-
-    const notification = {
-      type: NotificationType.COFFEE_CHAT,
-      receiverId: partnerId,
-      title: '커피챗 수락',
-      content:
-        '상대방이 커피챗을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
-      data: {
-        chatRoomId: chatRoom.id,
-        senderId: userId,
-      },
-    };
-
-    await this.notificationService.create(notification);
-    return {
-      ...chatRoom,
-      isSuccess: true,
-    };
-  }
-
-  /**
-   * 매칭 수락 시 채팅방을 생성하고 알림을 전송합니다.
-   * @param userId 현재 로그인한 사용자 ID
-   * @param partnerId 매칭된 상대방 ID
-   * @returns 생성된 채팅방 정보와 성공 상태
-   */
-  async acceptMatch(userId: string, partnerId: string) {
-    this.logger.log(
-      `매칭 수락 처리 시작 - 사용자 ID: ${userId}, 상대방 ID: ${partnerId}`,
+    await this.sendNotification(
+      partnerId,
+      userId,
+      chatRoom.id,
+      NotificationType.COFFEE_CHAT,
+      '커피챗 수락',
+      '상대방이 커피챗을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
     );
-
-    const chatRoom = await this.createMatchingRoom(userId, partnerId);
-    this.logger.log(`채팅방 생성 완료 - ID: ${chatRoom.id}`);
-
-    const notification = {
-      type: NotificationType.MATCH,
-      receiverId: partnerId,
-      title: '매칭 수락',
-      content: '상대방이 매칭을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
-      data: {
-        chatRoomId: chatRoom.id,
-        senderId: userId,
-      },
-    };
-
-    this.logger.log(`알림 전송 시작 - 수신자 ID: ${partnerId}`);
-    await this.notificationService.create(notification);
-    this.logger.log(`알림 전송 완료`);
-
-    this.logger.log(`매칭 수락 처리 완료 - 채팅방 ID: ${chatRoom.id}`);
-    return {
-      ...chatRoom,
-      isSuccess: true,
-    };
+    return { ...chatRoom, isSuccess: true };
   }
 
-  /**
-   * 사용자의 채팅방 목록을 조회합니다.
-   * @param userId 조회할 사용자 ID
-   * @returns 채팅방 목록 (참여자 정보 포함)
-   */
-  async getRooms(userId: string) {
-    this.logger.log(`채팅방 목록 조회 시작 - 사용자 ID: ${userId}`);
+  // 매칭 수락 시 채팅방 생성 및 알림 전송
+  async acceptMatch(userId: string, partnerId: string) {
+    const chatRoom = await this.createMatchingRoom(userId, partnerId);
+    await this.sendNotification(
+      partnerId,
+      userId,
+      chatRoom.id,
+      NotificationType.MATCH,
+      '매칭 수락',
+      '상대방이 매칭을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
+    );
+    return { ...chatRoom, isSuccess: true };
+  }
 
+  // 날짜를 "오전/오후 HH:mm" 형식으로 변환
+  private formatTime(date: Date | undefined): string {
+    if (!date) return '';
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours < 12 ? '오전' : '오후';
+    const formattedHours = hours % 12 || 12;
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    return `${ampm} ${formattedHours}:${formattedMinutes}`;
+  }
+
+  // 알림 전송
+  private async sendNotification(
+    receiverId: string,
+    senderId: string,
+    chatRoomId: string,
+    type: NotificationType,
+    title: string,
+    content: string,
+  ) {
+    const notification = {
+      type,
+      receiverId,
+      title,
+      content,
+      data: {
+        chatRoomId,
+        senderId,
+        timestamp: this.formatTime(new Date()),
+      },
+    };
+    await this.notificationService.create(notification);
+  }
+
+  // 사용자의 채팅방 목록 조회
+  async getRooms(userId: string) {
     const rooms = await this.chatRoomRepository
       .createQueryBuilder('chatRoom')
       .innerJoinAndSelect('chatRoom.users', 'users', 'users.id != :userId', {
@@ -195,27 +164,10 @@ export class ChatService {
       .orderBy('chatRoom.updatedAt', 'DESC')
       .getMany();
 
-    this.logger.log(`채팅방 조회 완료 - 총 ${rooms.length}개의 채팅방`);
-
-    const result = rooms
+    return rooms
       .map((room) => {
-        const partner = room.users[0]; // 이제 users 배열에는 상대방만 있음
-        if (!partner) {
-          this.logger.warn(`채팅방 ${room.id}에서 상대방을 찾을 수 없음`);
-          return null;
-        }
-
-        this.logger.debug(`채팅방 ${room.id}의 상대방 프로필 이미지 정보:`, {
-          hasProfile: !!partner.profile,
-          profileId: partner.profile?.id,
-          hasProfileImages: !!partner.profile?.profileImage,
-          profileImageCount: partner.profile?.profileImage?.length || 0,
-          allImages: partner.profile?.profileImage?.map((img) => ({
-            id: img.id,
-            url: img.imageUrl,
-            isMain: img.isMain,
-          })),
-        });
+        const partner = room.users[0];
+        if (!partner) return null;
 
         const mainImage = partner.profile?.profileImage?.find(
           (img) => img.isMain,
@@ -223,12 +175,6 @@ export class ChatService {
         const firstImage = partner.profile?.profileImage?.[0];
         const profileImage =
           mainImage?.imageUrl || firstImage?.imageUrl || null;
-
-        this.logger.debug(`채팅방 ${room.id}의 최종 선택된 프로필 이미지:`, {
-          mainImage: mainImage?.imageUrl,
-          firstImage: firstImage?.imageUrl,
-          finalImage: profileImage,
-        });
 
         return {
           id: room.id,
@@ -246,98 +192,36 @@ export class ChatService {
         };
       })
       .filter(Boolean);
-
-    this.logger.log(
-      `채팅방 목록 처리 완료 - 유효한 채팅방: ${result.length}개`,
-    );
-    return result;
   }
 
-  /**
-   * 날짜를 "오전/오후 HH:mm" 형식으로 변환합니다.
-   * @param date 변환할 날짜
-   * @returns 변환된 시간 문자열
-   */
-  private formatTime(date: Date | undefined): string {
-    if (!date) return '';
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours < 12 ? '오전' : '오후';
-    const formattedHours = hours % 12 || 12;
-    const formattedMinutes = minutes.toString().padStart(2, '0');
-    return `${ampm} ${formattedHours}:${formattedMinutes}`;
-  }
-
-  /**
-   * 채팅 메시지를 조회합니다.
-   * @param chatRoomId 특정 채팅방의 메시지만 조회할 경우 채팅방 ID
-   * @returns 채팅 메시지 목록
-   */
+  // 채팅방의 메시지 조회
   async getMessages(chatRoomId: string, userId: string) {
-    this.logger.log(`채팅 메시지 조회 시작 - 채팅방 ID: ${chatRoomId}`);
-
-    const chatRoom = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .leftJoinAndSelect('chatRoom.users', 'users')
-      .leftJoinAndSelect('users.profile', 'profile')
-      .leftJoinAndSelect(
-        'profile.profileImage',
-        'profileImage',
-        'profileImage.isMain = :isMain',
-        { isMain: true },
-      )
-      .where('chatRoom.id = :chatRoomId', { chatRoomId })
-      .andWhere('chatRoom.deletedAt IS NULL')
-      .getOne();
-
-    if (!chatRoom) {
-      this.logger.warn(`채팅방을 찾을 수 없음 - ID: ${chatRoomId}`);
-      return {
-        messages: [],
-        total: 0,
-        hasMore: false,
-        partner: {
-          profileImage: null,
-        },
-        isMine: true,
-      };
+    const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
+    if (!hasAccess) {
+      throw new Error('채팅방 접근 권한이 없습니다.');
     }
 
-    const partner = chatRoom.users.find((user) => user.id !== userId);
-    const mainImage = partner?.profile?.profileImage?.find((img) => img.isMain);
-    const firstImage = partner?.profile?.profileImage?.[0];
-    const profileImage = mainImage?.imageUrl || firstImage?.imageUrl || null;
+    const messages = await this.messageRepository.find({
+      where: { chatRoom: { id: chatRoomId } },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
 
-    // 메시지 조회
-    const messages = await this.messageRepository
-      .createQueryBuilder('message')
-      .leftJoinAndSelect('message.user', 'user')
-      .where('message.chatRoomId = :chatRoomId', { chatRoomId })
-      .orderBy('message.createdAt', 'DESC')
-      .take(50)
-      .getMany();
-
-    return {
-      messages,
-      total: messages.length,
-      hasMore: messages.length === 50,
-      partner: {
-        profileImage,
-      },
-      isMine: true,
-    };
+    return messages.reverse().map((message) => ({
+      id: message.id,
+      content: message.content,
+      userId: message.user.id,
+      userName: message.user.name,
+      createdAt: message.createdAt,
+    }));
   }
 
-  /**
-   * 사용자가 채팅방에서 나갑니다.
-   * @param chatRoomId 나갈 채팅방 ID
-   * @param userId 나가는 사용자 ID
-   * @returns 성공 여부
-   */
+  // 채팅방 나가기
   async exitRoom(chatRoomId: string, userId: string) {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new Error('사용자를 찾을 수 없습니다.');
+    const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
+    if (!hasAccess) {
+      throw new Error('채팅방 접근 권한이 없습니다.');
     }
 
     const chatRoom = await this.chatRoomRepository.findOne({
@@ -347,98 +231,63 @@ export class ChatService {
 
     if (!chatRoom) {
       throw new Error('채팅방을 찾을 수 없습니다.');
-    }
-
-    const isUserInRoom = chatRoom.users.some((user) => user.id === userId);
-    if (!isUserInRoom) {
-      throw new Error('해당 채팅방에 참여하고 있지 않습니다.');
     }
 
     chatRoom.users = chatRoom.users.filter((user) => user.id !== userId);
     await this.chatRoomRepository.save(chatRoom);
 
-    if (chatRoom.users.length === 0) {
-      await this.chatRoomRepository.remove(chatRoom);
-      return { success: true, message: '채팅방이 삭제되었습니다.' };
-    }
+    await this.saveSystemMessage(
+      `${userId}님이 채팅방을 나갔습니다.`,
+      chatRoomId,
+    );
 
-    return { success: true, message: '채팅방을 나갔습니다.' };
+    return { success: true };
   }
 
-  /**
-   * 새로운 채팅 메시지를 저장합니다.
-   * @param content 메시지 내용
-   * @param user 메시지를 보낸 사용자
-   * @param chatRoomId 메시지를 보낼 채팅방 ID
-   * @returns 저장된 메시지 정보
-   */
+  // 채팅 메시지 저장
   async saveMessage(content: string, user: User, chatRoomId?: string) {
     const message = this.messageRepository.create({
       content,
       user,
-      chatRoomId,
+      chatRoom: chatRoomId ? { id: chatRoomId } : undefined,
     });
-    return await this.messageRepository.save(message);
+    return this.messageRepository.save(message);
   }
 
-  /**
-   * 채팅방에 입장합니다.
-   * @param chatRoomId 채팅방 ID
-   * @param userId 입장할 사용자 ID
-   * @returns 채팅방 정보
-   */
+  // 채팅방 입장
   async enterRoom(chatRoomId: string, userId: string) {
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatRoomId },
-      relations: ['users'],
-    });
-
-    if (!chatRoom) {
-      throw new Error('채팅방을 찾을 수 없습니다.');
+    const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
+    if (!hasAccess) {
+      throw new Error('채팅방 접근 권한이 없습니다.');
     }
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
     if (!user) {
       throw new Error('사용자를 찾을 수 없습니다.');
     }
 
-    const isAlreadyJoined = chatRoom.users.some((u) => u.id === userId);
-    if (!isAlreadyJoined) {
-      chatRoom.users.push(user);
-      await this.chatRoomRepository.save(chatRoom);
-    }
+    await this.saveSystemMessage(
+      `${user.name}님이 채팅방에 입장하셨습니다.`,
+      chatRoomId,
+    );
 
-    return chatRoom;
+    return { success: true };
   }
 
-  /**
-   * 시스템 메시지를 저장합니다.
-   * @param content 시스템 메시지 내용
-   * @param chatRoomId 채팅방 ID
-   * @returns 저장된 시스템 메시지 정보
-   */
+  // 시스템 메시지 저장
   async saveSystemMessage(content: string, chatRoomId?: string) {
-    const systemUser = await this.userRepository.findOne({
-      where: { name: 'System' },
-    });
-    if (!systemUser) {
-      throw new Error('시스템 사용자를 찾을 수 없습니다.');
-    }
     const message = this.messageRepository.create({
       content,
-      user: systemUser,
       isSystem: true,
-      chatRoomId,
+      chatRoom: chatRoomId ? { id: chatRoomId } : undefined,
     });
-    return await this.messageRepository.save(message);
+    return this.messageRepository.save(message);
   }
 
-  /**
-   * 채팅방에 입장할 때 상대방에게 알림을 보냅니다.
-   * @param chatRoomId 채팅방 ID
-   * @param currentUserId 현재 사용자 ID
-   * @param opponentId 상대방 ID
-   */
+  // 채팅방 입장 알림 전송
   async sendChatRoomEntryNotification(
     chatRoomId: string,
     currentUserId: string,
@@ -447,6 +296,7 @@ export class ChatService {
     const currentUser = await this.userRepository.findOne({
       where: { id: currentUserId },
     });
+
     if (!currentUser) {
       throw new Error('사용자를 찾을 수 없습니다.');
     }
@@ -454,57 +304,55 @@ export class ChatService {
     const notification = {
       type: NotificationType.CHAT,
       receiverId: opponentId,
-      title: '새로운 채팅방',
-      content: `${currentUser.name}님이 채팅방에 입장했습니다.`,
+      title: '채팅방 입장',
+      content: `${currentUser.name}님이 채팅방에 입장하셨습니다.`,
       data: {
         chatRoomId,
         senderId: currentUserId,
+        timestamp: this.formatTime(new Date()),
       },
     };
 
     await this.notificationService.create(notification);
   }
 
-  /**
-   * 채팅방 접근 권한을 확인합니다.
-   * @param userId 사용자 ID
-   * @param chatRoomId 채팅방 ID
-   * @returns 접근 권한 여부
-   */
+  // 채팅방 접근 권한 확인
   async validateChatRoomAccess(
     userId: string,
     chatRoomId: string,
   ): Promise<boolean> {
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatRoomId },
-      relations: ['users'],
-    });
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .innerJoin('chatRoom.users', 'user', 'user.id = :userId', { userId })
+      .where('chatRoom.id = :chatRoomId', { chatRoomId })
+      .andWhere('chatRoom.deletedAt IS NULL')
+      .getOne();
 
-    if (!chatRoom) {
-      throw new Error('채팅방을 찾을 수 없습니다.');
-    }
-
-    return chatRoom.users.some((user) => user.id === userId);
+    return !!chatRoom;
   }
 
-  /**
-   * 채팅방에 메시지를 전송합니다.
-   * @param content 메시지 내용
-   * @param userId 사용자 ID
-   * @param chatRoomId 채팅방 ID
-   * @returns 저장된 메시지 정보
-   */
+  // 채팅 메시지 전송
   async sendMessage(content: string, userId: string, chatRoomId: string) {
     const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
     if (!hasAccess) {
       throw new Error('채팅방 접근 권한이 없습니다.');
     }
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
     if (!user) {
       throw new Error('사용자를 찾을 수 없습니다.');
     }
 
-    return this.saveMessage(content, user, chatRoomId);
+    const message = await this.saveMessage(content, user, chatRoomId);
+    return {
+      id: message.id,
+      content: message.content,
+      userId: user.id,
+      userName: user.name,
+      createdAt: message.createdAt,
+    };
   }
 }

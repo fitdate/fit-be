@@ -19,6 +19,9 @@ import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  /**
+   * 매칭 결과 페이지에서 대화하러 가기 버튼 클릭 시 채팅방을 생성하거나 기존 채팅방을 반환합니다.
+   */
   @Post('matchingRooms/:partnerId')
   @ApiOperation({
     summary: '대화하러 가기 버튼 클릭 시 채팅방 입장',
@@ -38,6 +41,9 @@ export class ChatController {
     return this.chatService.createMatchingRoom(userId, params.partnerId);
   }
 
+  /**
+   * 채팅 페이지에서 대화방 버튼 클릭 시 채팅방을 생성하거나 기존 채팅방을 반환합니다.
+   */
   @Post('chatRooms/findOrCreate/:partnerId')
   @ApiOperation({
     summary: '대화방 버튼 클릭 시 채팅방 입장',
@@ -57,6 +63,9 @@ export class ChatController {
     return this.chatService.findOrCreateChatRoom(userId, params.partnerId);
   }
 
+  /**
+   * 커피챗 수락 시 채팅방을 생성하고 알림을 전송합니다.
+   */
   @Post('coffee-chat/accept/:partnerId')
   @ApiOperation({ summary: '커피챗 수락' })
   @ApiResponse({
@@ -75,6 +84,9 @@ export class ChatController {
     return this.chatService.acceptCoffeeChat(userId, params.partnerId);
   }
 
+  /**
+   * 매칭 수락 시 채팅방을 생성하고 알림을 전송합니다.
+   */
   @Post('match/accept/:partnerId')
   @ApiOperation({ summary: '매칭 수락' })
   @ApiResponse({

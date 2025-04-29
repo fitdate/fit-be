@@ -23,12 +23,11 @@ export class ChatGateway {
     private readonly userService: UserService,
   ) {}
 
-  // 사용자 로그인 처리
+  // 사용자 로그인을 처리하고 시스템 메시지를 전송
   @SubscribeMessage('login')
   async handleLogin(client: Socket, userName: string) {
     try {
-      const user: { id: string; name: string } =
-        await this.userService.saveUser(userName, client.id);
+      const user = await this.userService.saveUser(userName, client.id);
       const welcomeMessage = await this.chatService.saveSystemMessage(
         `${user.name}님이 채팅방에 입장하셨습니다.`,
       );
@@ -45,13 +44,13 @@ export class ChatGateway {
     }
   }
 
+  // 사용자가 채팅방에 참여할 때 호출
   @SubscribeMessage('join')
   async handleJoin(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { chatRoomId: string; userId: string },
   ) {
     try {
-      // 채팅방 접근 권한 확인
       const hasAccess = await this.chatService.validateChatRoomAccess(
         data.userId,
         data.chatRoomId,
@@ -61,9 +60,7 @@ export class ChatGateway {
         throw new Error('채팅방 접근 권한이 없습니다.');
       }
 
-      // 소켓 룸 참여
       await client.join(data.chatRoomId);
-
       return { success: true };
     } catch (error: unknown) {
       return {
@@ -76,6 +73,7 @@ export class ChatGateway {
     }
   }
 
+  // 채팅 메시지를 처리하고 채팅방의 모든 사용자에게 전송
   @SubscribeMessage('message')
   async handleMessage(
     @ConnectedSocket() client: Socket,
@@ -83,16 +81,13 @@ export class ChatGateway {
     data: { content: string; userId: string; chatRoomId: string },
   ) {
     try {
-      // 메시지 전송
       const message = await this.chatService.sendMessage(
         data.content,
         data.userId,
         data.chatRoomId,
       );
 
-      // 채팅방의 모든 클라이언트에게 메시지 전송
       this.server.to(data.chatRoomId).emit('message', message);
-
       return { success: true };
     } catch (error: unknown) {
       return {
