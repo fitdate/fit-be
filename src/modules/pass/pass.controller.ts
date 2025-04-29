@@ -16,12 +16,17 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 
+class PassResponseDto {
+  isSuccess: boolean;
+}
+
 @ApiTags('Pass')
 @Controller('pass')
 @UsePipes(new ValidationPipe({ transform: true }))
 export class PassController {
   constructor(private readonly passService: PassService) {}
 
+  // 매칭 페이지에서 X버튼을 눌러 둘 다 선택하지 않음
   @Post('both')
   @ApiOperation({ summary: '매칭 페이지에서 X버튼을 눌러 둘 다 선택하지 않음' })
   @ApiBody({
@@ -50,51 +55,35 @@ export class PassController {
     await this.passService.passBothUsers(userId, passedUserId2);
   }
 
+  // 호감페이지에서 매칭 요청 거절
   @Post('match/:passedUserId')
   @ApiOperation({ summary: '호감페이지에서 매칭 요청 거절' })
   @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
   @ApiResponse({
     status: 200,
-    description: '매칭 거절 완료 (항상 isSuccess: false 반환)',
-    schema: {
-      type: 'object',
-      properties: {
-        isSuccess: {
-          type: 'boolean',
-          description: '매칭 거절 성공 여부 (거절 시 항상 false)',
-          example: false,
-        },
-      },
-    },
+    description: '매칭 거절 완료',
+    type: PassResponseDto,
   })
   async passMatchRequest(
     @UserId() userId: string,
     @Param('passedUserId') passedUserId: string,
-  ): Promise<{ isSuccess: boolean }> {
+  ): Promise<PassResponseDto> {
     return await this.passService.passMatchRequest(userId, passedUserId);
   }
 
+  // 호감페이지에서 커피챗 요청 거절
   @Post('coffee-chat/:passedUserId')
   @ApiOperation({ summary: '호감페이지에서 커피챗 요청 거절' })
   @ApiParam({ name: 'passedUserId', description: '거절할 사용자 ID' })
   @ApiResponse({
     status: 200,
-    description: '커피챗 거절 완료 (항상 isSuccess: false 반환)',
-    schema: {
-      type: 'object',
-      properties: {
-        isSuccess: {
-          type: 'boolean',
-          description: '커피챗 거절 성공 여부 (거절 시 항상 false)',
-          example: false,
-        },
-      },
-    },
+    description: '커피챗 거절 완료',
+    type: PassResponseDto,
   })
   async passCoffeeChatRequest(
     @UserId() userId: string,
     @Param('passedUserId') passedUserId: string,
-  ): Promise<{ isSuccess: boolean }> {
+  ): Promise<PassResponseDto> {
     return await this.passService.passCoffeeChatRequest(userId, passedUserId);
   }
 }

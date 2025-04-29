@@ -8,6 +8,7 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { BaseTable } from '../../../common/entity/base-table.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { PassType } from './pass-type.enum';
 
 @Entity('pass')
 export class Pass extends BaseTable {
@@ -24,8 +25,11 @@ export class Pass extends BaseTable {
   passedUserId: string;
 
   @ApiProperty()
-  @Column({ type: 'enum', enum: ['MATCH', 'COFFEE_CHAT', 'BOTH'] })
-  passType: 'MATCH' | 'COFFEE_CHAT' | 'BOTH';
+  @Column({
+    type: 'enum',
+    enum: PassType,
+  })
+  passType: PassType;
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.passes)

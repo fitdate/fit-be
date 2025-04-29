@@ -1,90 +1,64 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pass } from './entities/pass.entity';
+import { PassType } from './entities/pass-type.enum';
 
 @Injectable()
 export class PassService {
-  private readonly logger = new Logger(PassService.name);
-
   constructor(
     @InjectRepository(Pass)
     private readonly passRepository: Repository<Pass>,
   ) {}
 
   /**
-   * 매칭 페이지에서 X버튼을 눌러 둘 다 선택하지 않을 때 호출됩니다.
-   * @param userId 현재 사용자 ID
-   * @param passedUserId 거절할 사용자 ID
+   * 사용자를 거절하는 공통 메서드
    */
-  async passBothUsers(userId: string, passedUserId: string): Promise<void> {
-    this.logger.log(
-      `사용자 ${userId}가 ${passedUserId}를 거절했습니다. (BOTH)`,
-    );
-
+  private async createPass(
+    userId: string,
+    passedUserId: string,
+    passType: PassType,
+  ): Promise<void> {
     const pass = this.passRepository.create({
       userId,
       passedUserId,
-      passType: 'BOTH',
+      passType,
     });
 
     await this.passRepository.save(pass);
   }
 
   /**
-   * 호감페이지에서 매칭 요청을 거절할 때 호출됩니다.
-   * @param userId 현재 사용자 ID
-   * @param passedUserId 거절할 사용자 ID
-   * @returns 거절 처리 결과
+   * 매칭 페이지에서 X버튼을 눌러 둘 다 선택하지 않을 때 호출
+   */
+  async passBothUsers(userId: string, passedUserId: string): Promise<void> {
+    await this.createPass(userId, passedUserId, PassType.BOTH);
+  }
+
+  /**
+   * 호감페이지에서 매칭 요청을 거절할 때 호출
    */
   async passMatchRequest(
     userId: string,
     passedUserId: string,
   ): Promise<{ isSuccess: boolean }> {
-    this.logger.log(
-      `사용자 ${userId}가 ${passedUserId}의 매칭 요청을 거절했습니다.`,
-    );
-
-    const pass = this.passRepository.create({
-      userId,
-      passedUserId,
-      passType: 'MATCH',
-    });
-
-    await this.passRepository.save(pass);
-
+    await this.createPass(userId, passedUserId, PassType.MATCH);
     return { isSuccess: false };
   }
 
   /**
-   * 호감페이지에서 커피챗 요청을 거절할 때 호출됩니다.
-   * @param userId 현재 사용자 ID
-   * @param passedUserId 거절할 사용자 ID
-   * @returns 거절 처리 결과
+   * 호감페이지에서 커피챗 요청을 거절할 때 호출
    */
   async passCoffeeChatRequest(
     userId: string,
     passedUserId: string,
   ): Promise<{ isSuccess: boolean }> {
-    this.logger.log(
-      `사용자 ${userId}가 ${passedUserId}의 커피챗 요청을 거절했습니다.`,
-    );
-
-    const pass = this.passRepository.create({
-      userId,
-      passedUserId,
-      passType: 'COFFEE_CHAT',
-    });
-
-    await this.passRepository.save(pass);
-
+    await this.createPass(userId, passedUserId, PassType.COFFEE_CHAT);
     return { isSuccess: false };
   }
 
   /**
-   * 사용자가 거절한 모든 사용자 ID 목록을 가져옵니다. 랜덤 매칭 기능에 사용
-   * @param userId 현재 사용자 ID
-   * @returns 거절한 사용자 ID 목록
+   * 사용자가 거절한 모든 사용자 ID 목록을 조회
    */
   async getPassedUserIds(userId: string): Promise<string[]> {
     const passes = await this.passRepository.find({
