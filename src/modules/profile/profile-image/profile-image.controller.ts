@@ -61,7 +61,7 @@ export class ProfileImageController {
           width: 800,
           height: 800,
         },
-        quality: 90,
+        quality: 100,
       }),
     )
     file: MulterFile,
