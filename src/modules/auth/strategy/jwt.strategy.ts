@@ -21,6 +21,26 @@ const cookieExtractor = (req: RequestWithCookies) => {
     throw new UnauthorizedException('Request 객체를 찾을 수 없습니다');
   }
 
+  // 쿠키 파싱 디버깅
+  console.log('Raw cookies:', req.cookies);
+  console.log('Raw headers:', req.headers);
+
+  // 헤더에서 쿠키 파싱 시도
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [name, value] = cookie.trim().split('=');
+        acc[name] = value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    if (cookies.accessToken) {
+      return cookies.accessToken;
+    }
+  }
+
+  // req.cookies에서 토큰 찾기
   const token = req.cookies?.accessToken;
   if (!token) {
     throw new UnauthorizedException('액세스 토큰이 없습니다');

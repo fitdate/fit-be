@@ -57,6 +57,11 @@ export class ActiveInterceptor implements NestInterceptor {
     const response = context.switchToHttp().getResponse<ResponseWithCookie>();
     const user = request.user;
 
+    // 쿠키 디버깅
+    this.logger.debug('Request cookies:', request.cookies);
+    this.logger.debug('Request headers:', request.headers);
+    this.logger.debug('User:', user);
+
     if (!user?.sub || !user?.token) {
       return next.handle(); // 인증 정보 없음
     }

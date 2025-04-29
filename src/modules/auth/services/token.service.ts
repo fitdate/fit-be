@@ -320,11 +320,19 @@ export class TokenService {
     metadata: TokenMetadata,
     origin?: string,
   ): Promise<JwtTokenResponse> {
+    this.logger.debug('Generating tokens for user:', {
+      userId,
+      userRole,
+      metadata,
+    });
+
     const { accessToken, refreshToken } = await this.generateTokens(
       userId,
       userRole,
       metadata,
     );
+
+    this.logger.debug('Generated tokens:', { accessToken, refreshToken });
 
     const accessTokenTtl =
       this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
@@ -333,6 +341,12 @@ export class TokenService {
 
     const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
     const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    this.logger.debug('Cookie options:', {
+      accessTokenMaxAge,
+      refreshTokenMaxAge,
+      origin,
+    });
 
     return {
       accessToken,
