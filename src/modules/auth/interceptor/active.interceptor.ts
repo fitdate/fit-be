@@ -65,6 +65,8 @@ export class ActiveInterceptor implements NestInterceptor {
     this.logger.debug('[Token Validation] Checking token validity for user:', {
       userId: user.sub,
       token: user.token,
+      tokenId: user.tokenId,
+      role: user.role,
     });
 
     // Redis에서 토큰 유효성 검증
@@ -72,6 +74,8 @@ export class ActiveInterceptor implements NestInterceptor {
     this.logger.debug('[Token Validation] Redis validation result:', {
       isValid,
       userId: user.sub,
+      token: user.token,
+      redisKey: `access_token:${user.token}`,
     });
 
     if (!isValid) {

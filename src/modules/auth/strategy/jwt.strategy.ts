@@ -42,7 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: TokenPayload) {
+  async validate(payload: TokenPayload, req: RequestWithCookies) {
     this.logger.debug(`Validating token payload: ${JSON.stringify(payload)}`);
 
     if (payload.type !== 'access') {
@@ -61,7 +61,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     return {
       ...payload,
       sub: payload.sub,
-      user,
+      user: user,
+      token: cookieExtractor(req),
     };
   }
 }
