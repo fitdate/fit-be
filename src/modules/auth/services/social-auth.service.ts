@@ -8,6 +8,7 @@ import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
 import { TokenService } from './token.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
+import { TokenMetadata } from '../types/token-payload.types';
 
 @Injectable()
 export class SocialAuthService {
@@ -22,6 +23,7 @@ export class SocialAuthService {
   // 소셜 로그인
   async processSocialLogin(
     userData: SocialUserInfo,
+    req: Request,
     origin?: string,
   ): Promise<
     JwtTokenResponse & {
@@ -49,8 +51,16 @@ export class SocialAuthService {
       }
     }
 
-    const { accessToken, refreshToken } =
-      await this.tokenService.generateTokens(user.id, user.role);
+    const metadata: TokenMetadata = {
+      ip: req.ip || req.socket.remoteAddress || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+    };
+
+    const tokens = await this.tokenService.generateTokens(
+      user.id,
+      user.role,
+      metadata,
+    );
 
     const accessTokenTtl =
       this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
@@ -61,8 +71,8 @@ export class SocialAuthService {
     const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
     const tokenResponse = {
-      accessToken,
-      refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
       refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
     };
@@ -114,6 +124,7 @@ export class SocialAuthService {
 
       const result = await this.processSocialLogin(
         socialUserInfo,
+        req,
         req.headers.origin,
       );
 
