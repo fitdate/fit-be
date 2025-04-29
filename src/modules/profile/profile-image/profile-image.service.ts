@@ -229,6 +229,7 @@ export class ProfileImageService {
     log: (message: string) => void,
   ) {
     const CHUNK_SIZE = 3; // 동시에 처리할 이미지 수
+    const MAX_RETRIES = 2; // 최대 재시도 횟수
     const results: Array<{
       profile: { id: string };
       imageUrl: string;
@@ -244,57 +245,109 @@ export class ProfileImageService {
       log(
         `Processing chunk ${i / CHUNK_SIZE + 1}: ${JSON.stringify(chunk, null, 2)}`,
       );
-      const chunkResults = await Promise.all(
-        chunk.map(async (url, index) => {
-          try {
-            log(`Processing image ${i + index + 1}: ${url}`);
+
+      const chunkResults = await Promise.allSettled(
+        chunk.map(
+          async (
+            url,
+            index,
+          ): Promise<{
+            profile: { id: string };
+            imageUrl: string;
+            key: string;
+            isMain: boolean;
+          } | null> => {
             if (!url) {
               log(`Skipping null/undefined URL at index ${i + index}`);
               return null;
             }
 
-            log(`Extracting key from URL: ${url}`);
-            const key = this.s3Service.extractKeyFromUrl(url);
-            log(`Extracted key: ${key}`);
-            log(
-              `URL components: ${JSON.stringify(url.split('.amazonaws.com/'), null, 2)}`,
-            );
+            const attemptProcess = async (
+              retryCount: number,
+            ): Promise<{
+              profile: { id: string };
+              imageUrl: string;
+              key: string;
+              isMain: boolean;
+            } | null> => {
+              try {
+                log(`Processing image ${i + index + 1}: ${url}`);
+                log(`Extracting key from URL: ${url}`);
+                const key = this.s3Service.extractKeyFromUrl(url);
+                log(`Extracted key: ${key}`);
 
-            log(
-              `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
-            );
-            const moved = await this.moveTempToProfileImage(profileId, key);
-            log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
+                log(
+                  `Moving temp image to profile image: profileId=${profileId}, key=${key}`,
+                );
+                const moved = await this.moveTempToProfileImage(profileId, key);
+                log(`Moved image result: ${JSON.stringify(moved, null, 2)}`);
 
-            const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net/${moved.key}`;
-            moved.url = cloudfrontUrl;
-            const result = {
-              profile: { id: profileId },
-              imageUrl: moved.url,
-              key: moved.key,
-              isMain: i + index === 0,
+                const cloudfrontUrl = `https://d22i603q3n4pzb.cloudfront.net/${moved.key}`;
+                moved.url = cloudfrontUrl;
+                const result = {
+                  profile: { id: profileId },
+                  imageUrl: moved.url,
+                  key: moved.key,
+                  isMain: i + index === 0,
+                };
+                log(
+                  `Created profile image object: ${JSON.stringify(result, null, 2)}`,
+                );
+                return result;
+              } catch (err) {
+                log(
+                  `Failed to process image ${i + index + 1} (attempt ${
+                    MAX_RETRIES - retryCount + 1
+                  }): ${err instanceof Error ? err.message : err}`,
+                );
+
+                if (retryCount > 0) {
+                  log(
+                    `Retrying image ${i + index + 1}... (${retryCount} retries left)`,
+                  );
+                  return attemptProcess(retryCount - 1); // 재귀 호출로 재시도
+                } else {
+                  log(`Max retries reached for image ${i + index + 1}`);
+                  // 에러를 명확히 처리하고, 실패한 작업을 null로 반환
+                  log(
+                    `Image processing failed after ${MAX_RETRIES + 1} attempts: ${
+                      err instanceof Error ? err.message : err
+                    }`,
+                  );
+                  return null; // 실패한 작업은 null로 반환
+                }
+              }
             };
-            log(
-              `Created profile image object: ${JSON.stringify(result, null, 2)}`,
-            );
-            return result;
-          } catch (err) {
-            log(
-              `Failed to process image ${i + index + 1}: ${
-                err instanceof Error ? err.message : err
-              }`,
-            );
-            if (err instanceof Error && err.stack) {
-              log(`Error stack: ${err.stack}`);
+
+            // 첫 번째 호출에서 재귀 호출 시작
+            const result: {
+              profile: { id: string };
+              imageUrl: string;
+              key: string;
+              isMain: boolean;
+            } | null = await attemptProcess(MAX_RETRIES);
+            if (result === null) {
+              log(
+                `Image processing ultimately failed for image ${i + index + 1}`,
+              );
             }
-            return null;
-          }
-        }),
+            return result;
+          },
+        ),
       );
+
+      // 성공과 실패를 구분하여 처리
+      chunkResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          log(`Failed to process chunk: ${result.reason}`);
+        }
+      });
+
       log(
         `Chunk ${i / CHUNK_SIZE + 1} results: ${JSON.stringify(chunkResults, null, 2)}`,
       );
-      results.push(...chunkResults);
     }
 
     const filteredResults = results.filter(
