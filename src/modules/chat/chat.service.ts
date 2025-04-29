@@ -219,11 +219,6 @@ export class ChatService {
 
   // 채팅방 나가기
   async exitRoom(chatRoomId: string, userId: string) {
-    const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
-    if (!hasAccess) {
-      throw new Error('채팅방 접근 권한이 없습니다.');
-    }
-
     const chatRoom = await this.chatRoomRepository.findOne({
       where: { id: chatRoomId },
       relations: ['users'],
@@ -233,11 +228,25 @@ export class ChatService {
       throw new Error('채팅방을 찾을 수 없습니다.');
     }
 
-    chatRoom.users = chatRoom.users.filter((user) => user.id !== userId);
-    await this.chatRoomRepository.save(chatRoom);
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
+    if (!user) {
+      throw new Error('사용자를 찾을 수 없습니다.');
+    }
+
+    const isUserInRoom = chatRoom.users.some((u) => u.id === userId);
+
+    if (!isUserInRoom) {
+      throw new Error('채팅방에 참여하고 있지 않습니다.');
+    }
+
+    chatRoom.users = chatRoom.users.filter((u) => u.id !== userId);
+
+    await this.chatRoomRepository.save(chatRoom);
     await this.saveSystemMessage(
-      `${userId}님이 채팅방을 나갔습니다.`,
+      `${user.name}님이 채팅방을 나갔습니다.`,
       chatRoomId,
     );
 
