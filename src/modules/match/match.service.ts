@@ -32,7 +32,7 @@ export class MatchService {
     private readonly passService: PassService,
   ) {}
 
-  // 성별 필터링
+  // 성별에 따른 사용자 필터링
   private filterUsersByGender(
     users: User[],
     gender: string,
@@ -44,7 +44,7 @@ export class MatchService {
     );
   }
 
-  // 랜덤 사용자 선택
+  // 랜덤으로 사용자 선택
   private selectRandomUsers(users: User[], count: number): User[] {
     const selected: User[] = [];
     while (selected.length < count && users.length > 0) {
@@ -81,7 +81,7 @@ export class MatchService {
     };
   }
 
-  // 랜덤 매칭 생성 (로그인)
+  // 로그인 사용자를 위한 랜덤 매칭 생성
   async findRandomMatches(userId: string): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
@@ -95,50 +95,31 @@ export class MatchService {
     }
 
     const allUsers = await this.userService.getAllUserInfo();
-
-    // 현재 사용자 제외하고 성별이 다른 사용자만 필터링
     const oppositeGenderUsers = this.filterUsersByGender(
       allUsers,
       currentUser.gender === '남자' ? '여자' : '남자',
       userId,
     );
 
-    // 이미 매칭된 사용자 목록 가져오기
     const selectorsList = await this.getSelectorsList(userId);
-
-    // 선택된 사용자와 선택한 사용자 모두 제외
     const matchedUserIds = new Set<string>();
-
-    // 현재 사용자 제외
     matchedUserIds.add(userId);
 
     selectorsList.forEach((selection) => {
-      // 선택한 사용자 제외
-      if (selection.selector && selection.selector.id) {
-        matchedUserIds.add(selection.selector.id);
-      }
-      // 선택된 사용자 제외
-      if (selection.selected && selection.selected.id) {
-        matchedUserIds.add(selection.selected.id);
-      }
+      if (selection.selector?.id) matchedUserIds.add(selection.selector.id);
+      if (selection.selected?.id) matchedUserIds.add(selection.selected.id);
     });
 
-    // 거절한 사용자 목록 가져오기
     const passedUserIds = await this.passService.getPassedUserIds(userId);
     passedUserIds.forEach((id) => matchedUserIds.add(id));
 
-    // 이미 매칭된 사용자와 거절한 사용자 제외
     const availableUsers = oppositeGenderUsers.filter(
       (user) => !matchedUserIds.has(user.id),
     );
 
-    // 랜덤으로 4명 선택
     const selectedUsers = this.selectRandomUsers(availableUsers, 4);
-
-    // 매칭 생성
     const matches: { matchId: string; user1: User; user2: User }[] = [];
 
-    // 2명씩 매칭
     for (let i = 0; i < selectedUsers.length; i += 2) {
       if (i + 1 < selectedUsers.length) {
         const match = await this.createMatch(
@@ -152,53 +133,33 @@ export class MatchService {
     return { matches };
   }
 
-  // 공개 매칭 생성 (비로그인)
+  // 비로그인 사용자를 위한 공개 매칭 생성
   async findRandomPublicMatches(): Promise<{
     matches: { matchId: string; user1: User; user2: User }[];
   }> {
     try {
-      // 페이징 처리로 사용자 정보 가져오기 (10명씩)
       const allUsers = await this.userService.getAllUserInfo();
-
-      // 성별별로 사용자 분리
       const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
       const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
 
-      // 각 성별에서 랜덤으로 2명씩 선택
       const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
       const selectedFemaleUsers = this.selectRandomUsers(femaleUsers, 2);
-
-      // 매칭 생성
       const matches: { matchId: string; user1: User; user2: User }[] = [];
 
-      // 남자-남자 매칭
       if (selectedMaleUsers.length === 2) {
-        try {
-          const match = await this.createMatch(
-            selectedMaleUsers[0],
-            selectedMaleUsers[1],
-          );
-          matches.push(match);
-        } catch (error) {
-          throw new InternalServerErrorException(
-            '남자-남자 매칭 생성 실패: ' + (error as Error).message,
-          );
-        }
+        const match = await this.createMatch(
+          selectedMaleUsers[0],
+          selectedMaleUsers[1],
+        );
+        matches.push(match);
       }
 
-      // 여자-여자 매칭
       if (selectedFemaleUsers.length === 2) {
-        try {
-          const match = await this.createMatch(
-            selectedFemaleUsers[0],
-            selectedFemaleUsers[1],
-          );
-          matches.push(match);
-        } catch (error) {
-          throw new InternalServerErrorException(
-            '여자-여자 매칭 생성 실패: ' + (error as Error).message,
-          );
-        }
+        const match = await this.createMatch(
+          selectedFemaleUsers[0],
+          selectedFemaleUsers[1],
+        );
+        matches.push(match);
       }
 
       return { matches };
@@ -209,6 +170,7 @@ export class MatchService {
     }
   }
 
+  // 매칭 생성
   async create(createMatchDto: CreateMatchDto): Promise<Match> {
     const match = this.matchRepository.create({
       id: createMatchDto.matchId,
@@ -219,12 +181,14 @@ export class MatchService {
     return this.matchRepository.save(match);
   }
 
+  // 모든 매칭 조회
   async findAll(): Promise<Match[]> {
     return this.matchRepository.find({
       relations: ['user1', 'user2'],
     });
   }
 
+  // 특정 매칭 조회
   async findOne(id: string): Promise<Match> {
     const match = await this.matchRepository.findOne({
       where: { id },
@@ -236,6 +200,7 @@ export class MatchService {
     return match;
   }
 
+  // 매칭 ID로 조회
   async findByMatchId(matchId: string): Promise<Match | null> {
     return this.matchRepository.findOne({
       where: { id: matchId },
@@ -243,55 +208,41 @@ export class MatchService {
     });
   }
 
+  // 매칭 삭제
   async remove(id: string): Promise<void> {
     await this.matchRepository.delete(id);
   }
 
-  /**
-   * 월드컵 페이지에서 선택하기 버튼을 누를 때 알림을 보냅니다.
-   * @param matchId 매칭 ID
-   * @param selectedUserId 선택된 사용자 ID
-   * @param currentUserId 현재 사용자 ID
-   */
+  // 선택 알림 전송
   async sendSelectionNotification(
     matchId: string,
     selectedUserId: string,
     currentUserId: string,
   ): Promise<void> {
-    try {
-      const match = await this.findByMatchId(matchId);
-      if (!match) {
-        throw new NotFoundException('매치를 찾을 수 없습니다.');
-      }
-      const currentUser = await this.userService.findOne(currentUserId);
-      if (!currentUser) {
-        throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
-      }
-      // match_selection 테이블에 데이터 생성
-      const matchSelection = this.matchSelectionRepository.create({
-        selector: { id: currentUserId },
-        selected: { id: selectedUserId },
-      });
-      await this.matchSelectionRepository.save(matchSelection);
-      await this.notificationService.create({
-        receiverId: selectedUserId,
-        type: NotificationType.MATCH,
-        title: '새로운 매칭 알림',
-        content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
-        data: { matchId },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        '알림 전송 중 오류가 발생했습니다: ' + (error as Error).message,
-      );
+    const match = await this.findByMatchId(matchId);
+    if (!match) {
+      throw new NotFoundException('매치를 찾을 수 없습니다.');
     }
+
+    const selectedUser = await this.userService.findOne(selectedUserId);
+    if (!selectedUser) {
+      throw new NotFoundException('선택된 사용자를 찾을 수 없습니다.');
+    }
+
+    await this.notificationService.create({
+      receiverId: selectedUserId,
+      type: NotificationType.MATCH,
+      title: '새로운 매칭 요청',
+      content: `${selectedUser.nickname}님이 매칭을 선택했습니다.`,
+      data: {
+        matchId,
+        selectedUserId,
+        currentUserId,
+      },
+    });
   }
 
-  /**
-   * 월드컵 페이지에서 모두 선택하기 버튼을 누를 때 두 명의 사용자에게 알림을 보냅니다.
-   * @param matchId 매칭 ID
-   * @param currentUserId 현재 사용자 ID
-   */
+  // 전체 선택 알림 전송
   async sendAllSelectionNotification(
     matchId: string,
     currentUserId: string,
@@ -330,67 +281,63 @@ export class MatchService {
         this.notificationService.create({
           receiverId: firstSelectedUserId,
           type: NotificationType.MATCH,
-          title: '새로운 매칭 알림',
-          content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
-          data: { matchId },
+          title: '매칭 성공',
+          content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
+          data: {
+            matchId,
+            selectedUserId: firstSelectedUserId,
+            currentUserId,
+          },
         }),
         this.notificationService.create({
           receiverId: secondSelectedUserId,
           type: NotificationType.MATCH,
-          title: '새로운 매칭 알림',
-          content: `${currentUser.nickname}님이 당신을 선택했습니다!`,
-          data: { matchId },
+          title: '매칭 성공',
+          content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
+          data: {
+            matchId,
+            selectedUserId: secondSelectedUserId,
+            currentUserId,
+          },
         }),
       ]);
     } catch (error) {
       throw new InternalServerErrorException(
-        '알림 전송 중 오류가 발생했습니다: ' + (error as Error).message,
+        '매칭 선택 처리 중 오류가 발생했습니다: ' + (error as Error).message,
       );
     }
   }
 
-  /**
-   * 채팅방 입장 알림을 전송합니다.
-   * @param matchId 매칭 ID
-   * @param currentUserId 현재 사용자 ID
-   */
+  // 채팅방 입장 알림 전송
   async sendChatRoomEntryNotification(
     matchId: string,
     currentUserId: string,
   ): Promise<void> {
-    try {
-      const match = await this.findByMatchId(matchId);
-      if (!match) {
-        throw new NotFoundException('매칭을 찾을 수 없습니다.');
-      }
-
-      const currentUser = await this.userService.findOne(currentUserId);
-      if (!currentUser) {
-        throw new NotFoundException('사용자 정보를 찾을 수 없습니다.');
-      }
-
-      // 상대방에게 알림 전송
-      const receiverId =
-        match.user1.id === currentUserId ? match.user2.id : match.user1.id;
-      await this.notificationService.create({
-        type: NotificationType.COFFEE_CHAT,
-        receiverId,
-        title: '새로운 채팅 알림',
-        content: `${currentUser.nickname}님이 채팅방에 입장했습니다!`,
-        data: { matchId },
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        '채팅방 입장 알림 전송 중 오류가 발생했습니다: ' +
-          (error as Error).message,
-      );
+    const match = await this.findByMatchId(matchId);
+    if (!match) {
+      throw new NotFoundException('매치를 찾을 수 없습니다.');
     }
+
+    const currentUser = await this.userService.findOne(currentUserId);
+    if (!currentUser) {
+      throw new NotFoundException('현재 사용자를 찾을 수 없습니다.');
+    }
+
+    const otherUserId =
+      match.user1.id === currentUserId ? match.user2.id : match.user1.id;
+    await this.notificationService.create({
+      receiverId: otherUserId,
+      type: NotificationType.COFFEE_CHAT,
+      title: '채팅방 입장',
+      content: `${currentUser.nickname}님이 채팅방에 입장했습니다.`,
+      data: {
+        matchId,
+        currentUserId,
+      },
+    });
   }
 
-  /**
-   * 특정 사용자를 선택한 사람들의 정보를 가져옵니다.
-   * @param selectedUserId 선택된 사용자 ID
-   */
+  // 선택자 목록 조회
   async getSelectorsList(selectedUserId: string) {
     const selectorsList = await this.matchSelectionRepository
       .createQueryBuilder('matchSelection')

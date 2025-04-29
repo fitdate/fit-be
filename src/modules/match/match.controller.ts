@@ -102,25 +102,25 @@ export class MatchController {
     );
   }
 
-  // @ApiOperation({
-  //   summary: '대화하러 가기 버튼 클릭',
-  //   description:
-  //     '매칭 결과 페이지에서 대화하러 가기 버튼을 클릭하면 상대방에게 채팅방 입장 알림을 보냅니다.',
-  // })
-  // @ApiResponse({ status: 200, description: '알림 전송 성공' })
-  // @ApiResponse({ status: 401, description: '인증 실패' })
-  // @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
-  // @Post('enter-chat')
-  // async enterChat(
-  //   @UserId() userId: string,
-  //   @Body() selectMatchDto: SelectMatchDto,
-  // ) {
-  //   if (!selectMatchDto || !selectMatchDto.matchId) {
-  //     throw new BadRequestException('matchId는 필수입니다.');
-  //   }
-  //   return this.matchService.sendChatRoomEntryNotification(
-  //     selectMatchDto.matchId,
-  //     userId,
-  //   );
-  // }
+  @ApiOperation({
+    summary: '대화하러 가기 버튼 클릭',
+    description:
+      '매칭 결과 페이지에서 대화하러 가기 버튼을 클릭하면 상대방에게 채팅방 입장 알림을 보냅니다.',
+  })
+  @ApiResponse({ status: 200, description: '알림 전송 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiResponse({ status: 404, description: '매칭을 찾을 수 없음' })
+  @Post('enter-chat')
+  async enterChat(
+    @UserId() userId: string,
+    @Body() selectMatchDto: SelectMatchDto,
+  ) {
+    if (!selectMatchDto || !selectMatchDto.matchId) {
+      throw new BadRequestException('matchId는 필수입니다.');
+    }
+    return this.matchService.sendChatRoomEntryNotification(
+      selectMatchDto.matchId,
+      userId,
+    );
+  }
 }
