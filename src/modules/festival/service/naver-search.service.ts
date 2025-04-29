@@ -3,6 +3,13 @@ import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { AxiosError } from 'axios';
+
+interface NaverSearchResponse {
+  items: {
+    link: string;
+  }[];
+}
+
 @Injectable()
 export class NaverSearchService {
   private readonly clientId: string;
@@ -25,7 +32,7 @@ export class NaverSearchService {
     const url = 'https://openapi.naver.com/v1/search/webkr.json';
 
     try {
-      const response = await axios.get(url, {
+      const response = await axios.get<NaverSearchResponse>(url, {
         headers: {
           'X-Naver-Client-Id': this.clientId,
           'X-Naver-Client-Secret': this.clientSecret,

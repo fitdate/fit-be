@@ -7,12 +7,8 @@ import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
 import { CoffeeChatStatus } from './enum/coffee-chat-statue.enum';
 import { DataSource } from 'typeorm';
 import { AcceptedCoffeeChat } from './entities/accepted-coffee-chat.entity';
-import { CoffeeChatReturn, UserSummary } from './types/coffee-chat.types';
 import { ChatService } from '../chat/chat.service';
-import { NotificationType } from 'src/common/enum/notification.enum';
 import { NotificationService } from 'src/modules/notification/notification.service';
-import { calculateAge } from 'src/common/util/age-calculator.util';
-import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class CoffeeChatService {
@@ -58,6 +54,13 @@ export class CoffeeChatService {
         `Duplicate coffee chat request detected - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
       );
       throw new BadRequestException('이미 요청된 커피챗이 존재합니다.');
+    }
+
+    if (userId === sendCoffeeChatDto.receiverId) {
+      this.logger.warn(
+        `Self coffee chat request detected - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
+      );
+      throw new BadRequestException('자기 자신에게 커피챗을 보낼 수 없습니다.');
     }
 
     return this.dataSource.transaction(async (manager) => {

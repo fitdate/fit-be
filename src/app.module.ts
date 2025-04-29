@@ -1,9 +1,4 @@
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-  // RequestMethod,
-} from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -83,12 +78,12 @@ import { ScheduleModule } from '@nestjs/schedule';
         synchronize: true,
         logging: true,
         extra: {
-          max: 2, // 최대 연결 풀 크기 (동시에 유지할 수 있는 최대 연결 수)
-          min: 1, // 최소 연결 풀 크기 (항상 유지할 최소 연결 수)
-          idleTimeoutMillis: 5000, // 사용하지 않는 연결이 유지되는 최대 시간 (5초)
-          connectionTimeoutMillis: 2000, // 연결 시도 타임아웃 (2초)
-          maxRetries: 1, // 연결 실패 시 최대 재시도 횟수 (1회)
-          retryDelay: 1000, // 재시도 간격 (1초)
+          max: 2,
+          min: 1,
+          idleTimeoutMillis: 5000,
+          connectionTimeoutMillis: 2000,
+          maxRetries: 1,
+          retryDelay: 1000,
         },
       }),
       inject: [ConfigService],

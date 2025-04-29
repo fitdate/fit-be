@@ -149,6 +149,7 @@ export class SocialAuthService {
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         domain = 'localhost';
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         domain = hostname;
       }
     }
