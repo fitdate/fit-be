@@ -42,6 +42,7 @@ export class SparkListService {
         age: calculateAge(coffeeChat.sender.birthday),
         region: coffeeChat.sender.region,
         profileImage: profileImage ? profileImage.imageUrl : null,
+        isSuccess: true,
       };
     });
     return filteredCoffeeChatList;
@@ -68,6 +69,7 @@ export class SparkListService {
             age: calculateAge(matchedUser.birthday),
             region: matchedUser.region,
             profileImage: profileImage ? profileImage.imageUrl : null,
+            isSuccess: true,
           };
         }
 
