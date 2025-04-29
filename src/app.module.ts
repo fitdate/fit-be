@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -31,7 +31,6 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { UserFilterModule } from './modules/user-filter/user-filter.module';
 import { Reflector } from '@nestjs/core';
-import { ActivityMiddleware } from './modules/auth/middleware/activity.middleware';
 import { FilterModule } from './modules/filter/filter.module';
 import { JwtAuthGuard } from './modules/auth/guard/auth.guard';
 import { CoffeeChatModule } from './modules/coffee-chat/coffee-chat.module';
@@ -39,6 +38,7 @@ import { DatingPreferenceModule } from './modules/dating-preference/dating-prefe
 import { SparkListModule } from './modules/spark-list/spark-list.module';
 import { FestivalModule } from './modules/festival/festival.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ActiveInterceptor } from './modules/auth/interceptor/active.interceptor';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -130,11 +130,11 @@ import { ScheduleModule } from '@nestjs/schedule';
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActiveInterceptor,
+    },
     Reflector,
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ActivityMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

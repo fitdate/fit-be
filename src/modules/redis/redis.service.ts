@@ -54,6 +54,22 @@ export class RedisService
     return storedId === tokenId;
   }
 
+  async isAccessTokenValid(token: string): Promise<boolean> {
+    const key = `access_token:${token}`;
+    const exists = await this.redisClient.exists(key);
+    return exists === 1;
+  }
+
+  async saveAccessToken(token: string, userId: string): Promise<void> {
+    const key = `access_token:${token}`;
+    await this.redisClient.set(key, userId, 'EX', 300); // 5 minutes TTL
+  }
+
+  async deleteAccessToken(token: string): Promise<void> {
+    const key = `access_token:${token}`;
+    await this.redisClient.del(key);
+  }
+
   // 사용자 토큰 무효화
   async invalidate(userId: string): Promise<void> {
     await this.redisClient.del(this.getKey(userId));

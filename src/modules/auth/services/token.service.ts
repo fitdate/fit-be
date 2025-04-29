@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
@@ -34,7 +34,7 @@ export class TokenService {
     const tokenId = uuidv4();
     this.logger.debug(`Generated tokenId: ${tokenId}`);
 
-    const accessToken = this.generateAccessToken(userId, userRole);
+    const accessToken = await this.generateAccessToken(userId, userRole);
     this.logger.debug(`Generated access token for user: ${userId}`);
 
     const refreshToken = await this.generateAndStoreRefreshToken(
@@ -51,7 +51,10 @@ export class TokenService {
   }
 
   // Access Token 생성
-  private generateAccessToken(userId: string, userRole: UserRole): string {
+  private async generateAccessToken(
+    userId: string,
+    userRole: UserRole,
+  ): Promise<string> {
     this.logger.debug(`Generating access token for user: ${userId}`);
     const accessTokenSecret = this.configService.getOrThrow(
       'jwt.accessTokenSecret',
@@ -72,7 +75,7 @@ export class TokenService {
       hasSecret: !!accessTokenSecret,
     });
 
-    return this.jwtService.sign(
+    const token = this.jwtService.sign(
       {
         sub: userId,
         role: userRole,
@@ -83,6 +86,12 @@ export class TokenService {
         expiresIn: accessTokenExpiresIn,
       },
     );
+
+    // Redis에 토큰 저장
+    const ttlSeconds = parseTimeToSeconds(accessTokenExpiresIn);
+    await this.redisService.set(`access_token:${token}`, userId, ttlSeconds);
+
+    return token;
   }
 
   // Refresh Token 생성 및 Redis 저장
@@ -137,72 +146,27 @@ export class TokenService {
     return refreshToken;
   }
 
-  // Refresh Token 유효성 검사
-  async validateRefreshToken(
-    userId: string,
-    tokenId: string,
-  ): Promise<boolean> {
-    this.logger.debug(
-      `Validating refresh token for user: ${userId}, tokenId: ${tokenId}`,
-    );
-    const redisKey = `refresh:${userId}:${tokenId}`;
-    const storedTokenId = await this.redisService.get(redisKey);
-
-    const isValid = storedTokenId === tokenId;
-    this.logger.debug(`Refresh token validation result:`, {
-      isValid,
-      storedTokenId,
-      expectedTokenId: tokenId,
-    });
-
-    return isValid;
+  // 토큰 유효성 검사
+  async isAccessTokenValid(token: string): Promise<boolean> {
+    const value = await this.redisService.get(`access_token:${token}`);
+    return value !== null;
   }
 
-  // Refresh Token 삭제
-  async revokeRefreshToken(userId: string, tokenId: string): Promise<void> {
-    this.logger.debug(
-      `Revoking refresh token for user: ${userId}, tokenId: ${tokenId}`,
+  // 토큰 저장
+  async saveAccessToken(token: string, userId: string): Promise<void> {
+    const accessTokenExpiresIn = this.configService.getOrThrow(
+      'jwt.accessTokenTtl',
+      {
+        infer: true,
+      },
     );
-    const redisKey = `refresh:${userId}:${tokenId}`;
-    await this.redisService.del(redisKey);
-    this.logger.debug(`Successfully revoked refresh token`);
+    const ttlSeconds = parseTimeToSeconds(accessTokenExpiresIn);
+    await this.redisService.set(`access_token:${token}`, userId, ttlSeconds);
   }
 
-  // Refresh Token 롤링링
-  async rotateRefreshToken(
-    userId: string,
-    oldTokenId: string,
-  ): Promise<{ accessToken: string; refreshToken: string; tokenId: string }> {
-    try {
-      this.logger.debug(
-        `Rotating refresh token for user: ${userId}, oldTokenId: ${oldTokenId}`,
-      );
-
-      const isValid = await this.validateRefreshToken(userId, oldTokenId);
-      if (!isValid) {
-        this.logger.warn(
-          `Invalid refresh token during rotation for user: ${userId}`,
-        );
-        throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
-      }
-
-      await this.revokeRefreshToken(userId, oldTokenId);
-      this.logger.debug(`Successfully revoked old refresh token`);
-
-      const newTokens = await this.generateTokens(userId, UserRole.USER);
-      this.logger.debug(
-        `Successfully generated new tokens for user: ${userId}`,
-      );
-
-      return newTokens;
-    } catch (error) {
-      this.logger.error('Error rotating refresh token', {
-        userId,
-        oldTokenId,
-        error: error instanceof UnauthorizedException,
-      });
-      throw new UnauthorizedException('Failed to rotate refresh token');
-    }
+  // 토큰 삭제
+  async deleteAccessToken(token: string): Promise<void> {
+    await this.redisService.del(`access_token:${token}`);
   }
 
   // 쿠키 옵션 생성
