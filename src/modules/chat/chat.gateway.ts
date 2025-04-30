@@ -13,6 +13,8 @@ import { UserService } from '../user/user.service';
   cors: {
     origin: '*',
   },
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
 })
 export class ChatGateway {
   @WebSocketServer()
