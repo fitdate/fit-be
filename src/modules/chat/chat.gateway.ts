@@ -14,7 +14,7 @@ import { UserService } from '../user/user.service';
     origin: '*',
   },
   path: '/socket.io/',
-  transports: ['websocket', 'polling'], // 추가
+  transports: ['websocket', 'polling'],
 })
 export class ChatGateway {
   @WebSocketServer()
