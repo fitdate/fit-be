@@ -472,12 +472,25 @@ export class AuthService {
         req.headers.origin,
       );
 
-      res.cookie('accessToken', '', cookieOptions.accessOptions);
-      res.cookie('refreshToken', '', cookieOptions.refreshOptions);
+      // 액세스 토큰만 쿠키에서 제거
+      res.cookie('accessToken', '', cookieOptions.accessOptions || {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0,
+        path: '/',
+      });
 
+      // 사용자의 토큰 정보 제거
       const userId = req.user?.sub;
       if (userId) {
+        // Redis에서 리프레시 토큰 및 세션 정보 제거
         await this.tokenService.deleteRefreshToken(userId);
+        
+        // 액세스 토큰도 Redis에서 제거 (있는 경우)
+        if (req.user?.token) {
+          await this.tokenService.deleteAccessToken(req.user.token);
+        }
       }
 
       return {

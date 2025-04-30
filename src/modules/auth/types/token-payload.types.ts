@@ -1,11 +1,12 @@
-import { JwtPayload } from 'jsonwebtoken';
 import { UserRole } from 'src/common/enum/user-role.enum';
 
-export interface TokenPayload extends JwtPayload {
+export interface TokenPayload {
   sub: string;
   role: UserRole;
   type: 'access' | 'refresh';
   tokenId?: string;
+  iat?: number;
+  exp?: number;
 }
 
 export interface TokenMetadata {
