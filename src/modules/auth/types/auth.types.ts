@@ -3,9 +3,9 @@ import { UserRole } from '../../../common/enum/user-role.enum';
 
 export interface JwtTokenResponse {
   accessToken: string;
-  refreshToken?: string;
+  refreshToken: string;
   accessOptions: CookieOptions;
-  refreshOptions?: CookieOptions;
+  refreshOptions: CookieOptions;
 }
 
 export interface LoginResponse {

@@ -238,7 +238,6 @@ export class TokenService {
     oldTokenId: string,
     userRole: UserRole,
     metadata: TokenMetadata,
-    oldAccessToken?: string,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -256,12 +255,6 @@ export class TokenService {
 
     // 기존 refresh token 삭제
     await this.deleteRefreshToken(userId);
-    
-    // 기존 access token이 있으면 삭제
-    if (oldAccessToken) {
-      this.logger.debug(`Deleting old access token during rotation: ${oldAccessToken}`);
-      await this.deleteAccessToken(oldAccessToken);
-    }
 
     // 새로운 토큰 쌍 발급
     return this.generateTokens(userId, userRole, metadata);
@@ -326,6 +319,20 @@ export class TokenService {
     return options;
   }
 
+  // 로그아웃 쿠키 옵션 생성
+  getLogoutCookieOptions(origin?: string): {
+    accessOptions: CookieOptions;
+    refreshOptions: CookieOptions;
+  } {
+    this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
+    const options = {
+      accessOptions: this.createCookieOptions(0, origin),
+      refreshOptions: this.createCookieOptions(0, origin),
+    };
+    this.logger.debug(`Created logout cookie options:`, options);
+    return options;
+  }
+
   // 토큰 생성 및 설정
   async generateAndSetTokens(
     userId: string,
@@ -339,42 +346,33 @@ export class TokenService {
       metadata,
     });
 
-    const { accessToken, refreshToken, tokenId } = await this.generateTokens(
+    const { accessToken, refreshToken } = await this.generateTokens(
       userId,
       userRole,
       metadata,
     );
 
-    this.logger.debug('Generated tokens:', { accessToken, refreshToken, tokenId });
+    this.logger.debug('Generated tokens:', { accessToken, refreshToken });
 
     const accessTokenTtl =
       this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
 
     const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
     this.logger.debug('Cookie options:', {
       accessTokenMaxAge,
+      refreshTokenMaxAge,
       origin,
     });
 
-    // 리프레시 토큰은 쿠키에 저장하지 않고 Redis에만 저장 (이미 generateTokens에서 저장됨)
     return {
       accessToken,
-      refreshToken: undefined, // 클라이언트에 제공하지 않음
+      refreshToken,
       accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: undefined, // 리프레시 토큰 쿠키 옵션 제공하지 않음
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
     };
-  }
-
-  // 로그아웃 쿠키 옵션 생성
-  getLogoutCookieOptions(origin?: string): {
-    accessOptions: CookieOptions;
-  } {
-    this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
-    const options = {
-      accessOptions: this.createCookieOptions(0, origin),
-    };
-    this.logger.debug(`Created logout cookie options:`, options);
-    return options;
   }
 }

@@ -83,10 +83,10 @@ export class ActiveInterceptor implements NestInterceptor {
         `[Token Validation] Token invalid for user ${user.sub}, attempting refresh`,
       );
 
-      // tokenId가 없으면 재인증 필요
-      if (!user.tokenId) {
+      const refreshToken = request.cookies?.refreshToken;
+      if (!refreshToken || !user.tokenId) {
         this.logger.warn(
-          `[Token Validation] No tokenId found for user ${user.sub}`,
+          `[Token Validation] No refresh token found for user ${user.sub}`,
         );
         throw new UnauthorizedException(
           '세션이 만료되었습니다. 다시 로그인해주세요.',
@@ -104,13 +104,11 @@ export class ActiveInterceptor implements NestInterceptor {
           tokenId: user.tokenId,
         });
 
-        // Redis에 저장된 리프레시 토큰으로 새 토큰 발급
         const newTokens = await this.tokenService.rotateTokens(
           user.sub,
           user.tokenId,
           user.role as any,
           metadata,
-          user.token,
         );
 
         this.logger.debug('[Token Validation] Token rotation successful:', {
@@ -118,12 +116,16 @@ export class ActiveInterceptor implements NestInterceptor {
           newAccessToken: newTokens.accessToken,
         });
 
-        // 새로운 액세스 토큰만 쿠키에 설정
+        // 새로운 토큰을 쿠키에 설정
         const accessTokenTtl =
           this.configService.get('jwt.accessTokenTtl', { infer: true }) ||
           this.ROLLING_PERIOD;
+        const refreshTokenTtl =
+          this.configService.get('jwt.refreshTokenTtl', { infer: true }) ||
+          '7d';
 
         const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+        const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
         const cookieOptions = {
           httpOnly: true,
@@ -137,9 +139,13 @@ export class ActiveInterceptor implements NestInterceptor {
           ...cookieOptions,
           maxAge: accessTokenMaxAge,
         });
+        response.cookie('refreshToken', newTokens.refreshToken, {
+          ...cookieOptions,
+          maxAge: refreshTokenMaxAge,
+        });
 
         this.logger.debug(
-          `[Token Validation] New access token set in cookies for user ${user.sub}`,
+          `[Token Validation] New tokens set in cookies for user ${user.sub}`,
         );
       } catch (error) {
         this.logger.error('[Token Validation] Token rotation failed:', error);
