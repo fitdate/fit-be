@@ -4,19 +4,24 @@ import {
   SubscribeMessage,
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { UserService } from '../user/user.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: 'https://www.fit-date.co.kr',
   },
   path: '/socket.io/',
-  transports: ['websocket', 'polling'],
+  transports: ['websocket'],
 })
-export class ChatGateway {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(ChatGateway.name);
+
   @WebSocketServer()
   server: Server;
 
@@ -24,6 +29,14 @@ export class ChatGateway {
     private readonly chatService: ChatService,
     private readonly userService: UserService,
   ) {}
+
+  handleConnection(client: Socket) {
+    this.logger.log(`✅ 클라이언트 연결됨: ${client.id}`);
+  }
+
+  handleDisconnect(client: Socket) {
+    this.logger.log(`❌ 클라이언트 연결 종료: ${client.id}`);
+  }
 
   // 사용자 로그인을 처리하고 시스템 메시지를 전송
   @SubscribeMessage('login')
