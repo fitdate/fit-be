@@ -46,7 +46,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       const result = await this.socialAuthService.processSocialLogin(
         {
           email: profile.emails[0].value,
-          name: profile.displayName,
           authProvider: AuthProvider.GOOGLE,
         },
         req,

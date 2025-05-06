@@ -61,15 +61,10 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
           '카카오 로그인 실패: 이메일이 없습니다.',
         );
       }
-      const name =
-        kakaoProfile._json.kakao_account?.profile?.nickname ||
-        kakaoProfile._json.properties?.nickname ||
-        '';
 
       const result = await this.socialAuthService.processSocialLogin(
         {
           email,
-          name,
           authProvider: AuthProvider.KAKAO,
         },
         req,
