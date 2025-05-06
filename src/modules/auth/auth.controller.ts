@@ -212,7 +212,7 @@ export class AuthController {
   ) {
     try {
       const redirectUrl = await this.socialAuthService.handleSocialCallback(
-        req.user as { email: string; name?: string },
+        req.user as { email: string },
         authProvider,
         req,
         res,

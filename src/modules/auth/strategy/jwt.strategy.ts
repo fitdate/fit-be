@@ -85,6 +85,24 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('잘못된 토큰 타입입니다');
     }
 
+    // accessToken 추출
+    const accessToken =
+      req.cookies?.accessToken ||
+      req.headers?.cookie
+        ?.split(';')
+        .find((c) => c.trim().startsWith('accessToken='))
+        ?.split('=')[1];
+    if (!accessToken) {
+      this.logger.error('액세스 토큰이 없습니다');
+      throw new UnauthorizedException('액세스 토큰이 없습니다');
+    }
+
+    // jti(tokenId) 검증
+    if (!payload.jti) {
+      this.logger.error('토큰에 jti(tokenId)가 없습니다');
+      throw new UnauthorizedException('토큰에 jti(tokenId)가 없습니다');
+    }
+
     const user = await this.userService.findOne(payload.sub);
     if (!user) {
       this.logger.error(`User not found for ID: ${payload.sub}`);
@@ -97,12 +115,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       ...payload,
       sub: payload.sub,
       user: user,
-      token:
-        req.cookies?.accessToken ||
-        req.headers?.cookie
-          ?.split(';')
-          .find((c) => c.trim().startsWith('accessToken='))
-          ?.split('=')[1],
+      token: accessToken,
+      tokenId: payload.jti,
     };
   }
 }

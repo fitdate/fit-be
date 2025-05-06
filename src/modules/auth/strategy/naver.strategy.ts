@@ -53,12 +53,10 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
           '네이버 로그인 실패: 이메일이 없습니다.',
         );
       }
-      const name = naverProfile.displayName;
 
       const result = await this.socialAuthService.processSocialLogin(
         {
           email,
-          name,
           authProvider: AuthProvider.NAVER,
         },
         req,

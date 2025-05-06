@@ -42,7 +42,6 @@ export class SocialAuthService {
       try {
         const newUser = await this.userService.createSocialUser({
           email: userData.email,
-          name: userData.name,
           authProvider: userData.authProvider,
         });
         user = newUser;
@@ -99,7 +98,7 @@ export class SocialAuthService {
 
   // 구글 콜백
   async handleGoogleCallback(
-    user: { email: string; name?: string },
+    user: { email: string },
     req: Request,
     res: Response,
   ): Promise<string> {
@@ -108,16 +107,25 @@ export class SocialAuthService {
 
   // 카카오 콜백
   async handleKakaoCallback(
-    user: { email: string; name?: string },
+    user: { email: string },
     req: Request,
     res: Response,
   ): Promise<string> {
     return this.handleSocialCallback(user, AuthProvider.KAKAO, req, res);
   }
 
+  // 네이버 콜백
+  async handleNaverCallback(
+    user: { email: string },
+    req: Request,
+    res: Response,
+  ): Promise<string> {
+    return this.handleSocialCallback(user, AuthProvider.NAVER, req, res);
+  }
+
   // 소셜 콜백
   async handleSocialCallback(
-    user: { email: string; name?: string },
+    user: { email: string },
     authProvider: AuthProvider,
     req: Request,
     res: Response,
@@ -128,7 +136,6 @@ export class SocialAuthService {
     try {
       const socialUserInfo: SocialUserInfo = {
         email: user.email,
-        name: user.name,
         authProvider,
       };
 

@@ -24,12 +24,22 @@ export class TokenService {
     private readonly redisService: RedisService,
   ) {}
 
-  // 모든 세션 무효화
+  // 모든 세션 무효화 (userId의 모든 tokenId 세션 삭제)
   async invalidateAllSessions(userId: string): Promise<void> {
-    await this.redisService.delMultiple(
-      `refresh:${userId}`,
-      `session:${userId}`,
-    );
+    // 모든 refresh, session, access_token 키 삭제
+    const refreshKeys = await this.redisService.keys(`refresh:${userId}:*`);
+    const sessionKeys = await this.redisService.keys(`session:${userId}:*`);
+    const accessTokenKeys = await this.redisService.keys(`access_token:*`);
+    for (const key of [...refreshKeys, ...sessionKeys]) {
+      await this.redisService.del(key);
+    }
+    // access_token은 값이 userId와 일치하는 것만 삭제
+    for (const key of accessTokenKeys) {
+      const value = await this.redisService.get(key);
+      if (value === userId) {
+        await this.redisService.del(key);
+      }
+    }
   }
 
   // 토큰 생성
@@ -43,58 +53,45 @@ export class TokenService {
     tokenId: string;
   }> {
     this.logger.debug(`[Token Generation] Starting for user: ${userId}`);
-
-    // 1️⃣ 기존 세션 제거
     await this.invalidateAllSessions(userId);
-    this.logger.debug(`[Token Generation] Invalidated existing sessions for user: ${userId}`);
-
-    // 2️⃣ 새 tokenId 생성
+    this.logger.debug(
+      `[Token Generation] Invalidated existing sessions for user: ${userId}`,
+    );
     const tokenId = uuidv4();
     this.logger.debug(`[Token Generation] Generated tokenId: ${tokenId}`);
-
-    // 3️⃣ Access Token 생성 및 Redis 저장
-    const accessToken = this.generateAccessToken(userId, userRole);
-    const accessTokenTtl = this.configService.getOrThrow('jwt.accessTokenTtl', {
-      infer: true,
-    }) || '30m';
+    // Access Token 생성 (jti 포함)
+    const accessToken = this.generateAccessToken(userId, userRole, tokenId);
+    const accessTokenTtl =
+      this.configService.getOrThrow('jwt.accessTokenTtl', { infer: true }) ||
+      '30m';
     await this.redisService.set(
-      `access_token:${accessToken}`,
+      `access_token:${tokenId}`,
       userId,
       parseTimeToSeconds(accessTokenTtl),
     );
-    this.logger.debug(`[Token Generation] Stored access token in Redis: ${accessToken}`);
-
-    // 4️⃣ Refresh Token 생성 및 Redis 저장
+    this.logger.debug(
+      `[Token Generation] Stored access token in Redis: ${accessToken}`,
+    );
+    // Refresh Token 생성 (jti=tokenId 포함)
     const refreshToken = await this.generateAndStoreRefreshToken(
       userId,
       tokenId,
     );
-    this.logger.debug(`[Token Generation] Generated and stored refresh token: ${refreshToken}`);
-
-    // 5️⃣ 세션 메타데이터 저장
-    const refreshTokenTtl = this.configService.getOrThrow('jwt.refreshTokenTtl', {
-      infer: true,
-    }) || '7d';
+    this.logger.debug(
+      `[Token Generation] Generated and stored refresh token: ${refreshToken}`,
+    );
+    // 세션 메타데이터 저장
+    const refreshTokenTtl =
+      this.configService.getOrThrow('jwt.refreshTokenTtl', { infer: true }) ||
+      '7d';
     await this.redisService.set(
-      `session:${userId}`,
+      `session:${userId}:${tokenId}`,
       JSON.stringify(metadata),
       parseTimeToSeconds(refreshTokenTtl),
     );
-    this.logger.debug(`[Token Generation] Stored session metadata for user: ${userId}`);
-
-    // 6️⃣ Redis 저장 확인
-    const storedAccessToken = await this.redisService.get(
-      `access_token:${accessToken}`,
+    this.logger.debug(
+      `[Token Generation] Stored session metadata for user: ${userId}`,
     );
-    const storedRefreshToken = await this.redisService.get(`refresh:${userId}`);
-    const storedSession = await this.redisService.get(`session:${userId}`);
-
-    this.logger.debug(`[Token Generation] Redis verification:`, {
-      accessTokenExists: !!storedAccessToken,
-      refreshTokenExists: !!storedRefreshToken,
-      sessionExists: !!storedSession,
-    });
-
     return {
       accessToken,
       refreshToken,
@@ -102,44 +99,37 @@ export class TokenService {
     };
   }
 
-  // Access Token 생성
-  private generateAccessToken(userId: string, userRole: UserRole): string {
+  // Access Token 생성 (jti 포함)
+  private generateAccessToken(
+    userId: string,
+    userRole: UserRole,
+    tokenId: string,
+  ): string {
     this.logger.debug(`Generating access token for user: ${userId}`);
     const accessTokenSecret = this.configService.getOrThrow(
       'jwt.accessTokenSecret',
-      {
-        infer: true,
-      },
+      { infer: true },
     );
-
     const accessTokenExpiresIn = this.configService.getOrThrow(
       'jwt.accessTokenTtl',
-      {
-        infer: true,
-      },
+      { infer: true },
     );
-
-    this.logger.debug(`Access token configuration:`, {
-      expiresIn: accessTokenExpiresIn,
-      hasSecret: !!accessTokenSecret,
-    });
-
     const token = this.jwtService.sign(
       {
         sub: userId,
         role: userRole,
         type: 'access',
+        jti: tokenId,
       },
       {
         secret: accessTokenSecret,
         expiresIn: accessTokenExpiresIn,
       },
     );
-
     return token;
   }
 
-  // Refresh Token 생성 및 Redis 저장
+  // Refresh Token 생성 및 Redis 저장 (tokenId 기반)
   private async generateAndStoreRefreshToken(
     userId: string,
     tokenId: string,
@@ -149,67 +139,56 @@ export class TokenService {
     );
     const refreshTokenSecret = this.configService.getOrThrow(
       'jwt.refreshTokenSecret',
-      {
-        infer: true,
-      },
+      { infer: true },
     );
-
     const refreshTokenExpiresIn = this.configService.getOrThrow(
       'jwt.refreshTokenTtl',
-      {
-        infer: true,
-      },
+      { infer: true },
     );
-
     this.logger.debug(`Refresh token configuration:`, {
       expiresIn: refreshTokenExpiresIn,
       hasSecret: !!refreshTokenSecret,
     });
-
     const refreshToken = this.jwtService.sign(
       {
         sub: userId,
         type: 'refresh',
         tokenId,
+        jti: tokenId,
       },
       {
         secret: refreshTokenSecret,
         expiresIn: refreshTokenExpiresIn,
       },
     );
-
     const ttlSeconds = parseTimeToSeconds(refreshTokenExpiresIn);
-    const redisKey = `refresh:${userId}`;
+    const redisKey = `refresh:${userId}:${tokenId}`;
     this.logger.debug(`Storing refresh token in Redis:`, {
       key: redisKey,
       ttlSeconds,
     });
-
     await this.redisService.set(redisKey, tokenId, ttlSeconds);
     this.logger.debug(`Successfully stored refresh token in Redis`);
-
     return refreshToken;
   }
 
-  // Refresh Token 유효성 검사
+  // Refresh Token 유효성 검사 (tokenId 기반)
   async validateRefreshToken(
     userId: string,
     tokenId: string,
     metadata: TokenMetadata,
   ): Promise<boolean> {
-    const redisKey = `refresh:${userId}`;
+    const redisKey = `refresh:${userId}:${tokenId}`;
     const storedTokenId = await this.redisService.get(redisKey);
     if (storedTokenId !== tokenId) {
       return false;
     }
-
     // 세션 메타데이터 검증
-    const sessionKey = `session:${userId}`;
+    const sessionKey = `session:${userId}:${tokenId}`;
     const storedMetadata = await this.redisService.get(sessionKey);
     if (!storedMetadata) {
       return false;
     }
-
     const parsedMetadata = JSON.parse(storedMetadata) as TokenMetadata;
     if (
       parsedMetadata.ip !== metadata.ip ||
@@ -220,19 +199,16 @@ export class TokenService {
       );
       return false;
     }
-
     return true;
   }
 
-  // Refresh Token 삭제
-  async deleteRefreshToken(userId: string): Promise<void> {
-    await this.redisService.delMultiple(
-      `refresh:${userId}`,
-      `session:${userId}`,
-    );
+  // Refresh Token 삭제 (tokenId 기반)
+  async deleteRefreshToken(userId: string, tokenId: string): Promise<void> {
+    await this.redisService.del(`refresh:${userId}:${tokenId}`);
+    await this.redisService.del(`session:${userId}:${tokenId}`);
   }
 
-  // Refresh Token으로 새로운 토큰 쌍 발급
+  // Refresh Token으로 새로운 토큰 쌍 발급 (tokenId 기반)
   async rotateTokens(
     userId: string,
     oldTokenId: string,
@@ -252,35 +228,31 @@ export class TokenService {
     if (!isValid) {
       throw new UnauthorizedException('유효하지 않은 refresh token입니다');
     }
-
     // 기존 refresh token 삭제
-    await this.deleteRefreshToken(userId);
-
+    await this.deleteRefreshToken(userId, oldTokenId);
     // 새로운 토큰 쌍 발급
     return this.generateTokens(userId, userRole, metadata);
   }
 
-  // 토큰 유효성 검사
-  async isAccessTokenValid(token: string): Promise<boolean> {
-    const value = await this.redisService.get(`access_token:${token}`);
-    return value !== null;
+  // 토큰 유효성 검사 (tokenId 기반)
+  async isAccessTokenValid(tokenId: string, userId: string): Promise<boolean> {
+    const value = await this.redisService.get(`access_token:${tokenId}`);
+    return value === userId;
   }
 
-  // 토큰 저장
-  async saveAccessToken(token: string, userId: string): Promise<void> {
+  // 토큰 저장 (tokenId 기반)
+  async saveAccessToken(tokenId: string, userId: string): Promise<void> {
     const accessTokenExpiresIn = this.configService.getOrThrow(
       'jwt.accessTokenTtl',
-      {
-        infer: true,
-      },
+      { infer: true },
     );
     const ttlSeconds = parseTimeToSeconds(accessTokenExpiresIn);
-    await this.redisService.set(`access_token:${token}`, userId, ttlSeconds);
+    await this.redisService.set(`access_token:${tokenId}`, userId, ttlSeconds);
   }
 
-  // 토큰 삭제
-  async deleteAccessToken(token: string): Promise<void> {
-    await this.redisService.del(`access_token:${token}`);
+  // 토큰 삭제 (tokenId 기반)
+  async deleteAccessToken(tokenId: string): Promise<void> {
+    await this.redisService.del(`access_token:${tokenId}`);
   }
 
   // 쿠키 옵션 생성
