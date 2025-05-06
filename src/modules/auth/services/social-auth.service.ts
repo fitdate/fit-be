@@ -115,6 +115,15 @@ export class SocialAuthService {
     return this.handleSocialCallback(user, AuthProvider.KAKAO, req, res);
   }
 
+  // 네이버 콜백
+  async handleNaverCallback(
+    user: { email: string; name?: string },
+    req: Request,
+    res: Response,
+  ): Promise<string> {
+    return this.handleSocialCallback(user, AuthProvider.NAVER, req, res);
+  }
+
   // 소셜 콜백
   async handleSocialCallback(
     user: { email: string; name?: string },
