@@ -14,7 +14,7 @@ import { UserService } from '../user/user.service';
 
 @WebSocketGateway({
   cors: {
-    origin: 'https://www.fit-date.co.kr',
+    origin: '*',
   },
   path: '/socket.io/',
   transports: ['websocket'],
@@ -32,10 +32,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     this.logger.log(`✅ 클라이언트 연결됨: ${client.id}`);
+    console.log('연결된 클라이언트:', client.id);
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`❌ 클라이언트 연결 종료: ${client.id}`);
+    console.log('연결 종료된 클라이언트:', client.id);
   }
 
   // 사용자 로그인을 처리하고 시스템 메시지를 전송
