@@ -476,15 +476,24 @@ export class AuthService {
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
 
       const userId = req.user?.sub;
+      const tokenId = req.user?.tokenId || '';
       if (userId) {
-        await this.tokenService.deleteRefreshToken(userId);
+        // refresh/session 삭제
+        await this.tokenService.deleteRefreshToken(userId, tokenId);
+        // accessToken Redis 키도 삭제
+        if (tokenId) {
+          await this.tokenService.deleteAccessToken(tokenId);
+        }
+        this.logger.log(
+          `로그아웃: userId=${userId}, tokenId=${tokenId}의 모든 토큰 삭제 완료`,
+        );
       }
 
       return {
         message: '로그아웃 성공',
       };
     } catch (error) {
-      this.logger.error('Logout failed', error);
+      this.logger.error('로그아웃 실패', error);
       throw new UnauthorizedException('로그아웃에 실패했습니다.');
     }
   }

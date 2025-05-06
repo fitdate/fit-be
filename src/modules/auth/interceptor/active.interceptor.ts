@@ -69,13 +69,25 @@ export class ActiveInterceptor implements NestInterceptor {
       role: user.role,
     });
 
-    // Redis에서 토큰 유효성 검증
-    const isValid = await this.redisService.isAccessTokenValid(user.token);
+    if (!user.tokenId) {
+      this.logger.warn(
+        `[Token Validation] tokenId가 없습니다: user ${user.sub}`,
+      );
+      throw new UnauthorizedException(
+        '세션이 만료되었습니다. 다시 로그인해주세요.',
+      );
+    }
+
+    // Redis에서 토큰 유효성 검증 (tokenId 기반)
+    const isValid = await this.tokenService.isAccessTokenValid(
+      user.tokenId,
+      user.sub,
+    );
     this.logger.debug('[Token Validation] Redis validation result:', {
       isValid,
       userId: user.sub,
-      token: user.token,
-      redisKey: `access_token:${user.token}`,
+      tokenId: user.tokenId,
+      redisKey: `access_token:${user.tokenId}`,
     });
 
     if (!isValid) {
@@ -86,7 +98,7 @@ export class ActiveInterceptor implements NestInterceptor {
       const refreshToken = request.cookies?.refreshToken;
       if (!refreshToken || !user.tokenId) {
         this.logger.warn(
-          `[Token Validation] No refresh token found for user ${user.sub}`,
+          `[Token Validation] No refresh token or tokenId found for user ${user.sub}`,
         );
         throw new UnauthorizedException(
           '세션이 만료되었습니다. 다시 로그인해주세요.',
