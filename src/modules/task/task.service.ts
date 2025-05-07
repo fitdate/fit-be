@@ -14,7 +14,9 @@ export class TaskService {
   constructor(private readonly sseService: SseService) {}
 
   // 매일 오전 10시에 실행
-  @Cron(DAILY_COFFEE_CHAT_AM_10)
+  // @Cron(DAILY_COFFEE_CHAT_AM_10)
+  // 테스트 5분 간격
+  @Cron('*/5 * * * *')
   handleDailyTask() {
     this.logger.log('매일 오전 10시 커피챗 알림 보내기');
     // 사용자들에게 커피챗 알림 보내기
