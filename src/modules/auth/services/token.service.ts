@@ -278,6 +278,7 @@ export class TokenService {
     const allowedDomains = [
       'localhost',
       'api.fit-date.co.kr',
+      'www.fit-date.co.kr',
       this.configService.get('app.host', { infer: true }) || undefined,
     ].filter(Boolean);
 
