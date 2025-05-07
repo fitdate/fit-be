@@ -90,6 +90,7 @@ import { SseModule } from './modules/sse/sse.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     SseModule,
     AuthModule,
     ProfileModule,
@@ -118,7 +119,6 @@ import { SseModule } from './modules/sse/sse.module';
     SparkListModule,
     FestivalModule,
     TaskModule,
-    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
