@@ -9,7 +9,8 @@ import { DataSource } from 'typeorm';
 import { AcceptedCoffeeChat } from './entities/accepted-coffee-chat.entity';
 import { ChatService } from '../chat/chat.service';
 import { NotificationService } from 'src/modules/notification/notification.service';
-
+import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
+import { NotificationType } from 'src/common/enum/notification.enum';
 @Injectable()
 export class CoffeeChatService {
   private readonly logger = new Logger(CoffeeChatService.name);
@@ -27,7 +28,7 @@ export class CoffeeChatService {
 
   async sendCoffeeChat(
     userId: string,
-    sendCoffeeChatDto: SendCoffeeChatDto,
+    notificationDto: CreateNotificationDto,
   ): Promise<{
     savedCoffeeChat: {
       id: string;
@@ -37,28 +38,28 @@ export class CoffeeChatService {
     };
   }> {
     this.logger.log(
-      `Starting coffee chat request - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
+      `Starting coffee chat request - Sender: ${userId}, Receiver: ${notificationDto.receiverId}`,
     );
 
     // 중복 요청 방지
     const existingChat = await this.coffeeChatRepository.findOne({
       where: {
         sender: { id: userId },
-        receiver: { id: sendCoffeeChatDto.receiverId },
+        receiver: { id: notificationDto.receiverId },
         status: CoffeeChatStatus.PENDING,
       },
     });
 
     if (existingChat) {
       this.logger.warn(
-        `Duplicate coffee chat request detected - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
+        `Duplicate coffee chat request detected - Sender: ${userId}, Receiver: ${notificationDto.receiverId}`,
       );
       throw new BadRequestException('이미 요청된 커피챗이 존재합니다.');
     }
 
-    if (userId === sendCoffeeChatDto.receiverId) {
+    if (userId === notificationDto.receiverId) {
       this.logger.warn(
-        `Self coffee chat request detected - Sender: ${userId}, Receiver: ${sendCoffeeChatDto.receiverId}`,
+        `Self coffee chat request detected - Sender: ${userId}, Receiver: ${notificationDto.receiverId}`,
       );
       throw new BadRequestException('자기 자신에게 커피챗을 보낼 수 없습니다.');
     }
@@ -66,7 +67,7 @@ export class CoffeeChatService {
     return this.dataSource.transaction(async (manager) => {
       const sender = await this.userService.getCoffeeChatUserById(userId);
       const receiver = await this.userService.getCoffeeChatUserById(
-        sendCoffeeChatDto.receiverId,
+        notificationDto.receiverId,
       );
 
       this.logger.log(
@@ -95,6 +96,14 @@ export class CoffeeChatService {
         `Coffee chat request saved - ID: ${savedCoffeeChat.id}, Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
       );
 
+      const notification = this.notificationService.create({
+        receiverId: receiver.id,
+        title: notificationDto.title,
+        content: notificationDto.content,
+        type: notificationDto.type,
+        data: notificationDto.data,
+      });
+
       return {
         savedCoffeeChat: {
           id: savedCoffeeChat.id,
@@ -102,8 +111,41 @@ export class CoffeeChatService {
           receiver: receiver.id,
           status: savedCoffeeChat.status,
         },
+        notification,
       };
     });
+  }
+
+  async acceptCoffeeChat(
+    userId: string,
+    coffeeChatId: string,
+  ): Promise<{
+    savedCoffeeChat: {
+      id: string;
+      sender: string;
+      receiver: string;
+      status: CoffeeChatStatus;
+    };
+  }> {
+    const coffeeChat = await this.coffeeChatRepository.findOne({
+      where: { id: coffeeChatId, receiver: { id: userId } },
+    });
+
+    if (!coffeeChat) {
+      throw new BadRequestException('커피챗 요청이 존재하지 않습니다.');
+    }
+
+    coffeeChat.status = CoffeeChatStatus.ACCEPTED;
+    await this.coffeeChatRepository.save(coffeeChat);
+    // 커피챗 수락 후에 커피챗에서 데이터 삭제, 채팅방 생성
+    return {
+      savedCoffeeChat: {
+        id: coffeeChat.id,
+        sender: coffeeChat.sender.id,
+        receiver: coffeeChat.receiver.id,
+        status: coffeeChat.status,
+      },
+    };
   }
 
   async getReceivedCoffeeChatList(userId: string) {
