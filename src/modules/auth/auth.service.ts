@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { AllConfig } from 'src/common/config/config.types';
@@ -363,42 +357,40 @@ export class AuthService {
     newPassword: string,
     confirmPassword: string,
   ) {
-    // 비밀번호 유효성 검사
-    if (!newPassword || !confirmPassword) {
-      throw new BadRequestException('새 비밀번호를 입력해주세요.');
-    }
-
-    if (newPassword.length < 8 || newPassword.length > 16) {
-      throw new BadRequestException(
-        '비밀번호는 8자 이상 16자 이하이어야 합니다.',
-      );
-    }
-
-    if (newPassword !== confirmPassword) {
-      throw new BadRequestException('새 비밀번호가 일치하지 않습니다.');
-    }
-
-    const user = await this.userService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-
-    const isPasswordValid = await this.hashService.compare(
+    const isPasswordValid = await this.userService.checkUserPassword(
+      userId,
       oldPassword,
-      user.password,
     );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('기존 비밀번호가 일치하지 않습니다.');
     }
 
-    const hashedPassword = await this.hashService.hash(newPassword);
-    if (hashedPassword === user.password) {
-      throw new BadRequestException('기존 비밀번호와 동일합니다.');
+    if (newPassword !== confirmPassword) {
+      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
 
-    await this.userService.updateUserPassword(user.email, hashedPassword);
-    return { message: '비밀번호가 성공적으로 변경되었습니다.' };
+    if (!newPassword || !confirmPassword) {
+      throw new UnauthorizedException('새 비밀번호를 입력해주세요.');
+    }
+
+    if (newPassword.length < 8) {
+      throw new UnauthorizedException('비밀번호는 8자 이상이어야 합니다.');
+    }
+
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+    }
+
+    const email = user.email;
+
+    const hashedPassword = await this.hashService.hash(newPassword);
+    if (hashedPassword === user.password) {
+      throw new UnauthorizedException('기존 비밀번호와 동일합니다.');
+    }
+    await this.userService.updateUserPassword(email, hashedPassword);
+    return { message: '비밀번호 변경 성공' };
   }
 
   // 이메일 로그인 유효성 검사
@@ -426,6 +418,17 @@ export class AuthService {
     return user;
   }
 
+  // async login(
+  //   loginDto: EmailLoginDto,
+  //   origin?: string,
+  // ): Promise<JwtTokenResponse> {
+  //   this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
+  //   const { email, password } = loginDto;
+  //   const user = await this.validate(email, password);
+
+  //   return this.tokenService.generateAndSetTokens(user.id, user.role, origin);
+  // }
+
   //이메일 로그인
   async handleEmailLogin(
     loginDto: EmailLoginDto,
@@ -435,10 +438,12 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
 
+    // ip, userAgent 추출
     const metadata: TokenMetadata = {
-      ip: req.ip || req.socket.remoteAddress || 'unknown',
+      ip: req.ip || req.socket?.remoteAddress || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown',
     };
+    this.logger.log(`TokenMetadata 생성: ${JSON.stringify(metadata)}`);
 
     const tokens = await this.tokenService.generateAndSetTokens(
       user.id,
@@ -450,7 +455,7 @@ export class AuthService {
     res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
     res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
 
-    this.logger.debug(`Cookies set successfully`);
+    this.logger.debug(`쿠키가 성공적으로 설정되었습니다.`);
 
     const userData = await this.userService.findOne(user.id);
     if (!userData) {
@@ -476,24 +481,16 @@ export class AuthService {
       res.cookie('refreshToken', '', cookieOptions.refreshOptions);
 
       const userId = req.user?.sub;
-      const tokenId = req.user?.tokenId || '';
-      if (userId) {
-        // refresh/session 삭제
+      const tokenId = (req.user as { tokenId?: string })?.tokenId;
+      if (userId && tokenId) {
         await this.tokenService.deleteRefreshToken(userId, tokenId);
-        // accessToken Redis 키도 삭제
-        if (tokenId) {
-          await this.tokenService.deleteAccessToken(tokenId);
-        }
-        this.logger.log(
-          `로그아웃: userId=${userId}, tokenId=${tokenId}의 모든 토큰 삭제 완료`,
-        );
       }
 
       return {
         message: '로그아웃 성공',
       };
     } catch (error) {
-      this.logger.error('로그아웃 실패', error);
+      this.logger.error('Logout failed', error);
       throw new UnauthorizedException('로그아웃에 실패했습니다.');
     }
   }
@@ -632,17 +629,17 @@ export class AuthService {
   }
 
   // 활동 상태 확인 및 갱신
-  async checkAndRefreshActivity(userId: string): Promise<boolean> {
+  async checkAndRefreshActivity(
+    userId: string,
+    tokenId: string,
+    userRole: UserRole,
+    metadata: TokenMetadata,
+  ): Promise<boolean> {
     try {
-      const metadata: TokenMetadata = {
-        ip: 'unknown',
-        userAgent: 'unknown',
-      };
-
       // 토큰 유효성 검사
       const isValid = await this.tokenService.validateRefreshToken(
         userId,
-        userId,
+        tokenId,
         metadata,
       );
       if (!isValid) {
@@ -650,12 +647,7 @@ export class AuthService {
       }
 
       // 토큰 갱신
-      await this.tokenService.rotateTokens(
-        userId,
-        userId,
-        UserRole.USER,
-        metadata,
-      );
+      await this.tokenService.rotateTokens(userId, tokenId, userRole, metadata);
       return true;
     } catch (error) {
       this.logger.error(`Activity check failed for user ${userId}:`, error);

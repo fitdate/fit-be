@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
@@ -8,11 +13,7 @@ import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { v4 as uuidv4 } from 'uuid';
 import { CookieOptions } from 'express';
 import { JwtTokenResponse } from '../types/auth.types';
-
-interface TokenMetadata {
-  ip: string;
-  userAgent: string;
-}
+import { TokenMetadata } from '../types/token-payload.types';
 
 @Injectable()
 export class TokenService {
@@ -26,19 +27,24 @@ export class TokenService {
 
   // 모든 세션 무효화 (userId의 모든 tokenId 세션 삭제)
   async invalidateAllSessions(userId: string): Promise<void> {
-    // 모든 refresh, session, access_token 키 삭제
-    const refreshKeys = await this.redisService.keys(`refresh:${userId}:*`);
-    const sessionKeys = await this.redisService.keys(`session:${userId}:*`);
-    const accessTokenKeys = await this.redisService.keys(`access_token:*`);
-    for (const key of [...refreshKeys, ...sessionKeys]) {
-      await this.redisService.del(key);
-    }
-    // access_token은 값이 userId와 일치하는 것만 삭제
-    for (const key of accessTokenKeys) {
-      const value = await this.redisService.get(key);
-      if (value === userId) {
+    try {
+      const refreshKeys = await this.redisService.keys(`refresh:${userId}:*`);
+      const sessionKeys = await this.redisService.keys(`session:${userId}:*`);
+      const accessTokenKeys = await this.redisService.keys(`access_token:*`);
+      for (const key of [...refreshKeys, ...sessionKeys]) {
         await this.redisService.del(key);
       }
+      for (const key of accessTokenKeys) {
+        const value = await this.redisService.get(key);
+        if (value === userId) {
+          await this.redisService.del(key);
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Redis 연결 실패: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException('Redis 연결에 실패했습니다.');
     }
   }
 
