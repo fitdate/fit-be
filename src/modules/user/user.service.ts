@@ -620,58 +620,76 @@ export class UserService {
   async updateUserProfileImages(userId: string, imageUrls: string[]) {
     this.logger.log(`프로필 이미지 업데이트 시작 - userId: ${userId}`);
 
-    // 1. userId로 profileId 및 기존 이미지 조회
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['profile', 'profile.profileImage'],
-    });
-    if (!user || !user.profile?.id) {
-      throw new NotFoundException('프로필을 찾을 수 없습니다.');
-    }
-    const profileId = user.profile.id;
-    const existingImages = user.profile.profileImage || [];
-
-    // 2. 기존 이미지와 새 이미지 비교
-    const existingUrls = existingImages.map((img) => img.imageUrl);
-    const toAdd = imageUrls.filter((url) => !existingUrls.includes(url));
-    const toRemove = existingImages.filter(
-      (img) => !imageUrls.includes(img.imageUrl),
-    );
-
-    // 3. 삭제할 이미지 S3/DB에서 삭제
-    for (const img of toRemove) {
-      await this.profileImageService.deleteProfileImage(img.id);
-    }
-
-    // 4. 새로 추가된 이미지는 S3 이동 및 DB 저장
-    const log = (msg: string) => this.logger.log(msg);
-    const newImageEntities =
-      await this.profileImageService.processImagesInChunks(
-        toAdd,
-        profileId,
-        log,
-      );
-    // DB에 저장
-    if (newImageEntities.length > 0) {
-      await this.profileImageService['profileImageRepository'].save(
-        newImageEntities,
-      );
-    }
-
-    // 5. 순서/메인 이미지(isMain) 반영
-    // (예: 첫 번째 이미지를 메인으로)
-    if (imageUrls.length > 0) {
-      const mainImage = await this.profileImageService[
-        'profileImageRepository'
-      ].findOne({
-        where: { profile: { id: profileId }, imageUrl: imageUrls[0] },
+    // 트랜잭션 시작
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      // 1. userId로 profileId 및 기존 이미지 조회
+      const user = await qr.manager.findOne(User, {
+        where: { id: userId },
+        relations: ['profile', 'profile.profileImage'],
       });
-      if (mainImage) {
-        await this.profileImageService.setMainImage(profileId, mainImage.id);
+      if (!user || !user.profile?.id) {
+        throw new NotFoundException('프로필을 찾을 수 없습니다.');
       }
-    }
+      const profileId = user.profile.id;
+      const existingImages = user.profile.profileImage || [];
 
-    this.logger.log(`프로필 이미지 업데이트 완료 - userId: ${userId}`);
-    return { success: true };
+      // 2. 기존 이미지와 새 이미지 비교 (key 기준)
+      const existingKeys = existingImages.map((img) => img.key);
+      // 새로 추가된 이미지: temp url만 있는 경우(즉, 기존 key에 없는 경우)
+      const toAdd = imageUrls.filter((url) => {
+        // temp url은 key가 없음, 기존 key와 매칭 안됨
+        return !existingImages.some(
+          (img) => img.imageUrl === url || img.key === url,
+        );
+      });
+      // 삭제할 이미지: 기존에 있는데 새 배열에 없는 경우
+      const toRemove = existingImages.filter(
+        (img) =>
+          !imageUrls.includes(img.imageUrl) && !imageUrls.includes(img.key),
+      );
+
+      // 3. 삭제
+      for (const img of toRemove) {
+        await this.profileImageService.deleteProfileImage(img.id);
+      }
+
+      // 4. 추가 (S3 이동 및 DB 저장)
+      const log = (msg: string) => this.logger.log(msg);
+      const newImageEntities =
+        await this.profileImageService.processImagesInChunks(
+          toAdd,
+          profileId,
+          log,
+        );
+      if (newImageEntities.length > 0) {
+        await qr.manager.save(newImageEntities);
+      }
+
+      // 5. 메인 이미지 처리
+      if (imageUrls.length > 0) {
+        // imageUrls[0]에 해당하는 imageUrl 또는 key를 가진 이미지를 메인으로
+        const mainImage = await qr.manager.findOne('ProfileImage', {
+          where: [
+            { profile: { id: profileId }, imageUrl: imageUrls[0] },
+            { profile: { id: profileId }, key: imageUrls[0] },
+          ],
+        });
+        if (mainImage) {
+          await this.profileImageService.setMainImage(profileId, mainImage.id);
+        }
+      }
+
+      await qr.commitTransaction();
+      this.logger.log(`프로필 이미지 업데이트 완료 - userId: ${userId}`);
+      return { success: true };
+    } catch (error) {
+      await qr.rollbackTransaction();
+      throw error;
+    } finally {
+      await qr.release();
+    }
   }
 }
