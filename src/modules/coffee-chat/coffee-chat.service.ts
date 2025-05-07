@@ -130,6 +130,7 @@ export class CoffeeChatService {
           id: acceptCoffeeChatDto.coffeeChatId,
           receiver: { id: userId },
         },
+        relations: ['sender', 'receiver'],
       });
 
       if (!coffeeChat) {

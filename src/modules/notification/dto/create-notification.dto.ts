@@ -28,6 +28,9 @@ export class CreateNotificationDto {
   @IsEnum(NotificationType)
   type: NotificationType;
 
+  @ApiProperty({
+    description: '알림 받는 사람의 ID',
+  })
   @IsUUID()
   receiverId: string;
 
