@@ -372,7 +372,12 @@ export class ChatService {
   }
 
   // 채팅 메시지 전송
-  async sendMessage(content: string, userId: string, chatRoomId: string) {
+  async sendMessage(
+    content: string,
+    userId: string,
+    chatRoomId: string,
+    userInfo: { profileImage: string; name: string },
+  ) {
     const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
     if (!hasAccess) {
       throw new Error('채팅방 접근 권한이 없습니다.');
@@ -391,7 +396,9 @@ export class ChatService {
       id: message.id,
       content: message.content,
       userId: user.id,
-      userName: user.name,
+      userName: userInfo?.name || user.name,
+      profileImage:
+        userInfo?.profileImage || user.profile?.profileImage?.[0]?.imageUrl,
       createdAt: message.createdAt,
     };
   }

@@ -35,12 +35,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     this.logger.log(`✅ 클라이언트 연결됨: ${client.id}`);
-    console.log('연결된 클라이언트:', client.id);
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`❌ 클라이언트 연결 종료: ${client.id}`);
-    console.log('연결 종료된 클라이언트:', client.id);
   }
 
   // 사용자 로그인을 처리하고 시스템 메시지를 전송
@@ -98,13 +96,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody()
-    data: { content: string; userId: string; chatRoomId: string },
+    data: {
+      content: string;
+      userId: string;
+      chatRoomId: string;
+      profileImage: string;
+      name: string;
+    },
   ) {
     try {
       const message = await this.chatService.sendMessage(
         data.content,
         data.userId,
         data.chatRoomId,
+        {
+          profileImage: data.profileImage,
+          name: data.name,
+        },
       );
 
       this.server.to(data.chatRoomId).emit('message', message);
