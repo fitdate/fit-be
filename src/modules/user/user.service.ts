@@ -103,6 +103,11 @@ export class UserService {
     });
   }
 
+  async findAllUsers() {
+    const users = await this.userRepository.find();
+    return users.map((user) => user.id);
+  }
+
   // 모든 사용자 정보 조회
   async getAllUserInfo() {
     return this.userRepository.find({
