@@ -4,6 +4,7 @@ import { UserId } from 'src/common/decorator/get-user.decorator';
 import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
+import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 @Controller('coffee-chat')
 export class CoffeeChatController {
   private readonly logger = new Logger(CoffeeChatController.name);
@@ -25,10 +26,13 @@ export class CoffeeChatController {
   @ApiOperation({ summary: '커피챗 수락' })
   @ApiResponse({ status: 200, description: '커피챗 수락 성공' })
   @ApiResponse({ status: 400, description: '커피챗 수락 실패' })
-  @ApiBody({ type: String })
+  @ApiBody({ type: AcceptCoffeeChatDto })
   @Post('accept')
-  acceptCoffeeChat(@UserId() userId: string, @Body() coffeeChatId: string) {
-    return this.coffeeChatService.acceptCoffeeChat(userId, coffeeChatId);
+  acceptCoffeeChat(
+    @UserId() userId: string,
+    @Body() acceptCoffeeChatDto: AcceptCoffeeChatDto,
+  ) {
+    return this.coffeeChatService.acceptCoffeeChat(userId, acceptCoffeeChatDto);
   }
 
   @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })

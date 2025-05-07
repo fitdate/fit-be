@@ -10,6 +10,7 @@ import { ChatService } from '../chat/chat.service';
 import { NotificationService } from 'src/modules/notification/notification.service';
 import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
 import { NotificationType } from 'src/common/enum/notification.enum';
+import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
 
 @Injectable()
 export class CoffeeChatService {
@@ -115,7 +116,7 @@ export class CoffeeChatService {
 
   async acceptCoffeeChat(
     userId: string,
-    coffeeChatId: string,
+    acceptCoffeeChatDto: AcceptCoffeeChatDto,
   ): Promise<{
     senderId: string;
     receiverId: string;
@@ -125,7 +126,10 @@ export class CoffeeChatService {
   }> {
     return await this.dataSource.transaction(async (manager) => {
       const coffeeChat = await manager.findOne(CoffeeChat, {
-        where: { id: coffeeChatId, receiver: { id: userId } },
+        where: {
+          id: acceptCoffeeChatDto.coffeeChatId,
+          receiver: { id: userId },
+        },
       });
 
       if (!coffeeChat) {
