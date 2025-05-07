@@ -46,16 +46,22 @@ export interface SocialConfig {
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
+    callbackUrlDev: string;
+    callbackUrlLocal: string;
   };
   kakao: {
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
+    callbackUrlDev: string;
+    callbackUrlLocal: string;
   };
   naver: {
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
+    callbackUrlDev: string;
+    callbackUrlLocal: string;
   };
   socialFrontendUrl: string;
 }
