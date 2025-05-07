@@ -40,6 +40,7 @@ import { FestivalModule } from './modules/festival/festival.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ActiveInterceptor } from './modules/auth/interceptor/active.interceptor';
 import { TaskModule } from './modules/task/task.module';
+import { SseModule } from './modules/sse/sse.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -89,6 +90,7 @@ import { TaskModule } from './modules/task/task.module';
       }),
       inject: [ConfigService],
     }),
+    SseModule,
     AuthModule,
     ProfileModule,
     MatchModule,
