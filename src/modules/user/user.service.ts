@@ -28,6 +28,7 @@ import { CreateIntroductionDto } from '../profile/introduction/dto/create-introd
 import { CreateInterestCategoryDto } from '../profile/interest-category/dto/create-interest-category.dto';
 import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
+import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -671,7 +672,7 @@ export class UserService {
       // 5. 메인 이미지 처리
       if (imageUrls.length > 0) {
         // imageUrls[0]에 해당하는 imageUrl 또는 key를 가진 이미지를 메인으로
-        const mainImage = await qr.manager.findOne('ProfileImage', {
+        const mainImage = await qr.manager.findOne(ProfileImage, {
           where: [
             { profile: { id: profileId }, imageUrl: imageUrls[0] },
             { profile: { id: profileId }, key: imageUrls[0] },
