@@ -53,7 +53,7 @@ export class TokenService {
     tokenId: string;
   }> {
     this.logger.debug(`[Token Generation] Starting for user: ${userId}`);
-    await this.invalidateAllSessions(userId);
+    await this.invalidateAllSessions(userId); // 멀티 세션 정책으로 주석 처리
     this.logger.debug(
       `[Token Generation] Invalidated existing sessions for user: ${userId}`,
     );
@@ -255,27 +255,36 @@ export class TokenService {
     await this.redisService.del(`access_token:${tokenId}`);
   }
 
+  // 최상위 도메인 추출
+  private getRootDomain(hostname: string): string {
+    const parts = hostname.split('.');
+    if (parts.length >= 2) {
+      return `.${parts.slice(-2).join('.')}`;
+    }
+    return `.${hostname}`;
+  }
+
   // 쿠키 옵션 생성
   createCookieOptions(maxAge: number, origin?: string): CookieOptions {
-    this.logger.debug(
-      `Creating cookie options with maxAge: ${maxAge}, origin: ${origin}`,
-    );
+    this.logger.debug(`쿠키 옵션 생성: maxAge=${maxAge}, origin=${origin}`);
     let domain: string | undefined;
 
-    const configDomain = this.configService.get('app.host', {
-      infer: true,
-    });
-    if (configDomain) {
-      domain = configDomain;
-      this.logger.debug(`Using config domain: ${domain}`);
-    } else if (origin) {
-      const hostname = new URL(origin).hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        domain = 'localhost';
-      } else {
-        domain = hostname;
+    if (origin) {
+      try {
+        const hostname = new URL(origin).hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          domain = 'localhost';
+        } else {
+          domain = this.getRootDomain(hostname);
+        }
+        this.logger.debug(`origin 기반 도메인 사용: ${domain}`);
+      } catch {
+        domain = undefined;
+        this.logger.warn('origin 파싱 실패, 도메인 미설정');
       }
-      this.logger.debug(`Using origin hostname as domain: ${domain}`);
+    } else {
+      domain = this.configService.get('app.host', { infer: true }) || undefined;
+      this.logger.debug(`app.host 기반 도메인 사용: ${domain}`);
     }
 
     const options: CookieOptions = {
@@ -283,11 +292,11 @@ export class TokenService {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge,
-      domain: '.fit-date.co.kr',
+      domain,
       path: '/',
     };
 
-    this.logger.debug(`Created cookie options:`, options);
+    this.logger.debug(`최종 쿠키 옵션:`, options);
     return options;
   }
 

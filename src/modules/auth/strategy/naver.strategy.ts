@@ -31,7 +31,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
       clientSecret: configService.getOrThrow('social.naver.clientSecret', {
         infer: true,
       }),
-      callbackURL: configService.getOrThrow('social.naver.callbackUrl', {
+      callbackURL: configService.getOrThrow('social.naver.callbackUrlDev', {
         infer: true,
       }),
       scope: ['email', 'profile'],

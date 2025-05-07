@@ -38,7 +38,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
       clientSecret: configService.getOrThrow('social.kakao.clientSecret', {
         infer: true,
       }),
-      callbackURL: configService.getOrThrow('social.kakao.callbackUrl', {
+      callbackURL: configService.getOrThrow('social.kakao.callbackUrlDev', {
         infer: true,
       }),
       scope: ['account_email', 'profile_nickname'],

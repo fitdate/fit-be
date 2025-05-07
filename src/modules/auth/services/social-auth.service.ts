@@ -77,8 +77,14 @@ export class SocialAuthService {
     const tokenResponse = {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+      accessOptions: this.tokenService.createCookieOptions(
+        accessTokenMaxAge,
+        origin,
+      ),
+      refreshOptions: this.tokenService.createCookieOptions(
+        refreshTokenMaxAge,
+        origin,
+      ),
     };
 
     const isProfileComplete = user.isProfileComplete || false;
@@ -166,34 +172,5 @@ export class SocialAuthService {
         { cause: error },
       );
     }
-  }
-
-  // 쿠키 옵션 생성
-  private createCookieOptions(maxAge: number, origin?: string) {
-    let domain: string | undefined;
-
-    const configDomain = this.configService.get('app.host', {
-      infer: true,
-    });
-    if (configDomain) {
-      domain = configDomain;
-    } else if (origin) {
-      const hostname = new URL(origin).hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        domain = 'localhost';
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        domain = hostname;
-      }
-    }
-
-    return {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge,
-      domain: '.fit-date.co.kr',
-      path: '/',
-    };
   }
 }

@@ -22,7 +22,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret: configService.getOrThrow('social.google.clientSecret', {
         infer: true,
       }),
-      callbackURL: configService.getOrThrow('social.google.callbackUrl', {
+      callbackURL: configService.getOrThrow('social.google.callbackUrlDev', {
         infer: true,
       }),
       scope: ['email', 'profile'],
