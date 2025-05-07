@@ -14,7 +14,10 @@ import { UserService } from '../user/user.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: 'https://www.fit-date.co.kr',
+    methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   },
   path: '/socket.io/',
   transports: ['websocket'],
