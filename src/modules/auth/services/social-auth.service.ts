@@ -152,7 +152,6 @@ export class SocialAuthService {
       );
 
       res.cookie('accessToken', result.accessToken, result.accessOptions);
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
 
       const frontendUrl =
         this.configService.get('social.socialFrontendUrl', { infer: true }) ||

@@ -275,18 +275,26 @@ export class TokenService {
     this.logger.debug(`쿠키 옵션 생성: maxAge=${maxAge}, origin=${origin}`);
     let domain: string | undefined;
 
+    const allowedDomains = [
+      'localhost',
+      'api.fit-date.co.kr',
+      this.configService.get('app.host', { infer: true }) || undefined,
+    ].filter(Boolean);
+
     if (origin) {
       try {
         const hostname = new URL(origin).hostname;
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          domain = 'localhost';
-        } else {
-          domain = this.getRootDomain(hostname);
+        const isAllowed = allowedDomains.some((d) => hostname === d);
+        if (!isAllowed) {
+          this.logger.warn(`허용되지 않은 origin: ${origin}`);
+          throw new UnauthorizedException('허용되지 않은 origin입니다.');
         }
+        domain = hostname;
         this.logger.debug(`origin 기반 도메인 사용: ${domain}`);
       } catch {
         domain = undefined;
         this.logger.warn('origin 파싱 실패, 도메인 미설정');
+        throw new UnauthorizedException('유효하지 않은 origin입니다.');
       }
     } else {
       domain = this.configService.get('app.host', { infer: true }) || undefined;
@@ -309,12 +317,10 @@ export class TokenService {
   // 로그아웃 쿠키 옵션 생성
   getLogoutCookieOptions(origin?: string): {
     accessOptions: CookieOptions;
-    refreshOptions: CookieOptions;
   } {
     this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
     const options = {
       accessOptions: this.createCookieOptions(0, origin),
-      refreshOptions: this.createCookieOptions(0, origin),
     };
     this.logger.debug(`Created logout cookie options:`, options);
     return options;
@@ -343,23 +349,18 @@ export class TokenService {
 
     const accessTokenTtl =
       this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
     const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
     this.logger.debug('Cookie options:', {
       accessTokenMaxAge,
-      refreshTokenMaxAge,
       origin,
     });
 
     return {
       accessToken,
-      refreshToken,
+      refreshToken: undefined,
       accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
+      refreshOptions: undefined,
     };
   }
 }
