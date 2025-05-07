@@ -4,9 +4,9 @@ import { Pass } from './entities/pass.entity';
 import { PassService } from './pass.service';
 import { PassController } from './pass.controller';
 import { User } from '../user/entities/user.entity';
-
+import { CoffeeChatModule } from '../coffee-chat/coffee-chat.module';
 @Module({
-  imports: [TypeOrmModule.forFeature([Pass, User])],
+  imports: [TypeOrmModule.forFeature([Pass, User]), CoffeeChatModule],
   controllers: [PassController],
   providers: [PassService],
   exports: [PassService],

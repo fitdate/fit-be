@@ -3,12 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pass } from './entities/pass.entity';
 import { PassType } from './entities/pass-type.enum';
-
+import { CoffeeChatService } from '../coffee-chat/coffee-chat.service';
 @Injectable()
 export class PassService {
   constructor(
     @InjectRepository(Pass)
     private readonly passRepository: Repository<Pass>,
+    private readonly coffeeChatService: CoffeeChatService,
   ) {}
 
   // 사용자를 거절하는 공통 메서드
@@ -46,6 +47,7 @@ export class PassService {
     passedUserId: string,
   ): Promise<{ isSuccess: boolean }> {
     await this.createPass(userId, passedUserId, PassType.COFFEE_CHAT);
+    await this.coffeeChatService.removeCoffeeChat(userId, passedUserId);
     return { isSuccess: false };
   }
 

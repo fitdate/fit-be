@@ -157,6 +157,12 @@ export class CoffeeChatService {
     });
   }
 
+  async removeCoffeeChat(userId: string, passedUserId: string) {
+    await this.coffeeChatRepository.delete({
+      sender: { id: userId },
+      receiver: { id: passedUserId },
+    });
+  }
   async getReceivedCoffeeChatList(userId: string) {
     // 수신한 커피챗 요청
     const pendingChats = await this.coffeeChatRepository.find({
