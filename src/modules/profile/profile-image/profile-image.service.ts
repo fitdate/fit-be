@@ -144,6 +144,18 @@ export class ProfileImageService {
     }
   }
 
+  async updateProfileImage(profileId: string, imageId: string) {
+    await this.profileImageRepository.update(
+      { profile: { id: profileId } },
+      { isMain: false },
+    );
+
+    await this.profileImageRepository.update(
+      { id: imageId, profile: { id: profileId } },
+      { isMain: true },
+    );
+  }
+
   //임시 폴더에 이미지 업로드
   async uploadTempImage(file: MulterFile) {
     this.logger.log('임시 이미지 업로드 시작');

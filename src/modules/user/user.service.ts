@@ -19,6 +19,15 @@ import { RedisService } from '../redis/redis.service';
 import { HashService } from '../auth/hash/hash.service';
 import { UpdateDatingPreferenceDto } from '../dating-preference/dto/update-dating-preference.dto';
 import { calculateAge } from 'src/common/util/age-calculator.util';
+import { DataSource } from 'typeorm';
+import { Mbti } from '../profile/mbti/entities/mbti.entity';
+import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
+import { FeedbackService } from '../profile/feedback/common/feedback.service';
+import { IntroductionService } from '../profile/introduction/common/introduction.service';
+import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
+import { CreateInterestCategoryDto } from '../profile/interest-category/dto/create-interest-category.dto';
+import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
+import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -30,6 +39,11 @@ export class UserService {
     private readonly cursorPaginationUtil: CursorPaginationUtil,
     private readonly redisService: RedisService,
     private readonly hashService: HashService,
+    private readonly dataSource: DataSource,
+    private readonly feedbackService: FeedbackService,
+    private readonly introductionService: IntroductionService,
+    private readonly interestCategoryService: InterestCategoryService,
+    private readonly profileImageService: ProfileImageService,
   ) {}
 
   // 사용자 생성
@@ -38,15 +52,128 @@ export class UserService {
   }
 
   // 사용자 업데이트
-  updateUser(id: string, updateUserDto: UpdateUserDto) {
-    const isProfileComplete = this.isProfileDataComplete(updateUserDto);
-
-    const data = {
-      ...updateUserDto,
-      isProfileComplete,
-    };
-
-    return this.userRepository.update({ id }, data);
+  async updateUser(userId: string, updateUserDto: UpdateUserDto) {
+    // 닉네임 중복 체크 (본인 제외)
+    if (updateUserDto.nickname) {
+      const existingNickname = await this.findUserByNickname(
+        updateUserDto.nickname,
+      );
+      if (existingNickname && existingNickname.id !== userId) {
+        throw new BadRequestException('이미 존재하는 닉네임입니다.');
+      }
+    }
+    // 전화번호 중복 체크 (본인 제외)
+    if (updateUserDto.phone) {
+      const existingPhone = await this.findUserByPhone(updateUserDto.phone);
+      if (existingPhone && existingPhone.id !== userId) {
+        throw new BadRequestException('이미 존재하는 전화번호입니다.');
+      }
+    }
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      // 1. User와 Profile 연관관계 확인
+      const user = await qr.manager.findOne(User, {
+        where: { id: userId },
+        relations: ['profile'],
+      });
+      if (!user || !user.profile?.id) {
+        throw new NotFoundException('프로필을 찾을 수 없습니다.');
+      }
+      const profileId = user.profile.id;
+      // 2. User 업데이트
+      await qr.manager.update(
+        User,
+        { id: userId },
+        {
+          nickname: updateUserDto.nickname,
+          name: updateUserDto.name,
+          birthday: updateUserDto.birthday,
+          gender: updateUserDto.gender,
+          phone: updateUserDto.phone,
+          region: updateUserDto.region,
+          job: updateUserDto.job,
+        },
+      );
+      // profileImage 업데이트
+      if (updateUserDto.images?.length) {
+        await this.updateUserProfileImages(userId, updateUserDto.images);
+      }
+      // 4. MBTI 저장
+      if (updateUserDto.mbti?.[0]) {
+        await qr.manager.save(Mbti, {
+          mbti: updateUserDto.mbti[0],
+          profile: { id: profileId },
+        });
+      }
+      // 5. 피드백 저장
+      if (updateUserDto.selfintro?.length) {
+        await Promise.all(
+          updateUserDto.selfintro.map(async (feedbackName) => {
+            const existingFeedback =
+              await this.feedbackService.searchFeedbacks(feedbackName);
+            if (
+              Array.isArray(existingFeedback) &&
+              existingFeedback.length > 0
+            ) {
+              return existingFeedback[0];
+            }
+            const createDto: CreateFeedbackDto = { name: feedbackName };
+            return this.feedbackService.createFeedbackCategory(createDto);
+          }),
+        );
+      }
+      // 6. 자기소개 저장
+      if (updateUserDto.listening?.length) {
+        await Promise.all(
+          updateUserDto.listening.map(async (introductionName) => {
+            const existingIntroduction =
+              await this.introductionService.searchIntroductions(
+                introductionName,
+              );
+            if (
+              Array.isArray(existingIntroduction) &&
+              existingIntroduction.length > 0
+            ) {
+              return existingIntroduction[0];
+            }
+            const createDto: CreateIntroductionDto = { name: introductionName };
+            return this.introductionService.createIntroduction(createDto);
+          }),
+        );
+      }
+      // 7. 관심사 저장
+      if (updateUserDto.interests?.length) {
+        await Promise.all(
+          updateUserDto.interests.map(async (interestName) => {
+            const existingCategories =
+              await this.interestCategoryService.searchInterestCategories(
+                interestName,
+              );
+            if (
+              Array.isArray(existingCategories) &&
+              existingCategories.length > 0
+            ) {
+              return existingCategories[0];
+            }
+            const createDto: CreateInterestCategoryDto = { name: interestName };
+            return this.interestCategoryService.createInterestCategory(
+              createDto,
+            );
+          }),
+        );
+      }
+      const isProfileComplete = this.isProfileDataComplete(updateUserDto);
+      await qr.manager.update(User, { id: userId }, { isProfileComplete });
+      await qr.commitTransaction();
+      return { success: true };
+    } catch (error) {
+      await qr.rollbackTransaction();
+      throw error;
+    } finally {
+      await qr.release();
+    }
   }
 
   // 사용자 비밀번호 업데이트
@@ -95,6 +222,7 @@ export class UserService {
       'birthday',
       'phone',
       'region',
+      'job',
     ];
 
     return requiredFields.every((field) => {
@@ -462,5 +590,88 @@ export class UserService {
     const [users, totalCount] = await qb.getManyAndCount();
 
     return { users, nextCursor, totalCount };
+  }
+
+  // 프로필 이미지 메인 설정
+  async updateUserProfileImage(userId: string, imageId: string) {
+    this.logger.log(
+      `프로필 이미지 메인 설정 시작 - userId: ${userId}, imageId: ${imageId}`,
+    );
+    // 1. userId로 profileId 조회
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+    if (!user || !user.profile?.id) {
+      throw new NotFoundException('프로필을 찾을 수 없습니다.');
+    }
+    const profileId = user.profile.id;
+    // 2. ProfileImageService로 메인 이미지 설정
+    const updatedImage = await this.profileImageService.setMainImage(
+      profileId,
+      imageId,
+    );
+    this.logger.log(
+      `프로필 이미지 메인 설정 완료 - profileId: ${profileId}, imageId: ${imageId}`,
+    );
+    return updatedImage;
+  }
+
+  async updateUserProfileImages(userId: string, imageUrls: string[]) {
+    this.logger.log(`프로필 이미지 업데이트 시작 - userId: ${userId}`);
+
+    // 1. userId로 profileId 및 기존 이미지 조회
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['profile', 'profile.profileImage'],
+    });
+    if (!user || !user.profile?.id) {
+      throw new NotFoundException('프로필을 찾을 수 없습니다.');
+    }
+    const profileId = user.profile.id;
+    const existingImages = user.profile.profileImage || [];
+
+    // 2. 기존 이미지와 새 이미지 비교
+    const existingUrls = existingImages.map((img) => img.imageUrl);
+    const toAdd = imageUrls.filter((url) => !existingUrls.includes(url));
+    const toRemove = existingImages.filter(
+      (img) => !imageUrls.includes(img.imageUrl),
+    );
+
+    // 3. 삭제할 이미지 S3/DB에서 삭제
+    for (const img of toRemove) {
+      await this.profileImageService.deleteProfileImage(img.id);
+    }
+
+    // 4. 새로 추가된 이미지는 S3 이동 및 DB 저장
+    const log = (msg: string) => this.logger.log(msg);
+    const newImageEntities =
+      await this.profileImageService.processImagesInChunks(
+        toAdd,
+        profileId,
+        log,
+      );
+    // DB에 저장
+    if (newImageEntities.length > 0) {
+      await this.profileImageService['profileImageRepository'].save(
+        newImageEntities,
+      );
+    }
+
+    // 5. 순서/메인 이미지(isMain) 반영
+    // (예: 첫 번째 이미지를 메인으로)
+    if (imageUrls.length > 0) {
+      const mainImage = await this.profileImageService[
+        'profileImageRepository'
+      ].findOne({
+        where: { profile: { id: profileId }, imageUrl: imageUrls[0] },
+      });
+      if (mainImage) {
+        await this.profileImageService.setMainImage(profileId, mainImage.id);
+      }
+    }
+
+    this.logger.log(`프로필 이미지 업데이트 완료 - userId: ${userId}`);
+    return { success: true };
   }
 }
