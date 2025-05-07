@@ -53,7 +53,7 @@ export class TokenService {
     tokenId: string;
   }> {
     this.logger.debug(`[Token Generation] Starting for user: ${userId}`);
-    // await this.invalidateAllSessions(userId); // 멀티 세션 정책으로 주석 처리
+    await this.invalidateAllSessions(userId); // 멀티 세션 정책으로 주석 처리
     this.logger.debug(
       `[Token Generation] Invalidated existing sessions for user: ${userId}`,
     );

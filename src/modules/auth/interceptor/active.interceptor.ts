@@ -161,8 +161,16 @@ export class ActiveInterceptor implements NestInterceptor {
         );
       } catch (error) {
         this.logger.error('[Token Validation] Token rotation failed:', error);
+        response.clearCookie('accessToken', {
+          path: '/',
+          domain: '.fit-date.co.kr',
+        });
+        response.clearCookie('refreshToken', {
+          path: '/',
+          domain: '.fit-date.co.kr',
+        });
         throw new UnauthorizedException(
-          '세션이 만료되었습니다. 다시 로그인해주세요.',
+          '다른 기기에서 로그인되어 자동 로그아웃되었습니다. 다시 로그인해주세요.',
         );
       }
     }
