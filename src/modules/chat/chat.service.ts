@@ -373,21 +373,18 @@ export class ChatService {
   }
 
   // 채팅 메시지 전송
-  async sendMessage(
-    content: string,
-    userId: string,
-    chatRoomId: string,
-    userInfo: { profileImage: string; name: string },
-  ) {
+  async sendMessage(content: string, userId: string, chatRoomId: string) {
     const hasAccess = await this.validateChatRoomAccess(userId, chatRoomId);
     if (!hasAccess) {
       throw new Error('채팅방 접근 권한이 없습니다.');
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ['profile', 'profile.profileImage'],
-    });
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
+      .where('user.id = :userId', { userId })
+      .getOne();
 
     if (!user) {
       throw new Error('사용자를 찾을 수 없습니다.');
@@ -402,9 +399,40 @@ export class ChatService {
       id: message.id,
       content: message.content,
       userId: user.id,
-      userName: userInfo.name,
-      profileImage: userInfo.profileImage || profileImage,
+      userName: user.name,
+      profileImage,
       createdAt: message.createdAt,
+    };
+  }
+
+  // 채팅방 상대방 정보 조회
+  async getChatRoomWithPartner(chatRoomId: string, userId: string) {
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .innerJoinAndSelect('chatRoom.users', 'users')
+      .leftJoinAndSelect('users.profile', 'profile')
+      .leftJoinAndSelect('profile.profileImage', 'profileImage')
+      .where('chatRoom.id = :chatRoomId', { chatRoomId })
+      .getOne();
+
+    if (!chatRoom) {
+      throw new Error('채팅방을 찾을 수 없습니다.');
+    }
+
+    const partner = chatRoom.users.find((user) => user.id !== userId);
+    if (!partner) {
+      throw new Error('상대방 정보를 찾을 수 없습니다.');
+    }
+
+    const mainImage = partner.profile?.profileImage?.find((img) => img.isMain);
+    const firstImage = partner.profile?.profileImage?.[0];
+    const partnerProfileImage =
+      mainImage?.imageUrl || firstImage?.imageUrl || null;
+
+    return {
+      id: partner.id,
+      name: partner.name,
+      profileImage: partnerProfileImage,
     };
   }
 }

@@ -100,8 +100,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       content: string;
       userId: string;
       chatRoomId: string;
-      profileImage: string;
-      name: string;
     },
   ) {
     try {
@@ -109,13 +107,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.content,
         data.userId,
         data.chatRoomId,
-        {
-          profileImage: data.profileImage,
-          name: data.name,
-        },
       );
 
-      this.server.to(data.chatRoomId).emit('message', message);
+      const partner = await this.chatService.getChatRoomWithPartner(
+        data.chatRoomId,
+        data.userId,
+      );
+
+      const messageWithPartnerInfo = {
+        ...message,
+        partner,
+      };
+
+      this.server.to(data.chatRoomId).emit('message', messageWithPartnerInfo);
       return { success: true };
     } catch (error: unknown) {
       return {
