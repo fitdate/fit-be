@@ -126,7 +126,7 @@ export class ChatController {
   @Delete('chatRooms/:chatRoomId/exit')
   async exitRoom(
     @Param('chatRoomId') chatRoomId: string,
-    @Body('userId') userId: string,
+    @UserId() userId: string,
   ) {
     return this.chatService.exitRoom(chatRoomId, userId);
   }

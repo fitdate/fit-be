@@ -251,10 +251,11 @@ export class ChatService {
 
   // 채팅방 나가기
   async exitRoom(chatRoomId: string, userId: string) {
-    const chatRoom = await this.chatRoomRepository.findOne({
-      where: { id: chatRoomId },
-      relations: ['users'],
-    });
+    const chatRoom = await this.chatRoomRepository
+      .createQueryBuilder('chatRoom')
+      .innerJoinAndSelect('chatRoom.users', 'users')
+      .where('chatRoom.id = :chatRoomId', { chatRoomId })
+      .getOne();
 
     if (!chatRoom) {
       return { success: false, message: '채팅방을 찾을 수 없습니다.' };
@@ -385,6 +386,7 @@ export class ChatService {
 
     const user = await this.userRepository.findOne({
       where: { id: userId },
+      relations: ['profile', 'profile.profileImage'],
     });
 
     if (!user) {
@@ -392,13 +394,16 @@ export class ChatService {
     }
 
     const message = await this.saveMessage(content, user, chatRoomId);
+    const mainImage = user.profile?.profileImage?.find((img) => img.isMain);
+    const firstImage = user.profile?.profileImage?.[0];
+    const profileImage = mainImage?.imageUrl || firstImage?.imageUrl || null;
+
     return {
       id: message.id,
       content: message.content,
       userId: user.id,
-      userName: userInfo?.name || user.name,
-      profileImage:
-        userInfo?.profileImage || user.profile?.profileImage?.[0]?.imageUrl,
+      userName: userInfo.name,
+      profileImage: userInfo.profileImage || profileImage,
       createdAt: message.createdAt,
     };
   }
