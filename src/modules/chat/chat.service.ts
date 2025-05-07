@@ -237,6 +237,7 @@ export class ChatService {
       chatRoomId,
       partner: {
         id: partner.id,
+        name: partner.name,
         profileImage: partnerProfileImage,
       },
       messages: messages.reverse().map((message) => ({
