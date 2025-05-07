@@ -3,7 +3,6 @@ import { CoffeeChat } from './entities/coffee-chat.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserService } from '../user/user.service';
-import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
 import { CoffeeChatStatus } from './enum/coffee-chat-statue.enum';
 import { DataSource } from 'typeorm';
 import { AcceptedCoffeeChat } from './entities/accepted-coffee-chat.entity';
@@ -11,6 +10,7 @@ import { ChatService } from '../chat/chat.service';
 import { NotificationService } from 'src/modules/notification/notification.service';
 import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
 import { NotificationType } from 'src/common/enum/notification.enum';
+
 @Injectable()
 export class CoffeeChatService {
   private readonly logger = new Logger(CoffeeChatService.name);
@@ -30,12 +30,11 @@ export class CoffeeChatService {
     userId: string,
     notificationDto: CreateNotificationDto,
   ): Promise<{
-    savedCoffeeChat: {
-      id: string;
-      sender: string;
-      receiver: string;
-      status: CoffeeChatStatus;
-    };
+    senderId: string;
+    receiverId: string;
+    coffeeChatId: string;
+    type: NotificationType;
+    status: CoffeeChatStatus;
   }> {
     this.logger.log(
       `Starting coffee chat request - Sender: ${userId}, Receiver: ${notificationDto.receiverId}`,
@@ -96,22 +95,20 @@ export class CoffeeChatService {
         `Coffee chat request saved - ID: ${savedCoffeeChat.id}, Sender: ${sender.nickname}, Receiver: ${receiver.nickname}`,
       );
 
-      const notification = this.notificationService.create({
+      await this.notificationService.create({
         receiverId: receiver.id,
         title: notificationDto.title,
         content: notificationDto.content,
-        type: notificationDto.type,
+        type: NotificationType.COFFEE_CHAT,
         data: notificationDto.data,
       });
 
       return {
-        savedCoffeeChat: {
-          id: savedCoffeeChat.id,
-          sender: sender.id,
-          receiver: receiver.id,
-          status: savedCoffeeChat.status,
-        },
-        notification,
+        senderId: sender.id,
+        receiverId: receiver.id,
+        coffeeChatId: savedCoffeeChat.id,
+        type: NotificationType.COFFEE_CHAT,
+        status: savedCoffeeChat.status,
       };
     });
   }
@@ -120,32 +117,39 @@ export class CoffeeChatService {
     userId: string,
     coffeeChatId: string,
   ): Promise<{
-    savedCoffeeChat: {
-      id: string;
-      sender: string;
-      receiver: string;
-      status: CoffeeChatStatus;
-    };
+    senderId: string;
+    receiverId: string;
+    chatRoomId: string;
+    type: NotificationType;
+    status: CoffeeChatStatus;
   }> {
-    const coffeeChat = await this.coffeeChatRepository.findOne({
-      where: { id: coffeeChatId, receiver: { id: userId } },
-    });
+    return await this.dataSource.transaction(async (manager) => {
+      const coffeeChat = await manager.findOne(CoffeeChat, {
+        where: { id: coffeeChatId, receiver: { id: userId } },
+      });
 
-    if (!coffeeChat) {
-      throw new BadRequestException('커피챗 요청이 존재하지 않습니다.');
-    }
+      if (!coffeeChat) {
+        throw new BadRequestException('커피챗 요청이 존재하지 않습니다.');
+      }
 
-    coffeeChat.status = CoffeeChatStatus.ACCEPTED;
-    await this.coffeeChatRepository.save(coffeeChat);
-    // 커피챗 수락 후에 커피챗에서 데이터 삭제, 채팅방 생성
-    return {
-      savedCoffeeChat: {
-        id: coffeeChat.id,
-        sender: coffeeChat.sender.id,
-        receiver: coffeeChat.receiver.id,
+      coffeeChat.status = CoffeeChatStatus.ACCEPTED;
+      await manager.save(CoffeeChat, coffeeChat);
+
+      const chatRoom = await this.chatService.acceptCoffeeChat(
+        coffeeChat.sender.id,
+        coffeeChat.receiver.id,
+      );
+
+      await manager.remove(CoffeeChat, coffeeChat);
+
+      return {
+        senderId: coffeeChat.sender.id,
+        receiverId: coffeeChat.receiver.id,
+        chatRoomId: chatRoom.id,
+        type: NotificationType.COFFEE_CHAT,
         status: coffeeChat.status,
-      },
-    };
+      };
+    });
   }
 
   async getReceivedCoffeeChatList(userId: string) {

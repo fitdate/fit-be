@@ -1,16 +1,9 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { CoffeeChatService } from './coffee-chat.service';
 import { UserId } from 'src/common/decorator/get-user.decorator';
-import { SendCoffeeChatDto } from './dto/send-coffee-chat.dto';
 import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
-
+import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
 @Controller('coffee-chat')
 export class CoffeeChatController {
   private readonly logger = new Logger(CoffeeChatController.name);
@@ -20,21 +13,22 @@ export class CoffeeChatController {
   @ApiOperation({ summary: '커피챗 보내기' })
   @ApiResponse({ status: 200, description: '커피챗 보내기 성공' })
   @ApiResponse({ status: 400, description: '커피챗 보내기 실패' })
-  @ApiBody({ type: SendCoffeeChatDto })
+  @ApiBody({ type: CreateNotificationDto })
   @Post('send')
   sendCoffeeChat(
     @UserId() userId: string,
-    @Body() sendCoffeeChatDto: SendCoffeeChatDto,
+    @Body() notificationDto: CreateNotificationDto,
   ) {
-    this.logger.debug(`Request body: ${JSON.stringify(sendCoffeeChatDto)}`);
-    this.logger.debug(`User ID: ${userId}`);
+    return this.coffeeChatService.sendCoffeeChat(userId, notificationDto);
+  }
 
-    if (!sendCoffeeChatDto.receiverId) {
-      this.logger.error('Receiver ID is missing in request body');
-      throw new BadRequestException('Receiver ID is required');
-    }
-
-    return this.coffeeChatService.sendCoffeeChat(userId, sendCoffeeChatDto);
+  @ApiOperation({ summary: '커피챗 수락' })
+  @ApiResponse({ status: 200, description: '커피챗 수락 성공' })
+  @ApiResponse({ status: 400, description: '커피챗 수락 실패' })
+  @ApiBody({ type: String })
+  @Post('accept')
+  acceptCoffeeChat(@UserId() userId: string, @Body() coffeeChatId: string) {
+    return this.coffeeChatService.acceptCoffeeChat(userId, coffeeChatId);
   }
 
   @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })
