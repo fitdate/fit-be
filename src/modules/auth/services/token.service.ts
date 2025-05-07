@@ -304,8 +304,8 @@ export class TokenService {
 
     const options: CookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge,
       domain,
       path: '/',
