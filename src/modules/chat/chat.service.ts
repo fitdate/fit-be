@@ -400,7 +400,7 @@ export class ChatService {
       id: message.id,
       content: message.content,
       userId: user.id,
-      userName: user.name,
+      name: user.name,
       profileImage,
       createdAt: message.createdAt,
     };
