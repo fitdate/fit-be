@@ -317,10 +317,12 @@ export class TokenService {
   // 로그아웃 쿠키 옵션 생성
   getLogoutCookieOptions(origin?: string): {
     accessOptions: CookieOptions;
+    refreshOptions: CookieOptions;
   } {
     this.logger.debug(`Creating logout cookie options for origin: ${origin}`);
     const options = {
       accessOptions: this.createCookieOptions(0, origin),
+      refreshOptions: this.createCookieOptions(0, origin),
     };
     this.logger.debug(`Created logout cookie options:`, options);
     return options;
@@ -349,18 +351,23 @@ export class TokenService {
 
     const accessTokenTtl =
       this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
     const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
     this.logger.debug('Cookie options:', {
       accessTokenMaxAge,
+      refreshTokenMaxAge,
       origin,
     });
 
     return {
       accessToken,
-      refreshToken: undefined,
+      refreshToken,
       accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
-      refreshOptions: undefined,
+      refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
     };
   }
 }

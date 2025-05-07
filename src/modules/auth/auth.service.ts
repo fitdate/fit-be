@@ -453,6 +453,9 @@ export class AuthService {
     );
 
     res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
+    if (tokens.refreshToken && tokens.refreshOptions) {
+      res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
+    }
 
     this.logger.debug(`쿠키가 성공적으로 설정되었습니다.`);
 
@@ -477,6 +480,9 @@ export class AuthService {
       );
 
       res.cookie('accessToken', '', cookieOptions.accessOptions);
+      if (cookieOptions.refreshOptions) {
+        res.cookie('refreshToken', '', cookieOptions.refreshOptions);
+      }
 
       const userId = req.user?.sub;
       const tokenId = (req.user as { tokenId?: string })?.tokenId;

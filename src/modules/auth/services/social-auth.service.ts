@@ -7,7 +7,6 @@ import { SocialUserInfo } from '../types/oatuth.types';
 import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
 import { TokenService } from './token.service';
-import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { TokenMetadata } from '../types/token-payload.types';
 
 @Injectable()
@@ -60,31 +59,18 @@ export class SocialAuthService {
       userAgent: req.headers['user-agent'] || 'unknown',
     };
 
-    const tokens = await this.tokenService.generateTokens(
+    const tokens = await this.tokenService.generateAndSetTokens(
       user.id,
       user.role,
       metadata,
+      origin,
     );
-
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
 
     const tokenResponse = {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      accessOptions: this.tokenService.createCookieOptions(
-        accessTokenMaxAge,
-        origin,
-      ),
-      refreshOptions: this.tokenService.createCookieOptions(
-        refreshTokenMaxAge,
-        origin,
-      ),
+      accessOptions: tokens.accessOptions,
+      refreshOptions: tokens.refreshOptions,
     };
 
     const isProfileComplete = user.isProfileComplete || false;
@@ -152,6 +138,9 @@ export class SocialAuthService {
       );
 
       res.cookie('accessToken', result.accessToken, result.accessOptions);
+      if (result.refreshToken && result.refreshOptions) {
+        res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
+      }
 
       const frontendUrl =
         this.configService.get('social.socialFrontendUrl', { infer: true }) ||
