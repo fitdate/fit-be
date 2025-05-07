@@ -39,6 +39,7 @@ import { SparkListModule } from './modules/spark-list/spark-list.module';
 import { FestivalModule } from './modules/festival/festival.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ActiveInterceptor } from './modules/auth/interceptor/active.interceptor';
+import { TaskModule } from './modules/task/task.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -114,6 +115,7 @@ import { ActiveInterceptor } from './modules/auth/interceptor/active.interceptor
     DatingPreferenceModule,
     SparkListModule,
     FestivalModule,
+    TaskModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
