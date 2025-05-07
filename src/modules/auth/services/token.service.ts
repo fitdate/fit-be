@@ -307,7 +307,7 @@ export class TokenService {
       secure: true,
       sameSite: 'none',
       maxAge,
-      domain,
+      domain: '.fit-date.co.kr',
       path: '/',
     };
 
