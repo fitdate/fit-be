@@ -1,16 +1,68 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationResponseDto } from './dto/notification-response.dto';
+import { Observable, Subject, timer } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Injectable()
 export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
+  private notificationStreams: Map<string, Subject<Notification>> = new Map();
+  private readonly STREAM_TIMEOUT = 30 * 60 * 1000; // 30분
+  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5분
+
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
-  ) {}
+  ) {
+    // 주기적으로 사용하지 않는 스트림 정리
+    this.startStreamCleanup();
+  }
+
+  private startStreamCleanup(): void {
+    timer(this.CLEANUP_INTERVAL, this.CLEANUP_INTERVAL).subscribe(() => {
+      this.cleanupInactiveStreams();
+    });
+  }
+
+  private cleanupInactiveStreams(): void {
+    for (const [userId, stream] of this.notificationStreams.entries()) {
+      if (stream.closed) {
+        this.notificationStreams.delete(userId);
+        this.logger.debug(`사용자 ${userId}의 비활성 스트림이 정리되었습니다.`);
+      }
+    }
+  }
+
+  // SSE 스트림 생성
+  createNotificationStream(userId: string): Observable<Notification> {
+    let stream = this.notificationStreams.get(userId);
+    if (!stream) {
+      stream = new Subject<Notification>();
+      this.notificationStreams.set(userId, stream);
+
+      // 스트림 타임아웃 설정
+      timer(this.STREAM_TIMEOUT)
+        .pipe(takeUntil(stream))
+        .subscribe(() => {
+          if (this.notificationStreams.has(userId)) {
+            this.notificationStreams.get(userId)?.complete();
+            this.notificationStreams.delete(userId);
+            this.logger.debug(
+              `사용자 ${userId}의 스트림이 타임아웃으로 종료되었습니다.`,
+            );
+          }
+        });
+    }
+    return stream.asObservable();
+  }
 
   // 알림 생성
   async create(createNotificationDto: CreateNotificationDto) {
@@ -43,8 +95,32 @@ export class NotificationService {
         timeoutPromise,
       ]);
 
+      // SSE 스트림으로 알림 전송
+      const stream = this.notificationStreams.get(
+        createNotificationDto.receiverId,
+      );
+      if (stream) {
+        try {
+          stream.next(savedNotification);
+          this.logger.debug(
+            `사용자 ${createNotificationDto.receiverId}에게 알림이 전송되었습니다.`,
+          );
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error ? error.message : '알 수 없는 오류';
+          this.logger.error(`알림 전송 중 오류 발생: ${errorMessage}`);
+          // 스트림이 닫혀있는 경우 정리
+          if (stream.closed) {
+            this.notificationStreams.delete(createNotificationDto.receiverId);
+          }
+        }
+      }
+
       return savedNotification;
-    } catch {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error(`알림 생성 중 오류 발생: ${errorMessage}`);
       throw new InternalServerErrorException(
         '알림 생성 중 오류가 발생했습니다.',
       );
@@ -78,7 +154,10 @@ export class NotificationService {
           notification?.createdAt?.toISOString() ?? new Date().toISOString(),
         data: notification?.data ?? {},
       }));
-    } catch {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error(`알림 조회 중 오류 발생: ${errorMessage}`);
       throw new InternalServerErrorException(
         '알림 조회 중 오류가 발생했습니다.',
       );
@@ -87,23 +166,50 @@ export class NotificationService {
 
   // 알림 읽음 처리
   async markAsRead(id: string) {
-    const notification = await this.notificationRepository.findOne({
-      where: { id },
-    });
-    if (notification) {
-      notification.isRead = true;
-      return this.notificationRepository.save(notification);
+    try {
+      const notification = await this.notificationRepository.findOne({
+        where: { id },
+      });
+      if (notification) {
+        notification.isRead = true;
+        return this.notificationRepository.save(notification);
+      }
+      return null;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error(`알림 읽음 처리 중 오류 발생: ${errorMessage}`);
+      throw new InternalServerErrorException(
+        '알림 읽음 처리 중 오류가 발생했습니다.',
+      );
     }
-    return null;
   }
 
   // 알림 삭제
   async remove(id: string) {
-    return this.notificationRepository.delete(id);
+    try {
+      return await this.notificationRepository.delete(id);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error(`알림 삭제 중 오류 발생: ${errorMessage}`);
+      throw new InternalServerErrorException(
+        '알림 삭제 중 오류가 발생했습니다.',
+      );
+    }
   }
 
   // 전체 알림 삭제
   async removeAll(userId: string) {
-    return this.notificationRepository.delete({ receiverId: userId });
+    try {
+      return await this.notificationRepository.delete({ receiverId: userId });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.error(`전체 알림 삭제 중 오류 발생: ${errorMessage}`);
+      throw new InternalServerErrorException(
+        '전체 알림 삭제 중 오류가 발생했습니다.',
+      );
+    }
   }
 }
