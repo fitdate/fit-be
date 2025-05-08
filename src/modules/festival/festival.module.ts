@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NaverSearchService } from './service/naver-search.service';
 import { RedisService } from '../redis/redis.service';
 import { UserRequestFestivalService } from './service/user-request-festival.service';
+import { UserModule } from '../user/user.module';
 @Module({
   imports: [
     LocationModule,
@@ -18,6 +19,7 @@ import { UserRequestFestivalService } from './service/user-request-festival.serv
       }),
       inject: [ConfigService],
     }),
+    UserModule,
   ],
   controllers: [FestivalController],
   providers: [

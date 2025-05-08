@@ -365,6 +365,12 @@ export class UserService {
     return this.findOne(id);
   }
 
+  // ID로 사용자 조회
+  async findUserById(id: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    return user;
+  }
+
   // 이메일로 사용자 조회
   async findUserByEmail(email: string) {
     const user = await this.userRepository.findOne({

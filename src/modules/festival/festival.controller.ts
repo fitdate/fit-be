@@ -5,6 +5,7 @@ import { ApiQuery, ApiOperation } from '@nestjs/swagger';
 import { FestivalRegionDto } from './dto/region.dto';
 import { RegionCode } from './enum/festival-region.enum';
 import { UserRequestFestivalService } from './service/user-request-festival.service';
+import { UserId } from 'src/common/decorator/get-user.decorator';
 @Controller('festival')
 export class FestivalController {
   constructor(
@@ -36,5 +37,11 @@ export class FestivalController {
     return this.userRequestFestivalService.getFestivalsByAreaName(
       regionDto.region,
     );
+  }
+
+  @ApiOperation({ summary: '사용자 지역 축제 조회' })
+  @Get('user-request/:userId')
+  getFestivalByUserArea(@UserId() userId: string): Promise<FestivalDto[]> {
+    return this.userRequestFestivalService.getFestivalByUserArea(userId);
   }
 }
