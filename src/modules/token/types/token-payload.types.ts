@@ -5,7 +5,8 @@ export interface TokenPayload extends JwtPayload {
   sub: string;
   role: UserRole;
   type: 'access' | 'refresh';
-  tokenId?: string;
+  tokenId: string;
+  sessionId: string;
 }
 
 export interface TokenMetadata {
@@ -15,4 +16,5 @@ export interface TokenMetadata {
   deviceType: string;
   browser: string;
   os: string;
+  sessionId: string;
 }
