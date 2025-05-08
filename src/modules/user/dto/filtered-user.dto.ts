@@ -41,4 +41,11 @@ export class FilteredUsersDto {
   @IsInt()
   @Min(0)
   minLikes?: number;
+
+  @ApiProperty({
+    description: '지역',
+    required: false,
+  })
+  @IsOptional()
+  region?: string;
 }

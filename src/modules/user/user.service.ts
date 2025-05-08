@@ -506,7 +506,7 @@ export class UserService {
       )}`,
     );
 
-    const { ageMin, ageMax, minLikes } = filteredUsersDto;
+    const { ageMin, ageMax, minLikes, region } = filteredUsersDto;
     const today = new Date();
 
     const currentUser = await this.findOne(currentUserId);
@@ -531,6 +531,10 @@ export class UserService {
       .andWhere('user.gender = :gender', {
         gender: currentUser.gender === '남자' ? '여자' : '남자',
       });
+
+    if (region) {
+      qb.andWhere('user.region = :region', { region });
+    }
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;
