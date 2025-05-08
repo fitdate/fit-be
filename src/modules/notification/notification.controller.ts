@@ -31,11 +31,6 @@ export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   // SSE 엔드포인트
-  @ApiOperation({ summary: '알림 SSE 스트림 연결' })
-  @ApiResponse({
-    status: 200,
-    description: 'SSE 스트림이 연결되었습니다.',
-  })
   @Sse('stream')
   streamNotifications(@Req() req: RequestWithUser): Observable<MessageEvent> {
     const userId = req.user?.sub || req.user?.id;

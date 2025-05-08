@@ -15,8 +15,8 @@ import { takeUntil } from 'rxjs/operators';
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
   private notificationStreams: Map<string, Subject<Notification>> = new Map();
-  private readonly STREAM_TIMEOUT = 30 * 60 * 1000; // 30분
-  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5분
+  private readonly STREAM_TIMEOUT = 5 * 60 * 1000; // 5분으로 변경
+  private readonly CLEANUP_INTERVAL = 1 * 60 * 1000; // 1분으로 변경
 
   constructor(
     @InjectRepository(Notification)
@@ -53,13 +53,32 @@ export class NotificationService {
         .pipe(takeUntil(stream))
         .subscribe(() => {
           if (this.notificationStreams.has(userId)) {
-            this.notificationStreams.get(userId)?.complete();
-            this.notificationStreams.delete(userId);
-            this.logger.debug(
-              `사용자 ${userId}의 스트림이 타임아웃으로 종료되었습니다.`,
-            );
+            const currentStream = this.notificationStreams.get(userId);
+            if (currentStream && !currentStream.closed) {
+              currentStream.complete();
+              this.notificationStreams.delete(userId);
+              this.logger.debug(
+                `사용자 ${userId}의 스트림이 타임아웃으로 종료되었습니다.`,
+              );
+            }
           }
         });
+
+      // 에러 처리 추가
+      stream.subscribe({
+        error: (error: Error) => {
+          this.logger.error(`스트림 에러 발생: ${error.message}`);
+          if (this.notificationStreams.has(userId)) {
+            this.notificationStreams.delete(userId);
+          }
+        },
+        complete: () => {
+          this.logger.debug(`사용자 ${userId}의 스트림이 완료되었습니다.`);
+          if (this.notificationStreams.has(userId)) {
+            this.notificationStreams.delete(userId);
+          }
+        },
+      });
     }
     return stream.asObservable();
   }
