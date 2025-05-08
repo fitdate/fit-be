@@ -21,6 +21,7 @@ import { IntroductionModule } from '../profile/introduction/common/introduction.
 import { TokenModule } from '../token/token.module';
 import { KakaoStrategy } from './strategy/kakao.stragegy';
 import { NaverStrategy } from './strategy/naver.strategy';
+import { SessionModule } from '../session/session.module';
 @Module({
   imports: [
     UserModule,
@@ -35,6 +36,7 @@ import { NaverStrategy } from './strategy/naver.strategy';
     FeedbackModule,
     IntroductionModule,
     TokenModule,
+    SessionModule,
   ],
   controllers: [AuthController],
   providers: [
