@@ -8,6 +8,7 @@ import { TokenService } from '../services/token.service';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
+import { UserRole } from 'src/common/enum/user-role.enum';
 import { TokenMetadata } from '../types/token-payload.types';
 
 interface RequestWithUser extends Request {
@@ -90,6 +91,17 @@ export class ActiveInterceptor implements NestInterceptor {
       redisKey: `access_token:${user.tokenId}`,
     });
 
+    // deviceId 안전 추출
+    let deviceId: string = 'unknown-device';
+    if (typeof request.headers['x-device-id'] === 'string') {
+      deviceId = request.headers['x-device-id'] as string;
+    } else if (
+      request.cookies &&
+      typeof request.cookies.deviceId === 'string'
+    ) {
+      deviceId = request.cookies.deviceId;
+    }
+
     // 슬라이딩 윈도우: accessToken 만료까지 5분 이하 남았을 때 accessToken만 갱신
     try {
       const decoded: unknown = this.jwtService.decode(user.token);
@@ -113,12 +125,11 @@ export class ActiveInterceptor implements NestInterceptor {
           const metadata: TokenMetadata = {
             ip: request.ip || request.socket.remoteAddress || 'unknown',
             userAgent: request.headers['user-agent'] || 'unknown',
+            deviceId,
           };
-          // invalidateAllSessions 주석 처리 필요
-          // await this.tokenService.invalidateAllSessions(user.sub); // 주석 처리
           const { accessToken } = await this.tokenService.generateTokens(
             user.sub,
-            user.role as any,
+            user.role as UserRole,
             metadata,
           );
           const accessTokenTtl =
@@ -164,6 +175,7 @@ export class ActiveInterceptor implements NestInterceptor {
         const metadata: TokenMetadata = {
           ip: request.ip || request.socket.remoteAddress || 'unknown',
           userAgent: request.headers['user-agent'] || 'unknown',
+          deviceId,
         };
 
         this.logger.debug('[Token Validation] Attempting token rotation:', {
@@ -173,8 +185,9 @@ export class ActiveInterceptor implements NestInterceptor {
 
         const newTokens = await this.tokenService.rotateTokens(
           user.sub,
+          deviceId,
           user.tokenId,
-          user.role as any,
+          user.role as UserRole,
           metadata,
         );
 
