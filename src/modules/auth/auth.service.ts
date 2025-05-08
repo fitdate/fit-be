@@ -33,7 +33,12 @@ import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
 import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
 import { TokenMetadata } from '../token/types/token-payload.types';
-import * as UAParser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
+import { v4 as uuidv4 } from 'uuid';
+import { parseTimeToSeconds } from 'src/common/util/time.util';
+import { SessionService } from '../session/session.service';
+import { TokenPayload } from '../token/types/token-payload.types';
+
 @Injectable()
 export class AuthService {
   protected readonly logger = new Logger(AuthService.name);
@@ -51,6 +56,7 @@ export class AuthService {
     private readonly interestCategoryService: InterestCategoryService,
     private readonly feedbackService: FeedbackService,
     private readonly introductionService: IntroductionService,
+    private readonly sessionService: SessionService,
   ) {}
 
   // 회원가입
@@ -428,53 +434,81 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
 
-    // ip, userAgent, deviceId 추출
+    // 디바이스 ID 추출
     const deviceId: string =
       (req.cookies?.deviceId as string) ||
       (req.headers['x-device-id'] as string) ||
       'unknown-device';
+
+    // 세션 ID와 토큰 ID 생성
+    const sessionId = uuidv4();
+    const tokenId = uuidv4();
+
+    // 메타데이터 생성
     const userAgentStr = req.headers['user-agent'] || 'unknown';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
-    const ParserClass = (UAParser as any).default || UAParser;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const parser = new ParserClass(userAgentStr);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const parser = new UAParser(userAgentStr);
     const device = parser.getDevice();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const deviceType = device && device.type ? device.type : 'desktop';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const deviceType = device?.type || 'desktop';
     const browserInfo = parser.getBrowser();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const browser =
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const browser = browserInfo?.name || 'unknown';
     const osInfo = parser.getOS();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const os = osInfo && osInfo.name ? osInfo.name : 'unknown';
+    const os = osInfo?.name || 'unknown';
+
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket?.remoteAddress || 'unknown',
       userAgent: userAgentStr,
       deviceId,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       deviceType,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       browser,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       os,
+      sessionId,
     };
-    this.logger.log(`TokenMetadata 생성: ${JSON.stringify(metadata)}`);
 
-    const tokens = await this.tokenService.generateAndSetTokens(
+    // 세션 생성
+    await this.sessionService.createSession(user.id, tokenId, metadata);
+
+    // 토큰 생성
+    const tokenPayload: TokenPayload = {
+      sub: user.id,
+      role: user.role,
+      type: 'access',
+      tokenId,
+      sessionId,
+      deviceType,
+    };
+
+    const tokens = await this.tokenService.generateTokens(
       user.id,
-      user.role,
-      metadata,
-      req.headers.origin,
+      deviceType,
+      tokenPayload,
     );
 
-    res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
-    if (tokens.refreshToken && tokens.refreshOptions) {
-      res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
+    const accessTokenTtl =
+      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
+    const refreshTokenTtl =
+      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
+
+    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
+
+    res.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      domain: '.fit-date.co.kr',
+      path: '/',
+      maxAge: accessTokenMaxAge,
+    });
+
+    if (tokens.refreshToken) {
+      res.cookie('refreshToken', tokens.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        domain: '.fit-date.co.kr',
+        path: '/',
+        maxAge: refreshTokenMaxAge,
+      });
     }
 
     this.logger.debug(`쿠키가 성공적으로 설정되었습니다.`);
@@ -667,23 +701,31 @@ export class AuthService {
   ): Promise<boolean> {
     try {
       // 토큰 유효성 검사
-      const isValid = await this.tokenService.validateRefreshToken(
-        userId,
-        deviceId,
+      const tokenPayload: TokenPayload = {
+        sub: userId,
+        role: userRole,
+        type: 'refresh',
         tokenId,
-        metadata,
-      );
+        sessionId: metadata.sessionId,
+        deviceType: metadata.deviceType,
+      };
+
+      const isValid =
+        await this.tokenService.validateRefreshToken(tokenPayload);
       if (!isValid) {
         return false;
       }
 
       // 토큰 갱신
-      await this.tokenService.rotateTokens(
+      const newTokenPayload: TokenPayload = {
+        ...tokenPayload,
+        type: 'access',
+      };
+
+      await this.tokenService.generateTokens(
         userId,
-        deviceId,
-        tokenId,
-        userRole,
-        metadata,
+        metadata.deviceType,
+        newTokenPayload,
       );
       return true;
     } catch (error) {

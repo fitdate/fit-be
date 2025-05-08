@@ -7,8 +7,14 @@ import { SocialUserInfo } from '../types/oatuth.types';
 import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
 import { TokenService } from '../../token/token.service';
-import { TokenMetadata } from '../../token/types/token-payload.types';
-import * as UAParser from 'ua-parser-js';
+import {
+  TokenMetadata,
+  TokenPayload,
+} from '../../token/types/token-payload.types';
+import { UAParser } from 'ua-parser-js';
+import { v4 as uuidv4 } from 'uuid';
+import { SessionService } from '../../session/session.service';
+import { parseTimeToSeconds } from 'src/common/util/time.util';
 
 @Injectable()
 export class SocialAuthService {
@@ -18,6 +24,7 @@ export class SocialAuthService {
     private readonly configService: ConfigService<AllConfig>,
     private readonly userService: UserService,
     private readonly tokenService: TokenService,
+    private readonly sessionService: SessionService,
   ) {}
 
   // 소셜 로그인
@@ -55,52 +62,76 @@ export class SocialAuthService {
       }
     }
 
+    // 디바이스 ID 추출
+    const deviceId =
+      (typeof req.headers['x-device-id'] === 'string' &&
+        req.headers['x-device-id']) ||
+      (req.cookies &&
+        typeof req.cookies.deviceId === 'string' &&
+        req.cookies.deviceId) ||
+      'unknown-device';
+
+    // 세션 ID 생성
+    const sessionId = uuidv4();
+    const tokenId = uuidv4();
+
+    // 메타데이터 생성
+    const userAgentStr = req.headers['user-agent'] || 'unknown';
+    const parser = new UAParser(userAgentStr);
+    const device = parser.getDevice();
+    const deviceType = device && device.type ? device.type : 'desktop';
+    const browserInfo = parser.getBrowser();
+    const browser =
+      browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
+    const osInfo = parser.getOS();
+    const os = osInfo && osInfo.name ? osInfo.name : 'unknown';
+
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket.remoteAddress || 'unknown',
-      userAgent: req.headers['user-agent'] || 'unknown',
-      deviceId:
-        (typeof req.headers['x-device-id'] === 'string' &&
-          req.headers['x-device-id']) ||
-        (req.cookies &&
-          typeof req.cookies.deviceId === 'string' &&
-          req.cookies.deviceId) ||
-        'unknown-device',
-      ...(() => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const parser = new (UAParser as any).default(
-          req.headers['user-agent'] || 'unknown',
-        );
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const device = parser.getDevice();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        const deviceType = device && device.type ? device.type : 'desktop';
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const browserInfo = parser.getBrowser();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const browser =
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const osInfo = parser.getOS();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        const os = osInfo && osInfo.name ? osInfo.name : 'unknown';
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        return { deviceType, browser, os };
-      })(),
+      userAgent: userAgentStr,
+      deviceId,
+      deviceType,
+      browser,
+      os,
+      sessionId,
     };
 
-    const tokens = await this.tokenService.generateAndSetTokens(
+    // 세션 생성
+    await this.sessionService.createSession(user.id, tokenId, metadata);
+
+    // 토큰 생성
+    const tokenPayload: TokenPayload = {
+      sub: user.id,
+      role: user.role,
+      type: 'access',
+      tokenId,
+      sessionId,
+      deviceType,
+    };
+
+    const tokens = await this.tokenService.generateTokens(
       user.id,
-      user.role,
-      metadata,
-      origin,
+      deviceType,
+      tokenPayload,
     );
 
     const tokenResponse = {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      accessOptions: tokens.accessOptions,
-      refreshOptions: tokens.refreshOptions,
+      accessOptions: this.tokenService.createCookieOptions(
+        parseTimeToSeconds(
+          this.configService.get('jwt.accessTokenTtl', { infer: true }) ||
+            '30m',
+        ) * 1000,
+        origin,
+      ),
+      refreshOptions: this.tokenService.createCookieOptions(
+        parseTimeToSeconds(
+          this.configService.get('jwt.refreshTokenTtl', { infer: true }) ||
+            '7d',
+        ) * 1000,
+        origin,
+      ),
     };
 
     const isProfileComplete = user.isProfileComplete || false;
