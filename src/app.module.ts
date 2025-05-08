@@ -41,6 +41,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ActiveInterceptor } from './modules/auth/interceptor/active.interceptor';
 import { TaskModule } from './modules/task/task.module';
 import { SseModule } from './modules/sse/sse.module';
+import { TokenModule } from './modules/token/token.module';
+import { SessionModule } from './modules/session/session.module';
 @Module({
   imports: [
     DevtoolsModule.register({
@@ -119,6 +121,8 @@ import { SseModule } from './modules/sse/sse.module';
     SparkListModule,
     FestivalModule,
     TaskModule,
+    TokenModule,
+    SessionModule,
   ],
   controllers: [AppController],
   providers: [

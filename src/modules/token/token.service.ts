@@ -8,12 +8,12 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { RedisService } from '../../redis/redis.service';
+import { RedisService } from '../redis/redis.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { v4 as uuidv4 } from 'uuid';
 import { CookieOptions } from 'express';
-import { JwtTokenResponse } from '../types/auth.types';
-import { TokenMetadata } from '../types/token-payload.types';
+import { JwtTokenResponse } from '../auth/types/auth.types';
+import { TokenMetadata } from './types/token-payload.types';
 
 @Injectable()
 export class TokenService {

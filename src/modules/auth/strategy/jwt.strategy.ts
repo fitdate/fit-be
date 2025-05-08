@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-jwt';
-import { TokenPayload } from '../types/token-payload.types';
+import { TokenPayload } from '../../token/types/token-payload.types';
 import { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from '../../user/user.service';

@@ -4,12 +4,12 @@ import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '../../redis/redis.service';
 import { Request, Response } from 'express';
-import { TokenService } from '../services/token.service';
+import { TokenService } from '../../token/token.service';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { UserRole } from 'src/common/enum/user-role.enum';
-import { TokenMetadata } from '../types/token-payload.types';
+import { TokenMetadata } from '../../token/types/token-payload.types';
 import * as UAParser from 'ua-parser-js';
 
 interface RequestWithUser extends Request {

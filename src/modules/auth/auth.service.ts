@@ -23,7 +23,7 @@ import { UserInterestCategory } from '../profile/interest-category/entities/user
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 import { S3Service } from '../s3/s3.service';
-import { TokenService } from './services/token.service';
+import { TokenService } from '../token/token.service';
 import { RequestWithUser } from './types/request.types';
 import { EmailAuthService } from './services/email-auth.service';
 import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
@@ -32,7 +32,7 @@ import { FeedbackService } from '../profile/feedback/common/feedback.service';
 import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
 import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
-import { TokenMetadata } from './types/token-payload.types';
+import { TokenMetadata } from '../token/types/token-payload.types';
 import * as UAParser from 'ua-parser-js';
 @Injectable()
 export class AuthService {
