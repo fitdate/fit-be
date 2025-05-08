@@ -33,7 +33,7 @@ import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
 import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
 import { TokenMetadata } from './types/token-payload.types';
-import UAParser from 'ua-parser-js';
+import * as UAParser from 'ua-parser-js';
 @Injectable()
 export class AuthService {
   protected readonly logger = new Logger(AuthService.name);
@@ -434,22 +434,31 @@ export class AuthService {
       (req.headers['x-device-id'] as string) ||
       'unknown-device';
     const userAgentStr = req.headers['user-agent'] || 'unknown';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
+    const parser = new (UAParser as any).default(userAgentStr);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const device = parser.getDevice();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const deviceType = device && device.type ? device.type : 'desktop';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const browserInfo = parser.getBrowser();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const UAParserConstructor = UAParser as any;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-    const parser: any = new UAParserConstructor(userAgentStr);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const deviceType: string = parser.getDevice().type || 'desktop';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const browser: string = parser.getBrowser().name || 'unknown';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const os: string = parser.getOS().name || 'unknown';
+    const browser =
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const osInfo = parser.getOS();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const os = osInfo && osInfo.name ? osInfo.name : 'unknown';
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket?.remoteAddress || 'unknown',
       userAgent: userAgentStr,
       deviceId,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       deviceType,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       browser,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       os,
     };
     this.logger.log(`TokenMetadata 생성: ${JSON.stringify(metadata)}`);
