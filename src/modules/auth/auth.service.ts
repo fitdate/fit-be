@@ -466,6 +466,7 @@ export class AuthService {
 
     // 세션 생성
     await this.sessionService.createSession(user.id, tokenId, metadata);
+    await this.sessionService.updateActiveSession(user.id, deviceId);
 
     // 토큰 생성
     const tokenPayload: TokenPayload = {
@@ -540,11 +541,16 @@ export class AuthService {
 
       const userId = req.user?.sub;
       const tokenId = (req.user as { tokenId?: string })?.tokenId;
-      // deviceId 추출
       const deviceId: string =
         (req.cookies?.deviceId as string) ||
         (req.headers['x-device-id'] as string) ||
         'unknown-device';
+
+      if (userId) {
+        await this.sessionService.deleteSession(userId, deviceId);
+        await this.sessionService.deleteActiveSession(userId, deviceId);
+      }
+
       if (userId && tokenId) {
         await this.tokenService.deleteRefreshToken(userId, deviceId, tokenId);
       }

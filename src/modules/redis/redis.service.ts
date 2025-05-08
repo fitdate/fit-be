@@ -124,4 +124,8 @@ export class RedisService
   async ttl(key: string): Promise<number> {
     return await this.redisClient.ttl(key);
   }
+
+  async exists(key: string): Promise<number> {
+    return await this.redisClient.exists(key);
+  }
 }
