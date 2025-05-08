@@ -1,26 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { CreateSessionDto } from './dto/create-session.dto';
-import { UpdateSessionDto } from './dto/update-session.dto';
+import { Session } from './types/session.types';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class SessionService {
-  create(createSessionDto: CreateSessionDto) {
-    return 'This action adds a new session';
-  }
+  private sessions: Map<string, Session> = new Map();
 
-  findAll() {
-    return `This action returns all session`;
-  }
+  constructor(private readonly redisService: RedisService) {}
 
-  findOne(id: number) {
-    return `This action returns a #${id} session`;
-  }
-
-  update(id: number, updateSessionDto: UpdateSessionDto) {
-    return `This action updates a #${id} session`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} session`;
+  async upsertSession(session: Session) {
+    const sessionKey = `session:${session.userId}:${session.deviceId}:${session.tokenId}`;
+    const storedMetadata = await this.redisService.get(sessionKey);
+    if (!storedMetadata) {
+      return false;
+    }
+    const parsedMetadata = JSON.parse(storedMetadata) as Session;
   }
 }
