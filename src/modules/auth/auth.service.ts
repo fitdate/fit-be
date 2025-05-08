@@ -435,7 +435,9 @@ export class AuthService {
       'unknown-device';
     const userAgentStr = req.headers['user-agent'] || 'unknown';
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
-    const parser = new (UAParser as any).default(userAgentStr);
+    const ParserClass = (UAParser as any).default || UAParser;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const parser = new ParserClass(userAgentStr);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const device = parser.getDevice();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access

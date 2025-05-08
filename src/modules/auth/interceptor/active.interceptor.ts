@@ -125,7 +125,9 @@ export class ActiveInterceptor implements NestInterceptor {
           this.logger.debug('[슬라이딩] accessToken만 갱신합니다.');
           const userAgentStr = request.headers['user-agent'] || 'unknown';
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
-          const parser = new (UAParser as any).default(userAgentStr);
+          const ParserClass = (UAParser as any).default || UAParser;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+          const parser = new ParserClass(userAgentStr);
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           const device = parser.getDevice();
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -197,7 +199,9 @@ export class ActiveInterceptor implements NestInterceptor {
       try {
         const userAgentStr = request.headers['user-agent'] || 'unknown';
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
-        const parser = new (UAParser as any).default(userAgentStr);
+        const ParserClass = (UAParser as any).default || UAParser;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+        const parser = new ParserClass(userAgentStr);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const device = parser.getDevice();
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
