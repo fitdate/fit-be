@@ -120,4 +120,8 @@ export class RedisService
   ): Promise<number> {
     return await this.redisClient.zremrangebyrank(key, start, end);
   }
+
+  async ttl(key: string): Promise<number> {
+    return await this.redisClient.ttl(key);
+  }
 }

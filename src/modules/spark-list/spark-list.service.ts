@@ -42,6 +42,7 @@ export class SparkListService {
       .map((coffeeChat) => {
         const profileImage = coffeeChat.sender.profile?.profileImage?.[0];
         return {
+          coffeeChatId: coffeeChat.id,
           coffeeChatUserId: coffeeChat.sender.id,
           nickname: coffeeChat.sender.nickname,
           likeCount: coffeeChat.sender.likeCount,

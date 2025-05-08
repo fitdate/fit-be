@@ -10,10 +10,9 @@ import { AllConfig } from 'src/common/config/config.types';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { RedisService } from '../redis/redis.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
-import { v4 as uuidv4 } from 'uuid';
 import { CookieOptions } from 'express';
 import { JwtTokenResponse } from '../auth/types/auth.types';
-import { TokenMetadata } from './types/token-payload.types';
+import { TokenPayload } from './types/token-payload.types';
 
 @Injectable()
 export class TokenService {
@@ -25,244 +24,311 @@ export class TokenService {
     private readonly redisService: RedisService,
   ) {}
 
-  // 모든 세션 무효화 (userId의 모든 tokenId 세션 삭제)
-  async invalidateAllSessions(userId: string): Promise<void> {
-    try {
-      const refreshKeys = await this.redisService.keys(`refresh:${userId}:*`);
-      const sessionKeys = await this.redisService.keys(`session:${userId}:*`);
-      const accessTokenKeys = await this.redisService.keys(`access_token:*`);
-      for (const key of [...refreshKeys, ...sessionKeys]) {
-        await this.redisService.del(key);
-      }
-      for (const key of accessTokenKeys) {
-        const value = await this.redisService.get(key);
-        if (value === userId) {
-          await this.redisService.del(key);
-        }
-      }
-    } catch (error) {
-      this.logger.error(
-        `Redis 연결 실패: ${error instanceof Error ? error.message : error}`,
-      );
-      throw new InternalServerErrorException('Redis 연결에 실패했습니다.');
-    }
+  private createAccessTokenKey(
+    userId: string,
+    tokenId: string,
+    sessionId: string,
+  ): string {
+    return `access_token:${userId}:${tokenId}:${sessionId}`;
+  }
+
+  private createRefreshTokenKey(
+    userId: string,
+    tokenId: string,
+    sessionId: string,
+  ): string {
+    return `refresh_token:${userId}:${tokenId}:${sessionId}`;
   }
 
   // 토큰 생성
   async generateTokens(
     userId: string,
-    userRole: UserRole,
-    metadata: TokenMetadata & { deviceId: string },
+    deviceType: string,
+    tokenPayload: TokenPayload,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
     tokenId: string;
   }> {
-    this.logger.debug(`[Token Generation] Starting for user: ${userId}`);
-    await this.invalidateDeviceSession(userId, metadata.deviceId);
-    const tokenId = uuidv4();
-    this.logger.debug(`[Token Generation] Generated tokenId: ${tokenId}`);
-    const accessToken = this.generateAccessToken(userId, userRole, tokenId);
-    const accessTokenTtl =
-      this.configService.getOrThrow('jwt.accessTokenTtl', { infer: true }) ||
-      '30m';
-    await this.redisService.set(
-      `access_token:${tokenId}`,
-      userId,
-      parseTimeToSeconds(accessTokenTtl),
-    );
-    this.logger.debug(
-      `[Token Generation] Stored access token in Redis: ${accessToken}`,
-    );
-    const refreshToken = await this.generateAndStoreRefreshToken(
-      userId,
-      metadata.deviceId,
-      tokenId,
-    );
-    this.logger.debug(
-      `[Token Generation] Generated and stored refresh token: ${refreshToken}`,
-    );
-    const refreshTokenTtl =
-      this.configService.getOrThrow('jwt.refreshTokenTtl', { infer: true }) ||
-      '7d';
-    await this.redisService.set(
-      `session:${userId}:${metadata.deviceId}:${tokenId}`,
-      JSON.stringify(metadata),
-      parseTimeToSeconds(refreshTokenTtl),
-    );
-    this.logger.debug(
-      `[Token Generation] Stored session metadata for user: ${userId}`,
-    );
-    return {
-      accessToken,
-      refreshToken,
-      tokenId,
-    };
+    try {
+      this.logger.debug(`[Token Generation] Starting for user: ${userId}`);
+      this.logger.debug(
+        `[Token Generation] Generated tokenId: ${tokenPayload.tokenId}`,
+      );
+
+      // 1. 토큰 생성
+      const accessToken = this.generateAccessToken(
+        userId,
+        tokenPayload.role,
+        tokenPayload.tokenId,
+      );
+
+      const refreshToken = this.generateRefreshToken(
+        userId,
+        deviceType,
+        tokenPayload.tokenId,
+        tokenPayload.sessionId,
+      );
+
+      // 2. Redis에 토큰 저장
+      await this.saveAccessToken(
+        tokenPayload.tokenId,
+        userId,
+        tokenPayload.sessionId,
+      );
+
+      await this.saveRefreshToken(
+        tokenPayload.tokenId,
+        userId,
+        tokenPayload.sessionId,
+      );
+
+      this.logger.debug(
+        `[Token Generation] Successfully generated and stored tokens for user: ${userId}`,
+      );
+
+      return {
+        accessToken,
+        refreshToken,
+        tokenId: tokenPayload.tokenId,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Token generation failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException('토큰 생성에 실패했습니다.');
+    }
   }
 
-  // Access Token 생성 (jti 포함)
+  // Access Token 생성
   private generateAccessToken(
     userId: string,
     userRole: UserRole,
     tokenId: string,
   ): string {
-    this.logger.debug(`Generating access token for user: ${userId}`);
-    const accessTokenSecret = this.configService.getOrThrow(
-      'jwt.accessTokenSecret',
-      { infer: true },
-    );
-    const accessTokenExpiresIn = this.configService.getOrThrow(
-      'jwt.accessTokenTtl',
-      { infer: true },
-    );
-    const token = this.jwtService.sign(
-      {
-        sub: userId,
-        role: userRole,
-        type: 'access',
-        jti: tokenId,
-      },
-      {
-        secret: accessTokenSecret,
-        expiresIn: accessTokenExpiresIn,
-      },
-    );
-    return token;
+    try {
+      this.logger.debug(`Generating access token for user: ${userId}`);
+      const accessTokenSecret = this.configService.getOrThrow(
+        'jwt.accessTokenSecret',
+        { infer: true },
+      );
+      const accessTokenExpiresIn = this.configService.getOrThrow(
+        'jwt.accessTokenTtl',
+        { infer: true },
+      );
+
+      const accessToken = this.jwtService.sign(
+        {
+          sub: userId,
+          role: userRole,
+          type: 'access',
+          jti: tokenId,
+        },
+        {
+          secret: accessTokenSecret,
+          expiresIn: accessTokenExpiresIn,
+        },
+      );
+
+      return accessToken;
+    } catch (error) {
+      this.logger.error(
+        `Access token generation failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        'Access 토큰 생성에 실패했습니다.',
+      );
+    }
   }
 
-  // Refresh Token 생성 및 Redis 저장 (tokenId 기반)
-  private async generateAndStoreRefreshToken(
+  // Refresh Token 생성 및 Redis 저장
+  private generateRefreshToken(
     userId: string,
-    deviceId: string,
+    deviceType: string,
     tokenId: string,
-  ): Promise<string> {
-    this.logger.debug(
-      `Generating refresh token for user: ${userId}, deviceId: ${deviceId}, tokenId: ${tokenId}`,
-    );
-    const refreshTokenSecret = this.configService.getOrThrow(
-      'jwt.refreshTokenSecret',
-      { infer: true },
-    );
-    const refreshTokenExpiresIn = this.configService.getOrThrow(
-      'jwt.refreshTokenTtl',
-      { infer: true },
-    );
-    this.logger.debug(`Refresh token configuration:`, {
-      expiresIn: refreshTokenExpiresIn,
-      hasSecret: !!refreshTokenSecret,
-    });
-    const refreshToken = this.jwtService.sign(
-      {
-        sub: userId,
-        type: 'refresh',
-        deviceId,
-        jti: tokenId,
-      },
-      {
-        secret: refreshTokenSecret,
-        expiresIn: refreshTokenExpiresIn,
-      },
-    );
-    const ttlSeconds = parseTimeToSeconds(refreshTokenExpiresIn);
-    const redisKey = `refresh:${userId}:${deviceId}:${tokenId}`;
-    this.logger.debug(`Storing refresh token in Redis:`, {
-      key: redisKey,
-      ttlSeconds,
-    });
-    await this.redisService.set(redisKey, tokenId, ttlSeconds);
-    this.logger.debug(`Successfully stored refresh token in Redis`);
-    return refreshToken;
+    sessionId: string,
+  ): string {
+    try {
+      this.logger.debug(`Generating refresh token for user: ${userId}`);
+
+      const refreshTokenSecret = this.configService.getOrThrow(
+        'jwt.refreshTokenSecret',
+        { infer: true },
+      );
+      const refreshTokenExpiresIn = this.configService.getOrThrow(
+        'jwt.refreshTokenTtl',
+        { infer: true },
+      );
+
+      const refreshToken = this.jwtService.sign(
+        {
+          sub: userId,
+          type: 'refresh',
+          jti: tokenId,
+          sessionId,
+          deviceType,
+        },
+        {
+          secret: refreshTokenSecret,
+          expiresIn: refreshTokenExpiresIn,
+        },
+      );
+      return refreshToken;
+    } catch (error) {
+      this.logger.error(
+        `Refresh token generation failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        'Refresh 토큰 생성에 실패했습니다.',
+      );
+    }
   }
 
-  // Refresh Token 유효성 검사 (tokenId 기반)
-  async validateRefreshToken(
-    userId: string,
-    deviceId: string,
-    tokenId: string,
-    metadata: TokenMetadata,
-  ): Promise<boolean> {
-    const redisKey = `refresh:${userId}:${deviceId}:${tokenId}`;
-    const storedTokenId = await this.redisService.get(redisKey);
-    if (storedTokenId !== tokenId) {
-      return false;
-    }
-    // 세션 메타데이터 검증
-    const sessionKey = `session:${userId}:${deviceId}:${tokenId}`;
-    const storedMetadata = await this.redisService.get(sessionKey);
-    if (!storedMetadata) {
-      return false;
-    }
-    const parsedMetadata = JSON.parse(storedMetadata) as TokenMetadata;
-    if (
-      parsedMetadata.ip !== metadata.ip ||
-      parsedMetadata.userAgent !== metadata.userAgent
-    ) {
-      this.logger.warn(
-        `Session metadata mismatch for user ${userId}. Expected: ${JSON.stringify(metadata)}, Got: ${JSON.stringify(parsedMetadata)}`,
+  // Refresh Token 유효성 검사
+  async validateRefreshToken(tokenPayload: TokenPayload): Promise<boolean> {
+    try {
+      const redisKey = this.createRefreshTokenKey(
+        tokenPayload.sub,
+        tokenPayload.tokenId,
+        tokenPayload.sessionId,
+      );
+      const storedTokenId = await this.redisService.get(redisKey);
+
+      if (!storedTokenId) {
+        this.logger.warn(
+          `Refresh token not found for user ${tokenPayload.sub}`,
+        );
+        return false;
+      }
+
+      if (storedTokenId !== tokenPayload.tokenId) {
+        this.logger.warn(`Token ID mismatch for user ${tokenPayload.sub}`);
+        return false;
+      }
+
+      // 토큰 만료 시간 확인
+      const tokenExpiry = await this.redisService.ttl(redisKey);
+      if (tokenExpiry <= 0) {
+        this.logger.warn(`Refresh token expired for user ${tokenPayload.sub}`);
+        await this.deleteRefreshToken(
+          tokenPayload.sub,
+          tokenPayload.tokenId,
+          tokenPayload.sessionId,
+        );
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Refresh token validation failed: ${error instanceof Error ? error.message : error}`,
       );
       return false;
     }
-    return true;
   }
 
-  // Refresh Token 삭제 (tokenId 기반)
+  // Refresh Token 삭제
   async deleteRefreshToken(
     userId: string,
-    deviceId: string,
     tokenId: string,
+    sessionId: string,
   ): Promise<void> {
-    await this.redisService.del(`refresh:${userId}:${deviceId}:${tokenId}`);
-    await this.redisService.del(`session:${userId}:${deviceId}:${tokenId}`);
-  }
-
-  // Refresh Token으로 새로운 토큰 쌍 발급 (tokenId 기반)
-  async rotateTokens(
-    userId: string,
-    deviceId: string,
-    oldTokenId: string,
-    userRole: UserRole,
-    metadata: TokenMetadata,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    tokenId: string;
-  }> {
-    // 기존 refresh token 검증
-    const isValid = await this.validateRefreshToken(
-      userId,
-      deviceId,
-      oldTokenId,
-      metadata,
-    );
-    if (!isValid) {
-      throw new UnauthorizedException('유효하지 않은 refresh token입니다');
+    try {
+      const redisKey = this.createRefreshTokenKey(userId, tokenId, sessionId);
+      await this.redisService.del(redisKey);
+    } catch (error) {
+      this.logger.error(
+        `Refresh token deletion failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        'Refresh 토큰 삭제에 실패했습니다.',
+      );
     }
-    // 기존 refresh token 삭제
-    await this.deleteRefreshToken(userId, deviceId, oldTokenId);
-    // 새로운 토큰 쌍 발급
-    const metaWithDeviceId = { ...metadata, deviceId };
-    return this.generateTokens(userId, userRole, metaWithDeviceId);
   }
 
-  // 토큰 유효성 검사 (tokenId 기반)
-  async isAccessTokenValid(tokenId: string, userId: string): Promise<boolean> {
-    const value = await this.redisService.get(`access_token:${tokenId}`);
-    return value === userId;
+  // 토큰 유효성 검사
+  async isAccessTokenValid(
+    tokenId: string,
+    userId: string,
+    sessionId: string,
+  ): Promise<boolean> {
+    try {
+      const redisKey = this.createAccessTokenKey(userId, tokenId, sessionId);
+      const value = await this.redisService.get(redisKey);
+      return value === userId;
+    } catch (error) {
+      this.logger.error(
+        `Access token validation failed: ${error instanceof Error ? error.message : error}`,
+      );
+      return false;
+    }
   }
 
-  // 토큰 저장 (tokenId 기반)
-  async saveAccessToken(tokenId: string, userId: string): Promise<void> {
-    const accessTokenExpiresIn = this.configService.getOrThrow(
-      'jwt.accessTokenTtl',
-      { infer: true },
-    );
-    const ttlSeconds = parseTimeToSeconds(accessTokenExpiresIn);
-    await this.redisService.set(`access_token:${tokenId}`, userId, ttlSeconds);
+  // 액세스 토큰 저장
+  async saveAccessToken(
+    tokenId: string,
+    userId: string,
+    sessionId: string,
+  ): Promise<void> {
+    try {
+      const accessTokenExpiresIn = this.configService.getOrThrow(
+        'jwt.accessTokenTtl',
+        { infer: true },
+      );
+      const ttlSeconds = parseTimeToSeconds(accessTokenExpiresIn);
+      const redisKey = this.createAccessTokenKey(userId, tokenId, sessionId);
+      await this.redisService.set(redisKey, userId, ttlSeconds);
+    } catch (error) {
+      this.logger.error(
+        `Access token storage failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        'Access 토큰 저장에 실패했습니다.',
+      );
+    }
   }
 
-  // 토큰 삭제 (tokenId 기반)
-  async deleteAccessToken(tokenId: string): Promise<void> {
-    await this.redisService.del(`access_token:${tokenId}`);
+  // 리프레시 토큰 저장
+  async saveRefreshToken(
+    tokenId: string,
+    userId: string,
+    sessionId: string,
+  ): Promise<void> {
+    try {
+      const refreshTokenExpiresIn = this.configService.getOrThrow(
+        'jwt.refreshTokenTtl',
+        { infer: true },
+      );
+      const ttlSeconds = parseTimeToSeconds(refreshTokenExpiresIn);
+      const redisKey = this.createRefreshTokenKey(userId, tokenId, sessionId);
+      await this.redisService.set(redisKey, tokenId, ttlSeconds);
+    } catch (error) {
+      this.logger.error(
+        `Refresh token storage failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        'Refresh 토큰 저장에 실패했습니다.',
+      );
+    }
+  }
+
+  // 액세스 토큰 삭제
+  async deleteAccessToken(
+    tokenId: string,
+    userId: string,
+    sessionId: string,
+  ): Promise<void> {
+    try {
+      const redisKey = this.createAccessTokenKey(userId, tokenId, sessionId);
+      await this.redisService.del(redisKey);
+    } catch (error) {
+      this.logger.error(
+        `Access token deletion failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new InternalServerErrorException(
+        'Access 토큰 삭제에 실패했습니다.',
+      );
+    }
   }
 
   // 최상위 도메인 추출
@@ -336,20 +402,20 @@ export class TokenService {
   // 토큰 생성 및 설정
   async generateAndSetTokens(
     userId: string,
-    userRole: UserRole,
-    metadata: TokenMetadata & { deviceId: string },
+    deviceType: string,
+    tokenPayload: TokenPayload,
     origin?: string,
   ): Promise<JwtTokenResponse> {
     this.logger.debug('Generating tokens for user:', {
       userId,
-      userRole,
-      metadata,
+      deviceType,
+      tokenPayload,
     });
 
     const { accessToken, refreshToken } = await this.generateTokens(
       userId,
-      userRole,
-      metadata,
+      deviceType,
+      tokenPayload,
     );
 
     this.logger.debug('Generated tokens:', { accessToken, refreshToken });
@@ -374,27 +440,5 @@ export class TokenService {
       accessOptions: this.createCookieOptions(accessTokenMaxAge, origin),
       refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
     };
-  }
-
-  async invalidateDeviceSession(
-    userId: string,
-    deviceId: string,
-  ): Promise<void> {
-    try {
-      const refreshKeys = await this.redisService.keys(
-        `refresh:${userId}:${deviceId}:*`,
-      );
-      const sessionKeys = await this.redisService.keys(
-        `session:${userId}:${deviceId}:*`,
-      );
-      for (const key of [...refreshKeys, ...sessionKeys]) {
-        await this.redisService.del(key);
-      }
-    } catch (error) {
-      this.logger.error(
-        `Redis 연결 실패: ${error instanceof Error ? error.message : error}`,
-      );
-      throw new InternalServerErrorException('Redis 연결에 실패했습니다.');
-    }
   }
 }
