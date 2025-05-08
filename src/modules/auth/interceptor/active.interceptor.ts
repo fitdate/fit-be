@@ -120,11 +120,14 @@ export class ActiveInterceptor implements NestInterceptor {
       );
     }
 
-    // 세션 활동 업데이트
+    // 인증 세션 활동 업데이트
     await this.sessionService.updateSessionActivity(
       user.sub,
       metadata.deviceId,
     );
+
+    // 활동 세션 업데이트
+    await this.sessionService.updateActiveSession(user.sub, metadata.deviceId);
 
     // 슬라이딩 윈도우: accessToken 만료까지 5분 이하 남았을 때 accessToken만 갱신
     try {
