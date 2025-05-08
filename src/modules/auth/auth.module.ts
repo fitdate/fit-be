@@ -19,6 +19,8 @@ import { EmailAuthService } from './services/email-auth.service';
 import { InterestCategoryModule } from '../profile/interest-category/common/interest-category.module';
 import { IntroductionModule } from '../profile/introduction/common/introduction.module';
 import { TokenModule } from '../token/token.module';
+import { KakaoStrategy } from './strategy/kakao.stragegy';
+import { NaverStrategy } from './strategy/naver.strategy';
 @Module({
   imports: [
     UserModule,
@@ -45,6 +47,8 @@ import { TokenModule } from '../token/token.module';
     EmailAuthService,
     JwtStrategy,
     GoogleStrategy,
+    KakaoStrategy,
+    NaverStrategy,
   ],
   exports: [AuthService, JwtModule],
 })
