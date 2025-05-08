@@ -6,6 +6,8 @@ import {
   Param,
   Delete,
   Req,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -19,12 +21,38 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { Notification } from './entities/notification.entity';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @ApiTags('Notification')
 @ApiBearerAuth()
 @Controller('notification')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
+
+  // SSE 엔드포인트
+  @ApiOperation({ summary: '알림 SSE 스트림 연결' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE 스트림이 연결되었습니다.',
+  })
+  @Sse('stream')
+  streamNotifications(@Req() req: RequestWithUser): Observable<MessageEvent> {
+    const userId = req.user?.sub || req.user?.id;
+    if (!userId) {
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    }
+
+    return this.notificationService
+      .createNotificationStream(userId.toString())
+      .pipe(
+        map((notification) => ({
+          data: notification,
+          type: 'message',
+          id: notification.id,
+        })),
+      );
+  }
 
   // 알림 생성
   @ApiOperation({
