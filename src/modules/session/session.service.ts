@@ -118,6 +118,24 @@ export class SessionService {
     }
   }
 
+  async updateActiveSession(userId: string, deviceId: string): Promise<void> {
+    const sessionKey = `active_session:${userId}:${deviceId}`;
+    await this.redisService.set(
+      sessionKey,
+      JSON.stringify({ isActive: true }),
+      parseTimeToSeconds('15m'),
+    );
+  }
+
+  async isActiveSession(userId: string, deviceId: string): Promise<boolean> {
+    const sessionKey = `active_session:${userId}:${deviceId}`;
+    return (await this.redisService.exists(sessionKey)) === 1;
+  }
+
+  async deleteActiveSession(userId: string, deviceId: string): Promise<void> {
+    await this.redisService.del(`active_session:${userId}:${deviceId}`);
+  }
+
   async getSession(userId: string, deviceId: string): Promise<Session | null> {
     const sessionKey = `session:${userId}:${deviceId}`;
     const sessionData = await this.redisService.get(sessionKey);

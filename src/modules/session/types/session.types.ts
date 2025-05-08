@@ -12,3 +12,13 @@ export interface Session {
   ip: string;
   userAgent: string;
 }
+
+export interface SocketMetadata {
+  userId: string;
+  deviceId: string;
+}
+
+export interface JwtPayload {
+  sub: string;
+  deviceId: string;
+}
