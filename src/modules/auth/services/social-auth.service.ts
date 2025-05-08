@@ -6,8 +6,8 @@ import { AuthProvider } from '../types/oatuth.types';
 import { SocialUserInfo } from '../types/oatuth.types';
 import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
-import { TokenService } from './token.service';
-import { TokenMetadata } from '../types/token-payload.types';
+import { TokenService } from '../../token/token.service';
+import { TokenMetadata } from '../../token/types/token-payload.types';
 import * as UAParser from 'ua-parser-js';
 
 @Injectable()
