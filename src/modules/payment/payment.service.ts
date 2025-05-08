@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import axios from 'axios';
 import { TossPaymentResponse } from './types/toss-payment.types';
@@ -10,24 +10,53 @@ import {
   PaymentStatistics,
   PaymentStatus,
   TopPayingUser,
+  PaymentError,
+  PaymentErrorCode,
 } from './types/payment.types';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PaymentService {
+  private readonly logger = new Logger(PaymentService.name);
+
   constructor(
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
 
   // 결제 정보 생성
   async createPayment(paymentData: Partial<Payment>): Promise<Payment> {
-    const payment = this.paymentRepository.create(paymentData);
-    return this.paymentRepository.save(payment);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const payment = this.paymentRepository.create({
+        ...paymentData,
+        status: PaymentStatus.PENDING,
+      });
+      const savedPayment = await queryRunner.manager.save(Payment, payment);
+      await queryRunner.commitTransaction();
+      return savedPayment;
+    } catch (error: unknown) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error('결제 생성 실패', {
+        error: error instanceof Error ? error.message : '알 수 없는 오류',
+        paymentData,
+      });
+      throw new PaymentError(
+        PaymentErrorCode.PAYMENT_FAILED,
+        '결제 생성에 실패했습니다.',
+        { paymentData },
+      );
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   // 토스페이먼츠 결제 확인
@@ -38,14 +67,46 @@ export class PaymentService {
     req: Request,
     userId: string,
   ): Promise<TossPaymentResponse> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const payment = await this.paymentRepository.findOne({
         where: { orderId },
         relations: ['user'],
       });
 
-      if (!payment || payment.user.id !== userId) {
-        throw new Error('Unauthorized payment access');
+      if (!payment) {
+        throw new PaymentError(
+          PaymentErrorCode.PAYMENT_NOT_FOUND,
+          '결제 정보를 찾을 수 없습니다.',
+          { orderId },
+        );
+      }
+
+      if (payment.user.id !== userId) {
+        throw new PaymentError(
+          PaymentErrorCode.UNAUTHORIZED_ACCESS,
+          '결제 접근 권한이 없습니다.',
+          { orderId, userId },
+        );
+      }
+
+      if (payment.status !== PaymentStatus.PENDING) {
+        throw new PaymentError(
+          PaymentErrorCode.PAYMENT_ALREADY_PROCESSED,
+          '이미 처리된 결제입니다.',
+          { orderId, status: payment.status },
+        );
+      }
+
+      if (payment.amount !== amount) {
+        throw new PaymentError(
+          PaymentErrorCode.INVALID_AMOUNT,
+          '결제 금액이 일치하지 않습니다.',
+          { orderId, expected: payment.amount, actual: amount },
+        );
       }
 
       const encryptedSecretKey = Buffer.from(
@@ -69,15 +130,43 @@ export class PaymentService {
         },
       );
 
-      await this.paymentRepository.update(
+      await queryRunner.manager.update(
+        Payment,
         { orderId },
-        { status: 'DONE', paymentKey },
+        { status: PaymentStatus.DONE, paymentKey },
       );
 
+      await queryRunner.commitTransaction();
       return response.data;
     } catch (error) {
-      await this.paymentRepository.update({ orderId }, { status: 'CANCELED' });
-      throw error;
+      await queryRunner.rollbackTransaction();
+
+      if (error instanceof PaymentError) {
+        throw error;
+      }
+
+      await this.paymentRepository.update(
+        { orderId },
+        { status: PaymentStatus.FAILED },
+      );
+
+      this.logger.error(
+        `결제 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+        {
+          orderId,
+          paymentKey,
+          amount,
+          userId,
+        },
+      );
+
+      throw new PaymentError(
+        PaymentErrorCode.PAYMENT_FAILED,
+        '결제 처리에 실패했습니다.',
+        { orderId, paymentKey, amount, userId },
+      );
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -101,12 +190,8 @@ export class PaymentService {
   // 테스트용 모의 결제 데이터 생성
   async generateMockPayments(): Promise<Payment[]> {
     const users = await this.userRepository.find();
-    const paymentMethods: PaymentMethod[] = [
-      'credit_card',
-      'kakao_pay',
-      'naver_pay',
-    ];
-    const statuses: PaymentStatus[] = ['completed', 'failed', 'refunded'];
+    const paymentMethods = Object.values(PaymentMethod);
+    const statuses = Object.values(PaymentStatus);
     const names = [
       '김철수',
       '이영희',
@@ -144,7 +229,7 @@ export class PaymentService {
   // 결제 통계 데이터 조회
   async getPaymentStatistics(): Promise<PaymentStatistics> {
     const payments = await this.paymentRepository.find({
-      where: { status: 'completed' },
+      where: { status: PaymentStatus.DONE },
     });
 
     const total = payments.length;
@@ -184,7 +269,7 @@ export class PaymentService {
 
     const userPayments = users.map((user) => {
       const completedPayments = (user.payments || []).filter(
-        (payment: Payment) => payment.status === 'completed',
+        (payment: Payment) => payment.status === PaymentStatus.DONE,
       );
       const totalAmount = completedPayments.reduce(
         (sum, payment: Payment) => sum + payment.amount,
