@@ -90,6 +90,61 @@ export class ActiveInterceptor implements NestInterceptor {
       redisKey: `access_token:${user.tokenId}`,
     });
 
+    // 슬라이딩 윈도우: accessToken 만료까지 5분 이하 남았을 때 accessToken만 갱신
+    try {
+      const decoded: unknown = this.jwtService.decode(user.token);
+      if (
+        decoded &&
+        typeof decoded === 'object' &&
+        'exp' in decoded &&
+        typeof (decoded as { exp: number }).exp === 'number'
+      ) {
+        const exp = (decoded as { exp: number }).exp;
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = exp - now;
+        const slidingWindow = 5 * 60; // 5분(초)
+        this.logger.debug(
+          '[슬라이딩 체크] accessToken 만료까지 남은 시간:',
+          `${remaining}초`,
+        );
+        if (remaining > 0 && remaining <= slidingWindow) {
+          // accessToken만 새로 발급, refreshToken은 그대로
+          this.logger.debug('[슬라이딩] accessToken만 갱신합니다.');
+          const metadata: TokenMetadata = {
+            ip: request.ip || request.socket.remoteAddress || 'unknown',
+            userAgent: request.headers['user-agent'] || 'unknown',
+          };
+          // invalidateAllSessions 주석 처리 필요
+          // await this.tokenService.invalidateAllSessions(user.sub); // 주석 처리
+          const { accessToken } = await this.tokenService.generateTokens(
+            user.sub,
+            user.role as any,
+            metadata,
+          );
+          const accessTokenTtl =
+            this.configService.get('jwt.accessTokenTtl', { infer: true }) ||
+            this.ROLLING_PERIOD;
+          const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+          const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none' as const,
+            domain: '.fit-date.co.kr',
+            path: '/',
+          };
+          response.cookie('accessToken', accessToken, {
+            ...cookieOptions,
+            maxAge: accessTokenMaxAge,
+          });
+          this.logger.debug(
+            '[슬라이딩] 새로운 accessToken을 쿠키에 설정했습니다.',
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.error('[슬라이딩] accessToken 만료 시간 파싱 실패:', err);
+    }
+
     if (!isValid) {
       this.logger.debug(
         `[Token Validation] Token invalid for user ${user.sub}, attempting refresh`,
