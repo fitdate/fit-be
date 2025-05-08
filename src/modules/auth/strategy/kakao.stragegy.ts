@@ -11,14 +11,8 @@ interface KakaoProfile extends Profile {
   _json: {
     kakao_account?: {
       email?: string;
-      profile?: {
-        nickname?: string;
-      };
     };
     account_email?: string;
-    properties?: {
-      nickname?: string;
-    };
   };
 }
 
@@ -41,7 +35,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
       callbackURL: configService.getOrThrow('social.kakao.callbackUrlDev', {
         infer: true,
       }),
-      scope: ['account_email', 'profile_nickname'],
+      scope: ['account_email'],
     });
   }
 
