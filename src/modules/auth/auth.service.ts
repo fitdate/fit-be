@@ -33,6 +33,7 @@ import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
 import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
 import { TokenMetadata } from './types/token-payload.types';
+import UAParser from 'ua-parser-js';
 @Injectable()
 export class AuthService {
   protected readonly logger = new Logger(AuthService.name);
@@ -418,17 +419,6 @@ export class AuthService {
     return user;
   }
 
-  // async login(
-  //   loginDto: EmailLoginDto,
-  //   origin?: string,
-  // ): Promise<JwtTokenResponse> {
-  //   this.logger.log(`Attempting login for user with email: ${loginDto.email}`);
-  //   const { email, password } = loginDto;
-  //   const user = await this.validate(email, password);
-
-  //   return this.tokenService.generateAndSetTokens(user.id, user.role, origin);
-  // }
-
   //이메일 로그인
   async handleEmailLogin(
     loginDto: EmailLoginDto,
@@ -438,10 +428,29 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
 
-    // ip, userAgent 추출
+    // ip, userAgent, deviceId 추출
+    const deviceId: string =
+      (req.cookies?.deviceId as string) ||
+      (req.headers['x-device-id'] as string) ||
+      'unknown-device';
+    const userAgentStr = req.headers['user-agent'] || 'unknown';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const UAParserConstructor = UAParser as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const parser: any = new UAParserConstructor(userAgentStr);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const deviceType: string = parser.getDevice().type || 'desktop';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const browser: string = parser.getBrowser().name || 'unknown';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const os: string = parser.getOS().name || 'unknown';
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket?.remoteAddress || 'unknown',
-      userAgent: req.headers['user-agent'] || 'unknown',
+      userAgent: userAgentStr,
+      deviceId,
+      deviceType,
+      browser,
+      os,
     };
     this.logger.log(`TokenMetadata 생성: ${JSON.stringify(metadata)}`);
 
@@ -486,8 +495,13 @@ export class AuthService {
 
       const userId = req.user?.sub;
       const tokenId = (req.user as { tokenId?: string })?.tokenId;
+      // deviceId 추출
+      const deviceId: string =
+        (req.cookies?.deviceId as string) ||
+        (req.headers['x-device-id'] as string) ||
+        'unknown-device';
       if (userId && tokenId) {
-        await this.tokenService.deleteRefreshToken(userId, tokenId);
+        await this.tokenService.deleteRefreshToken(userId, deviceId, tokenId);
       }
 
       return {
@@ -638,11 +652,13 @@ export class AuthService {
     tokenId: string,
     userRole: UserRole,
     metadata: TokenMetadata,
+    deviceId: string,
   ): Promise<boolean> {
     try {
       // 토큰 유효성 검사
       const isValid = await this.tokenService.validateRefreshToken(
         userId,
+        deviceId,
         tokenId,
         metadata,
       );
@@ -651,7 +667,13 @@ export class AuthService {
       }
 
       // 토큰 갱신
-      await this.tokenService.rotateTokens(userId, tokenId, userRole, metadata);
+      await this.tokenService.rotateTokens(
+        userId,
+        deviceId,
+        tokenId,
+        userRole,
+        metadata,
+      );
       return true;
     } catch (error) {
       this.logger.error(`Activity check failed for user ${userId}:`, error);

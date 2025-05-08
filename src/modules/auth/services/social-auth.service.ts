@@ -8,6 +8,7 @@ import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
 import { TokenService } from './token.service';
 import { TokenMetadata } from '../types/token-payload.types';
+import * as UAParser from 'ua-parser-js';
 
 @Injectable()
 export class SocialAuthService {
@@ -57,6 +58,35 @@ export class SocialAuthService {
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket.remoteAddress || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown',
+      deviceId:
+        (typeof req.headers['x-device-id'] === 'string' &&
+          req.headers['x-device-id']) ||
+        (req.cookies &&
+          typeof req.cookies.deviceId === 'string' &&
+          req.cookies.deviceId) ||
+        'unknown-device',
+      ...(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const parser = new (UAParser as any).default(
+          req.headers['user-agent'] || 'unknown',
+        );
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const device = parser.getDevice();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const deviceType = device && device.type ? device.type : 'desktop';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const browserInfo = parser.getBrowser();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const browser =
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const osInfo = parser.getOS();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const os = osInfo && osInfo.name ? osInfo.name : 'unknown';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        return { deviceType, browser, os };
+      })(),
     };
 
     const tokens = await this.tokenService.generateAndSetTokens(

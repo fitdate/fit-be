@@ -11,4 +11,8 @@ export interface TokenPayload extends JwtPayload {
 export interface TokenMetadata {
   ip: string;
   userAgent: string;
+  deviceId: string;
+  deviceType: string;
+  browser: string;
+  os: string;
 }
