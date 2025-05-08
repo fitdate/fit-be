@@ -8,6 +8,7 @@ import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { SocketMetadata, JwtPayload } from './types/session.types';
+import { SubscribeMessage } from '@nestjs/websockets';
 @WebSocketGateway()
 export class SessionGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -33,6 +34,22 @@ export class SessionGateway
       );
       client.disconnect();
     }
+  }
+
+  @SubscribeMessage('get:user:status')
+  async handleGetUserStatus(client: Socket, payload: { userIds: string[] }) {
+    const metadata = this.extractMetadata(client);
+    const statuses = await Promise.all(
+      payload.userIds.map(async (userId) => {
+        const isActive = await this.sessionService.isActiveSession(
+          userId,
+          metadata.deviceId,
+        );
+        return { userId, isActive };
+      }),
+    );
+    client.emit('userStatus', statuses);
+    return statuses;
   }
 
   async handleDisconnect(client: Socket) {
