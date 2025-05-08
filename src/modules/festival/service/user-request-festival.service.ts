@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import { FestivalDto } from '../dto/festival.dto';
 import { UserService } from '../../user/user.service';
+import { RegionCode } from '../enum/festival-region.enum';
 @Injectable()
 export class UserRequestFestivalService {
   private readonly logger = new Logger(UserRequestFestivalService.name);
@@ -64,7 +65,9 @@ export class UserRequestFestivalService {
       if (!user) {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
-      const region = user.region;
+      const region =
+        RegionCode[user.region as keyof typeof RegionCode] || user.region;
+
       const redisKey = `festivals:${region}`;
       this.logger.debug(
         `[getFestivalsByAreaName] Redis에서 데이터 조회: ${redisKey}`,
