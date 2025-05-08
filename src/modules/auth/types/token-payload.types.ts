@@ -12,4 +12,7 @@ export interface TokenMetadata {
   ip: string;
   userAgent: string;
   deviceId: string;
+  deviceType: string;
+  browser: string;
+  os: string;
 }

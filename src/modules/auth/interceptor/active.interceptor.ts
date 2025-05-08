@@ -10,6 +10,7 @@ import { AllConfig } from 'src/common/config/config.types';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { UserRole } from 'src/common/enum/user-role.enum';
 import { TokenMetadata } from '../types/token-payload.types';
+import * as UAParser from 'ua-parser-js';
 
 interface RequestWithUser extends Request {
   user: {
@@ -122,10 +123,32 @@ export class ActiveInterceptor implements NestInterceptor {
         if (remaining > 0 && remaining <= slidingWindow) {
           // accessToken만 새로 발급, refreshToken은 그대로
           this.logger.debug('[슬라이딩] accessToken만 갱신합니다.');
+          const userAgentStr = request.headers['user-agent'] || 'unknown';
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
+          const parser = new (UAParser as any).default(userAgentStr);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          const device = parser.getDevice();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          const deviceType: string =
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            device && device.type ? device.type : 'desktop';
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          const browserInfo = parser.getBrowser();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          const browser: string =
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          const osInfo = parser.getOS();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const os: string = osInfo && osInfo.name ? osInfo.name : 'unknown';
           const metadata: TokenMetadata = {
             ip: request.ip || request.socket.remoteAddress || 'unknown',
-            userAgent: request.headers['user-agent'] || 'unknown',
+            userAgent: userAgentStr,
             deviceId,
+            deviceType,
+            browser,
+            os,
           };
           const { accessToken } = await this.tokenService.generateTokens(
             user.sub,
@@ -172,10 +195,32 @@ export class ActiveInterceptor implements NestInterceptor {
       }
 
       try {
+        const userAgentStr = request.headers['user-agent'] || 'unknown';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/ban-ts-comment
+        const parser = new (UAParser as any).default(userAgentStr);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const device = parser.getDevice();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const deviceType: string =
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          device && device.type ? device.type : 'desktop';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const browserInfo = parser.getBrowser();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const browser: string =
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const osInfo = parser.getOS();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        const os: string = osInfo && osInfo.name ? osInfo.name : 'unknown';
         const metadata: TokenMetadata = {
           ip: request.ip || request.socket.remoteAddress || 'unknown',
-          userAgent: request.headers['user-agent'] || 'unknown',
+          userAgent: userAgentStr,
           deviceId,
+          deviceType,
+          browser,
+          os,
         };
 
         this.logger.debug('[Token Validation] Attempting token rotation:', {
