@@ -22,6 +22,8 @@ import { TokenModule } from '../token/token.module';
 import { KakaoStrategy } from './strategy/kakao.stragegy';
 import { NaverStrategy } from './strategy/naver.strategy';
 import { SessionModule } from '../session/session.module';
+import { FindEmailService } from './services/find-email.service';
+import { FindAndChangePasswordService } from './services/find-and-change-password.service';
 @Module({
   imports: [
     UserModule,
@@ -51,6 +53,8 @@ import { SessionModule } from '../session/session.module';
     GoogleStrategy,
     KakaoStrategy,
     NaverStrategy,
+    FindEmailService,
+    FindAndChangePasswordService,
   ],
   exports: [AuthService, JwtModule],
 })
