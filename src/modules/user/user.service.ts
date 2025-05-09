@@ -282,6 +282,19 @@ export class UserService {
     return user;
   }
 
+  // 커피 구매
+  async buyCoffee(userId: string, coffee: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    user.coffee += coffee;
+    await this.userRepository.save(user);
+    return { message: '커피 구매 성공' };
+  }
+
   // 사용자 정보 조회
   async getUserInfo(userId: string) {
     const user = await this.userRepository.findOne({
