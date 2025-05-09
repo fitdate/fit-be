@@ -35,10 +35,11 @@ export class FindAndChangePasswordService {
   }
 
   async findAndChangePassword(
-    userId: string,
     findAndChangePasswordDto: FindAndChangePasswordDto,
   ) {
-    const user = await this.userService.findOne(userId);
+    const user = await this.userService.findOne(
+      findAndChangePasswordDto.userId,
+    );
 
     if (!user) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');

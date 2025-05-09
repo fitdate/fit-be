@@ -153,14 +153,12 @@ export class AuthController {
   // 비밀번호 변경
   @Public()
   @Post('find-and-change-password')
-  @ApiOperation({ summary: '비밀번호 변경' })
+  @ApiOperation({ summary: '유저 id로 비밀번호 변경' })
   @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
   async findAndChangePassword(
-    @UserId() userId: string,
     @Body() findAndChangePasswordDto: FindAndChangePasswordDto,
   ) {
     return this.findAndChangePasswordService.findAndChangePassword(
-      userId,
       findAndChangePasswordDto,
     );
   }
