@@ -38,7 +38,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { SessionService } from '../session/session.service';
 import { TokenPayload } from '../token/types/token-payload.types';
-import { CoffeeChat } from '../coffee-chat/entities/coffee-chat.entity';
 
 @Injectable()
 export class AuthService {
@@ -601,7 +600,7 @@ export class AuthService {
     await qr.startTransaction();
 
     try {
-      // 1. 사용자 정보 조회
+      // 1. 사용자 정보 조회 (연관 데이터 포함)
       const user = await qr.manager.findOne(User, {
         where: { id: userId },
         relations: [
@@ -611,6 +610,15 @@ export class AuthService {
           'profile.feedback',
           'profile.introduction',
           'profile.interests',
+          'likes',
+          'likedBy',
+          'passes',
+          'passedBy',
+          'payments',
+          'coffeeChats',
+          'coffeeChatsReceived',
+          'sentAcceptedCoffeeChats',
+          'receivedAcceptedCoffeeChats',
         ],
       });
 
@@ -618,74 +626,70 @@ export class AuthService {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
       }
 
-      // 2. 프로필 이미지 삭제
       log('Deleting profile images');
       const profileImages = await qr.manager.find(ProfileImage, {
         where: { profile: { id: user.profile.id } },
       });
-
-      // S3에서 이미지 삭제
       for (const image of profileImages) {
         const bucketName = this.configService.getOrThrow('aws.bucketName', {
           infer: true,
         });
         await this.s3Service.deleteFile(image.key, bucketName);
       }
+      await qr.manager.softRemove(profileImages);
+      log('Profile images soft deleted successfully');
 
-      // 데이터베이스에서 이미지 레코드 삭제
-      await qr.manager.remove(ProfileImage, profileImages);
-      log('Profile images deleted successfully');
-
-      // 3. MBTI 삭제
-      log('Deleting MBTI');
-      await qr.manager.delete(Mbti, { profile: { id: user.profile.id } });
-      log('MBTI deleted successfully');
-
-      // 4. 피드백 삭제
-      log('Deleting feedback');
-      await qr.manager.delete(UserFeedback, {
+      log('Soft deleting MBTI, feedback, introduction, interests');
+      await qr.manager.softDelete(Mbti, {
         profile: { id: user.profile.id },
       });
-      log('Feedback deleted successfully');
-
-      // 5. 자기소개 삭제
-      log('Deleting introduction');
-      await qr.manager.delete(UserIntroduction, {
+      await qr.manager.softDelete(UserFeedback, {
         profile: { id: user.profile.id },
       });
-      log('Introduction deleted successfully');
-
-      // 6. 관심사 삭제
-      log('Deleting interests');
-      await qr.manager.delete(UserInterestCategory, {
+      await qr.manager.softDelete(UserIntroduction, {
         profile: { id: user.profile.id },
       });
-      log('Interests deleted successfully');
+      await qr.manager.softDelete(UserInterestCategory, {
+        profile: { id: user.profile.id },
+      });
+      log('MBTI, feedback, introduction, interests soft deleted');
 
-      // 7. 프로필 삭제
-      log('Deleting profile');
-      await qr.manager.remove(Profile, user.profile);
-      log('Profile deleted successfully');
+      log('Soft deleting profile');
+      await qr.manager.softRemove(Profile, user.profile);
+      log('Profile soft deleted successfully');
 
-      // 8. 사용자 삭제
-      log('Deleting user');
-      await qr.manager.remove(User, user);
-      log('User deleted successfully');
+      log('Soft deleting related entities');
+      for (const like of [...user.likes, ...user.likedBy]) {
+        await qr.manager.softRemove(like);
+      }
+      for (const pass of [...user.passes, ...user.passedBy]) {
+        await qr.manager.softRemove(pass);
+      }
+      for (const payment of user.payments) {
+        await qr.manager.softRemove(payment);
+      }
+      for (const chat of [...user.coffeeChats, ...user.coffeeChatsReceived]) {
+        await qr.manager.softRemove(chat);
+      }
+      for (const acc of [
+        ...user.sentAcceptedCoffeeChats,
+        ...user.receivedAcceptedCoffeeChats,
+      ]) {
+        await qr.manager.softRemove(acc);
+      }
+      log('Related entities soft deleted');
 
-      // 9. Redis에서 인증 상태 삭제
+      // 6. User soft delete
+      log('Soft deleting user');
+      await qr.manager.softRemove(user);
+      log('User soft deleted successfully');
+
+      // 7. Redis에서 인증 상태 삭제
       const verifiedKey = `email-verified:${user.email}`;
       await this.redisService.del(verifiedKey);
       log('Email verification status deleted from Redis');
 
-      // 10. 커피챗 삭제
-      log('Deleting coffee chat');
-      await qr.manager.delete(CoffeeChat, {
-        sender: { id: user.id },
-        receiver: { id: user.id },
-      });
-      log('Coffee chat deleted successfully');
-
-      // 11. Redis에서 session, token 삭제
+      // 8. Redis에서 session, token 삭제
       log('Deleting session and token');
       await this.redisService.del(`session:${user.id}:*`);
       await this.redisService.del(`active_session:${user.id}:*`);
