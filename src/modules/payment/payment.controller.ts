@@ -44,6 +44,9 @@ export class PaymentController {
       confirmPaymentDto.amount,
       req,
       user.id,
+      confirmPaymentDto.customerEmail,
+      confirmPaymentDto.customerName,
+      confirmPaymentDto.customerMobilePhone,
     );
   }
 

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, IsEmail, IsNotEmpty } from 'class-validator';
 
 export class ConfirmPaymentDto {
   @ApiProperty({
@@ -7,6 +7,7 @@ export class ConfirmPaymentDto {
     example: '5zJ4xY7m0kODnyRpQWGrN2xqGlNvLrKwv1M9ENjbeoPaZdL6',
   })
   @IsString()
+  @IsNotEmpty()
   paymentKey: string;
 
   @ApiProperty({
@@ -14,6 +15,7 @@ export class ConfirmPaymentDto {
     example: 'order_1234',
   })
   @IsString()
+  @IsNotEmpty()
   orderId: string;
 
   @ApiProperty({
@@ -22,4 +24,28 @@ export class ConfirmPaymentDto {
   })
   @IsNumber()
   amount: number;
+
+  @ApiProperty({
+    description: '고객 이메일',
+    example: 'user@example.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  customerEmail: string;
+
+  @ApiProperty({
+    description: '고객 이름',
+    example: '홍길동',
+  })
+  @IsString()
+  @IsNotEmpty()
+  customerName: string;
+
+  @ApiProperty({
+    description: '고객 전화번호',
+    example: '01012345678',
+  })
+  @IsString()
+  @IsNotEmpty()
+  customerMobilePhone: string;
 }

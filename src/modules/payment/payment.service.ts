@@ -67,6 +67,9 @@ export class PaymentService {
     amount: number,
     req: Request,
     userId: string,
+    customerEmail: string,
+    customerName: string,
+    customerMobilePhone: string,
   ): Promise<TossPaymentResponse> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -134,9 +137,9 @@ export class PaymentService {
           orderId,
           status: PaymentStatus.DONE,
           orderName: response.data.orderName,
-          customerName: response.data.customerName,
-          customerEmail: response.data.customerEmail,
-          customerMobilePhone: response.data.customerMobilePhone,
+          customerName,
+          customerEmail,
+          customerMobilePhone,
           paymentMethod: mapTossPaymentMethod(response.data.method),
         });
 
