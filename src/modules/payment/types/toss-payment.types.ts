@@ -46,6 +46,15 @@ export class TossPaymentResponse {
     discount: number;
   };
 
+  @ApiProperty()
+  customerName: string;
+
+  @ApiProperty()
+  customerEmail: string;
+
+  @ApiProperty()
+  customerMobilePhone: string;
+
   @ApiProperty({ required: false })
   card?: {
     company: string;

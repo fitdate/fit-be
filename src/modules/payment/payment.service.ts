@@ -72,40 +72,15 @@ export class PaymentService {
     await queryRunner.startTransaction();
 
     try {
-      const payment = await this.paymentRepository.findOne({
-        where: { orderId },
-        relations: ['user'],
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
       });
 
-      if (!payment) {
+      if (!user) {
         throw new PaymentError(
-          PaymentErrorCode.PAYMENT_NOT_FOUND,
-          '결제 정보를 찾을 수 없습니다.',
-          { orderId },
-        );
-      }
-
-      if (payment.user.id !== userId) {
-        throw new PaymentError(
-          PaymentErrorCode.UNAUTHORIZED_ACCESS,
-          '결제 접근 권한이 없습니다.',
-          { orderId, userId },
-        );
-      }
-
-      if (payment.status !== PaymentStatus.PENDING) {
-        throw new PaymentError(
-          PaymentErrorCode.PAYMENT_ALREADY_PROCESSED,
-          '이미 처리된 결제입니다.',
-          { orderId, status: payment.status },
-        );
-      }
-
-      if (payment.amount !== amount) {
-        throw new PaymentError(
-          PaymentErrorCode.INVALID_AMOUNT,
-          '결제 금액이 일치하지 않습니다.',
-          { orderId, expected: payment.amount, actual: amount },
+          PaymentErrorCode.USER_NOT_FOUND,
+          '사용자를 찾을 수 없습니다.',
+          { userId },
         );
       }
 
@@ -129,12 +104,21 @@ export class PaymentService {
         },
       );
 
-      await queryRunner.manager.update(
-        Payment,
-        { orderId },
-        { status: PaymentStatus.DONE, paymentKey },
-      );
+      // 토스페이먼츠 API 호출 성공 후 DB에 저장
+      const payment = this.paymentRepository.create({
+        user,
+        amount,
+        paymentKey,
+        orderId,
+        status: PaymentStatus.DONE,
+        orderName: response.data.orderName,
+        customerName: response.data.customerName,
+        customerEmail: response.data.customerEmail,
+        customerMobilePhone: response.data.customerMobilePhone,
+        paymentMethod: response.data.method as PaymentMethod,
+      });
 
+      await queryRunner.manager.save(Payment, payment);
       await queryRunner.commitTransaction();
       return response.data;
     } catch (error) {
@@ -143,11 +127,6 @@ export class PaymentService {
       if (error instanceof PaymentError) {
         throw error;
       }
-
-      await this.paymentRepository.update(
-        { orderId },
-        { status: PaymentStatus.FAILED },
-      );
 
       this.logger.error(
         `결제 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
@@ -184,45 +163,6 @@ export class PaymentService {
     }
 
     return payment;
-  }
-
-  // 테스트용 모의 결제 데이터 생성
-  async generateMockPayments(): Promise<Payment[]> {
-    const users = await this.userRepository.find();
-    const paymentMethods = Object.values(PaymentMethod);
-    const statuses = Object.values(PaymentStatus);
-    const names = [
-      '김철수',
-      '이영희',
-      '박민수',
-      '정지은',
-      '최동욱',
-      '강수진',
-      '윤지원',
-      '한민준',
-      '서예진',
-      '임태현',
-    ];
-
-    const mockPayments = users.flatMap((user) => {
-      const paymentCount = Math.floor(Math.random() * 5) + 1;
-      return Array.from({ length: paymentCount }, () => ({
-        user,
-        amount: Math.floor(Math.random() * 100000) + 10000,
-        paymentMethod:
-          paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        orderName: `${names[Math.floor(Math.random() * names.length)]}의 결제`,
-        orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        customerName: names[Math.floor(Math.random() * names.length)],
-        customerEmail: `${Math.random().toString(36).substr(2, 8)}@example.com`,
-        customerMobilePhone: `010${Math.floor(Math.random() * 100000000)
-          .toString()
-          .padStart(8, '0')}`,
-      }));
-    });
-
-    return this.paymentRepository.save(mockPayments);
   }
 
   // 결제 통계 데이터 조회
