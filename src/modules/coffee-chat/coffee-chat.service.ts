@@ -163,20 +163,20 @@ export class CoffeeChatService {
     }
 
     const result = await this.coffeeChatRepository.delete({
-      sender: { id: userId },
-      receiver: { id: passedUserId },
+      sender: { id: passedUserId },
+      receiver: { id: userId },
       status: CoffeeChatStatus.PENDING,
     });
 
     if (result.affected === 0) {
       this.logger.warn(
-        `거절할 커피챗이 존재하지 않습니다. sender: ${userId}, receiver: ${passedUserId}`,
+        `거절할 커피챗이 존재하지 않습니다. sender: ${passedUserId}, receiver: ${userId}`,
       );
       throw new BadRequestException('거절할 커피챗이 존재하지 않습니다.');
     }
 
     this.logger.log(
-      `커피챗 거절 완료 - sender: ${userId}, receiver: ${passedUserId}`,
+      `커피챗 거절 완료 - sender: ${passedUserId}, receiver: ${userId}`,
     );
   }
 
