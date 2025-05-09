@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseTable } from '../../../common/entity/base-table.entity';
@@ -17,9 +11,8 @@ export class Payment extends BaseTable {
   id: string;
 
   @ApiProperty({ type: () => User })
-  @ManyToOne(() => User, { onDelete: 'CASCADE', eager: true })
-  @JoinColumn({ name: 'userId' })
-  user!: User;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  user: User;
 
   @ApiProperty()
   @Column()
@@ -38,22 +31,30 @@ export class Payment extends BaseTable {
   paymentKey: string;
 
   @ApiProperty()
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
+  })
   status: PaymentStatus;
 
   @ApiProperty()
-  @Column({ nullable: true })
+  @Column()
   customerEmail: string;
 
   @ApiProperty()
-  @Column({ nullable: true })
+  @Column()
   customerName: string;
 
   @ApiProperty()
-  @Column({ nullable: true })
+  @Column()
   customerMobilePhone: string;
 
   @ApiProperty()
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
+    default: PaymentMethod.CREDIT_CARD,
+  })
   paymentMethod: PaymentMethod;
 }

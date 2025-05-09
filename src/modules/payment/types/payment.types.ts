@@ -1,11 +1,34 @@
-export type PaymentStatus =
-  | 'completed'
-  | 'failed'
-  | 'refunded'
-  | 'DONE'
-  | 'CANCELED';
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  DONE = 'DONE',
+  CANCELED = 'CANCELED',
+  FAILED = 'FAILED',
+}
 
-export type PaymentMethod = 'credit_card' | 'kakao_pay' | 'naver_pay';
+export enum PaymentMethod {
+  CREDIT_CARD = 'CREDIT_CARD',
+  KAKAO_PAY = 'KAKAO_PAY',
+  NAVER_PAY = 'NAVER_PAY',
+}
+
+export enum PaymentErrorCode {
+  UNAUTHORIZED_ACCESS = 'PAYMENT_001',
+  INVALID_AMOUNT = 'PAYMENT_002',
+  PAYMENT_NOT_FOUND = 'PAYMENT_003',
+  PAYMENT_ALREADY_PROCESSED = 'PAYMENT_004',
+  PAYMENT_FAILED = 'PAYMENT_005',
+}
+
+export class PaymentError extends Error {
+  constructor(
+    public readonly code: PaymentErrorCode,
+    message: string,
+    public readonly details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = 'PaymentError';
+  }
+}
 
 export interface PaymentStatistics {
   total: number;
