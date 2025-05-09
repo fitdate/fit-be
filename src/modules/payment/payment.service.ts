@@ -12,6 +12,7 @@ import {
   TopPayingUser,
   PaymentError,
   PaymentErrorCode,
+  mapTossPaymentMethod,
 } from './types/payment.types';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -136,7 +137,7 @@ export class PaymentService {
           customerName: response.data.customerName,
           customerEmail: response.data.customerEmail,
           customerMobilePhone: response.data.customerMobilePhone,
-          paymentMethod: response.data.method as PaymentMethod,
+          paymentMethod: mapTossPaymentMethod(response.data.method),
         });
 
         await queryRunner.manager.save(Payment, payment);

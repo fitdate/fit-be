@@ -6,9 +6,13 @@ export enum PaymentStatus {
 }
 
 export enum PaymentMethod {
-  CREDIT_CARD = 'CREDIT_CARD',
-  KAKAO_PAY = 'KAKAO_PAY',
-  NAVER_PAY = 'NAVER_PAY',
+  CARD = 'CARD', // 신용/체크카드
+  TRANSFER = 'TRANSFER', // 퀵계좌이체
+  TOSSPAY = 'TOSSPAY', // 토스페이
+  PAYCO = 'PAYCO', // 페이코
+  KAKAO_PAY = 'KAKAO_PAY', // 카카오페이
+  NAVER_PAY = 'NAVER_PAY', // 네이버페이
+  PHONE = 'PHONE', // 휴대폰
 }
 
 export enum PaymentErrorCode {
@@ -66,4 +70,18 @@ export interface PaymentResponseDto {
   customerEmail: string;
   customerMobilePhone: string;
   createdAt: Date;
+}
+
+export function mapTossPaymentMethod(tossMethod: string): PaymentMethod {
+  const methodMap: Record<string, PaymentMethod> = {
+    카드: PaymentMethod.CARD,
+    계좌이체: PaymentMethod.TRANSFER,
+    토스페이: PaymentMethod.TOSSPAY,
+    페이코: PaymentMethod.PAYCO,
+    카카오페이: PaymentMethod.KAKAO_PAY,
+    네이버페이: PaymentMethod.NAVER_PAY,
+    휴대폰: PaymentMethod.PHONE,
+  };
+
+  return methodMap[tossMethod] || PaymentMethod.CARD;
 }

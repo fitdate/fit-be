@@ -54,7 +54,7 @@ export class Payment extends BaseTable {
   @Column({
     type: 'enum',
     enum: PaymentMethod,
-    default: PaymentMethod.CREDIT_CARD,
+    default: PaymentMethod.CARD,
   })
   paymentMethod: PaymentMethod;
 }
