@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, Req, Body } from '@nestjs/common';
 import {
   ApiOperation,
   ApiResponse,
@@ -34,7 +34,7 @@ export class PaymentController {
   @Post('confirm')
   // 토스페이먼츠 결제 확인
   async confirmPayment(
-    @Query() confirmPaymentDto: ConfirmPaymentDto,
+    @Body() confirmPaymentDto: ConfirmPaymentDto,
     @Req() req: Request,
     @UserId() user: User,
   ): Promise<TossPaymentResponse> {
