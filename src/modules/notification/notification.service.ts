@@ -45,6 +45,7 @@ export class NotificationService {
   createNotificationStream(userId: string): Observable<Notification> {
     let stream = this.notificationStreams.get(userId);
     if (!stream) {
+      this.logger.log(`사용자 ${userId}의 새로운 알림 스트림을 생성합니다.`);
       stream = new Subject<Notification>();
       this.notificationStreams.set(userId, stream);
 
@@ -57,7 +58,7 @@ export class NotificationService {
             if (currentStream && !currentStream.closed) {
               currentStream.complete();
               this.notificationStreams.delete(userId);
-              this.logger.debug(
+              this.logger.log(
                 `사용자 ${userId}의 스트림이 타임아웃으로 종료되었습니다.`,
               );
             }
@@ -66,6 +67,11 @@ export class NotificationService {
 
       // 에러 처리 추가
       stream.subscribe({
+        next: (notification) => {
+          this.logger.log(
+            `사용자 ${userId}에게 알림 전송: ${JSON.stringify(notification)}`,
+          );
+        },
         error: (error: Error) => {
           this.logger.error(`스트림 에러 발생: ${error.message}`);
           if (this.notificationStreams.has(userId)) {
@@ -73,12 +79,14 @@ export class NotificationService {
           }
         },
         complete: () => {
-          this.logger.debug(`사용자 ${userId}의 스트림이 완료되었습니다.`);
+          this.logger.log(`사용자 ${userId}의 스트림이 완료되었습니다.`);
           if (this.notificationStreams.has(userId)) {
             this.notificationStreams.delete(userId);
           }
         },
       });
+    } else {
+      this.logger.log(`사용자 ${userId}의 기존 알림 스트림을 재사용합니다.`);
     }
     return stream.asObservable();
   }

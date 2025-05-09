@@ -31,22 +31,28 @@ export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   // SSE 엔드포인트
-  @Sse('stream')
-  streamNotifications(@Req() req: RequestWithUser): Observable<MessageEvent> {
-    const userId = req.user?.sub || req.user?.id;
-    if (!userId) {
+  @Sse('stream/:userId')
+  streamNotifications(
+    @Param('userId') userId: string,
+    @Req() req: RequestWithUser,
+  ): Observable<MessageEvent> {
+    // URL 파라미터의 userId와 토큰의 userId가 일치하는지 확인
+    const tokenUserId = req.user?.sub || req.user?.id;
+    if (!tokenUserId) {
       throw new Error('사용자 정보를 찾을 수 없습니다.');
     }
 
-    return this.notificationService
-      .createNotificationStream(userId.toString())
-      .pipe(
-        map((notification) => ({
-          data: notification,
-          type: 'message',
-          id: notification.id,
-        })),
-      );
+    if (tokenUserId !== userId) {
+      throw new Error('권한이 없습니다.');
+    }
+
+    return this.notificationService.createNotificationStream(userId).pipe(
+      map((notification) => ({
+        data: notification,
+        type: 'message',
+        id: notification.id,
+      })),
+    );
   }
 
   // 알림 생성
