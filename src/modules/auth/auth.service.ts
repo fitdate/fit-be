@@ -645,15 +645,39 @@ export class AuthService {
           id: user.profile.mbti.id,
         });
       }
-      await qr.manager.softDelete(UserFeedback, {
-        profileId: user.profile.id,
+      // UserFeedback
+      const userFeedbacks = await qr.manager.find(UserFeedback, {
+        where: { profile: { id: user.profile.id } },
       });
-      await qr.manager.softDelete(UserIntroduction, {
-        profileId: user.profile.id,
+      if (userFeedbacks.length > 0) {
+        await qr.manager.softDelete(
+          UserFeedback,
+          userFeedbacks.map((fb) => fb.id),
+        );
+      }
+      // UserIntroduction
+      const userIntroductions = await qr.manager.find(UserIntroduction, {
+        where: { profile: { id: user.profile.id } },
       });
-      await qr.manager.softDelete(UserInterestCategory, {
-        profileId: user.profile.id,
-      });
+      if (userIntroductions.length > 0) {
+        await qr.manager.softDelete(
+          UserIntroduction,
+          userIntroductions.map((intro) => intro.id),
+        );
+      }
+      // UserInterestCategory
+      const userInterestCategories = await qr.manager.find(
+        UserInterestCategory,
+        {
+          where: { profile: { id: user.profile.id } },
+        },
+      );
+      if (userInterestCategories.length > 0) {
+        await qr.manager.softDelete(
+          UserInterestCategory,
+          userInterestCategories.map((cat) => cat.id),
+        );
+      }
       log('MBTI, feedback, introduction, interests soft deleted');
 
       log('Soft deleting profile');
