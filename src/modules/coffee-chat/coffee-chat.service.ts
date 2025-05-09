@@ -157,7 +157,7 @@ export class CoffeeChatService {
     });
   }
 
-  async declineCoffeeChat(
+  async removeCoffeeChat(
     userId: string,
     notificationDto: CreateNotificationDto,
   ) {
