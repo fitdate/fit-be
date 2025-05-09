@@ -38,7 +38,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { SessionService } from '../session/session.service';
 import { TokenPayload } from '../token/types/token-payload.types';
-import { CoffeeChat } from '../coffee-chat/entities/coffee-chat.entity';
 
 @Injectable()
 export class AuthService {
