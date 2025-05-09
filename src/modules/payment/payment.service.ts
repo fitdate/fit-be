@@ -165,6 +165,45 @@ export class PaymentService {
     return payment;
   }
 
+  // 테스트용 모의 결제 데이터 생성
+  async generateMockPayments(): Promise<Payment[]> {
+    const users = await this.userRepository.find();
+    const paymentMethods = Object.values(PaymentMethod);
+    const statuses = Object.values(PaymentStatus);
+    const names = [
+      '김철수',
+      '이영희',
+      '박민수',
+      '정지은',
+      '최동욱',
+      '강수진',
+      '윤지원',
+      '한민준',
+      '서예진',
+      '임태현',
+    ];
+
+    const mockPayments = users.flatMap((user) => {
+      const paymentCount = Math.floor(Math.random() * 5) + 1;
+      return Array.from({ length: paymentCount }, () => ({
+        user,
+        amount: Math.floor(Math.random() * 100000) + 10000,
+        paymentMethod:
+          paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+        orderName: `${names[Math.floor(Math.random() * names.length)]}의 결제`,
+        orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        customerName: names[Math.floor(Math.random() * names.length)],
+        customerEmail: `${Math.random().toString(36).substr(2, 8)}@example.com`,
+        customerMobilePhone: `010${Math.floor(Math.random() * 100000000)
+          .toString()
+          .padStart(8, '0')}`,
+      }));
+    });
+
+    return this.paymentRepository.save(mockPayments);
+  }
+
   // 결제 통계 데이터 조회
   async getPaymentStatistics(): Promise<PaymentStatistics> {
     const payments = await this.paymentRepository.find({
