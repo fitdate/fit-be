@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Payment } from './entities/payment.entity';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { TossPaymentResponse } from './types/toss-payment.types';
 import { User } from '../user/entities/user.entity';
 import {
@@ -72,11 +72,16 @@ export class PaymentService {
     await queryRunner.startTransaction();
 
     try {
+      this.logger.log(
+        `결제 승인 시도: ${JSON.stringify({ paymentKey, orderId, amount, userId })}`,
+      );
+
       const user = await this.userRepository.findOne({
         where: { id: userId },
       });
 
       if (!user) {
+        this.logger.error(`사용자를 찾을 수 없음: ${userId}`);
         throw new PaymentError(
           PaymentErrorCode.USER_NOT_FOUND,
           '사용자를 찾을 수 없습니다.',
@@ -84,43 +89,77 @@ export class PaymentService {
         );
       }
 
-      const encryptedSecretKey = Buffer.from(
-        `${this.configService.getOrThrow('toss.secretKey', { infer: true })}:`,
-      ).toString('base64');
+      const secretKey = this.configService.get<string>('toss.secretKey');
+      if (!secretKey) {
+        this.logger.error('토스페이먼츠 시크릿 키가 설정되지 않음');
+        throw new PaymentError(
+          PaymentErrorCode.CONFIGURATION_ERROR,
+          '결제 설정이 올바르지 않습니다.',
+        );
+      }
 
-      const response = await axios.post<TossPaymentResponse>(
-        'https://api.tosspayments.com/v1/payments/confirm',
-        {
+      const encryptedSecretKey = Buffer.from(`${secretKey}:`).toString(
+        'base64',
+      );
+
+      try {
+        const response = await axios.post<TossPaymentResponse>(
+          'https://api.tosspayments.com/v1/payments/confirm',
+          {
+            paymentKey,
+            orderId,
+            amount,
+          },
+          {
+            headers: {
+              Authorization: `Basic ${encryptedSecretKey}`,
+              'Content-Type': 'application/json',
+            },
+            withCredentials: true,
+          },
+        );
+
+        this.logger.log(
+          `토스페이먼츠 API 응답: ${JSON.stringify(response.data)}`,
+        );
+
+        // 토스페이먼츠 API 호출 성공 후 DB에 저장
+        const payment = this.paymentRepository.create({
+          user,
+          amount,
+          paymentKey,
+          orderId,
+          status: PaymentStatus.DONE,
+          orderName: response.data.orderName,
+          customerName: response.data.customerName,
+          customerEmail: response.data.customerEmail,
+          customerMobilePhone: response.data.customerMobilePhone,
+          paymentMethod: response.data.method as PaymentMethod,
+        });
+
+        await queryRunner.manager.save(Payment, payment);
+        await queryRunner.commitTransaction();
+        return response.data;
+      } catch (error) {
+        const axiosError = error as AxiosError;
+        this.logger.error('토스페이먼츠 API 호출 실패', {
+          error: axiosError.response?.data || axiosError.message,
+          status: axiosError.response?.status,
           paymentKey,
           orderId,
           amount,
-        },
-        {
-          headers: {
-            Authorization: `Basic ${encryptedSecretKey}`,
-            'Content-Type': 'application/json',
+        });
+        throw new PaymentError(
+          PaymentErrorCode.PAYMENT_FAILED,
+          '토스페이먼츠 결제 처리에 실패했습니다.',
+          {
+            paymentKey,
+            orderId,
+            amount,
+            error: axiosError.response?.data || axiosError.message,
           },
-          withCredentials: true,
-        },
-      );
-
-      // 토스페이먼츠 API 호출 성공 후 DB에 저장
-      const payment = this.paymentRepository.create({
-        user,
-        amount,
-        paymentKey,
-        orderId,
-        status: PaymentStatus.DONE,
-        orderName: response.data.orderName,
-        customerName: response.data.customerName,
-        customerEmail: response.data.customerEmail,
-        customerMobilePhone: response.data.customerMobilePhone,
-        paymentMethod: response.data.method as PaymentMethod,
-      });
-
-      await queryRunner.manager.save(Payment, payment);
-      await queryRunner.commitTransaction();
-      return response.data;
+        );
+      }
     } catch (error) {
       await queryRunner.rollbackTransaction();
 
@@ -128,15 +167,14 @@ export class PaymentService {
         throw error;
       }
 
-      this.logger.error(
-        `결제 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
-        {
-          orderId,
-          paymentKey,
-          amount,
-          userId,
-        },
-      );
+      this.logger.error('결제 처리 중 예상치 못한 오류 발생', {
+        error: error instanceof Error ? error.message : '알 수 없는 오류',
+        stack: error instanceof Error ? error.stack : undefined,
+        orderId,
+        paymentKey,
+        amount,
+        userId,
+      });
 
       throw new PaymentError(
         PaymentErrorCode.PAYMENT_FAILED,

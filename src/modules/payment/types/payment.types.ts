@@ -18,6 +18,7 @@ export enum PaymentErrorCode {
   PAYMENT_ALREADY_PROCESSED = 'PAYMENT_004',
   PAYMENT_FAILED = 'PAYMENT_005',
   USER_NOT_FOUND = 'PAYMENT_006',
+  CONFIGURATION_ERROR = 'PAYMENT_007',
 }
 
 export class PaymentError extends Error {
