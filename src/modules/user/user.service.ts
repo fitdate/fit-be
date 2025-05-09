@@ -210,8 +210,8 @@ export class UserService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
-    user.password = newPassword;
-    await this.updateUserPassword(user.email, newPassword);
+    const hashedNewPassword = await this.hashService.hash(newPassword);
+    await this.updateUserPassword(user.email, hashedNewPassword);
     return { message: '비밀번호 변경 성공' };
   }
 

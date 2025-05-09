@@ -64,7 +64,8 @@ export class FindAndChangePasswordService {
     const newPassword = await this.hashService.hash(
       findAndChangePasswordDto.newPassword,
     );
-    await this.userService.updateUserPassword(user.id, newPassword);
+
+    await this.userService.updateUserPassword(user.email, newPassword);
 
     return { message: '비밀번호 변경 성공' };
   }
