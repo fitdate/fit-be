@@ -1,9 +1,10 @@
 import { Max, Min } from 'class-validator';
 import { User } from 'src/modules/user/entities/user.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
-export class UserFilter {
+export class UserFilter extends BaseTable {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -12,11 +13,6 @@ export class UserFilter {
 
   @Column({ default: '여자' })
   gender: '남자' | '여자';
-
-  // @Column({ default: 10 })
-  // @Min(0)
-  // @Max(10)
-  // maxDistance: number;
 
   @Column({ default: 20 })
   @Min(20)

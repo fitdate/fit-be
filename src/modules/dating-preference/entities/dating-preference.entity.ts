@@ -1,8 +1,9 @@
 import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { User } from 'src/modules/user/entities/user.entity';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 
 @Entity()
-export class DatingPreference {
+export class DatingPreference extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

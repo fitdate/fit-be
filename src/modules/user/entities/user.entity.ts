@@ -57,7 +57,10 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   phone?: string;
 
-  @OneToOne(() => Profile, (profile) => profile.user, { nullable: true })
+  @OneToOne(() => Profile, (profile) => profile.user, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   profile: Profile;
 
@@ -67,10 +70,10 @@ export class User extends BaseTable {
   @Column({ nullable: true })
   longitude?: number;
 
-  @OneToMany(() => Like, (like) => like.likedUser)
+  @OneToMany(() => Like, (like) => like.likedUser, { onDelete: 'CASCADE' })
   likes: Like[];
 
-  @OneToMany(() => Like, (like) => like.user)
+  @OneToMany(() => Like, (like) => like.user, { onDelete: 'CASCADE' })
   likedBy: Like[];
 
   @Column({ default: 0, nullable: true })
@@ -79,13 +82,13 @@ export class User extends BaseTable {
   @Column({ default: 100, nullable: true })
   coffee: number;
 
-  @OneToMany(() => Pass, (pass) => pass.passedUser)
+  @OneToMany(() => Pass, (pass) => pass.passedUser, { onDelete: 'CASCADE' })
   passedBy: Pass[];
 
-  @OneToMany(() => Pass, (pass) => pass.user)
+  @OneToMany(() => Pass, (pass) => pass.user, { onDelete: 'CASCADE' })
   passes: Pass[];
 
-  @OneToMany(() => Payment, (payment) => payment.user)
+  @OneToMany(() => Payment, (payment) => payment.user, { onDelete: 'CASCADE' })
   payments: Payment[];
 
   @Column({ type: 'varchar', default: UserRole.USER })
@@ -108,29 +111,40 @@ export class User extends BaseTable {
 
   @OneToOne(() => UserFilter, (userFilter) => userFilter.user, {
     nullable: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn()
   userFilter: UserFilter;
 
-  @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.sender)
+  @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.sender, {
+    onDelete: 'CASCADE',
+  })
   coffeeChats: CoffeeChat[];
 
-  @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.receiver)
+  @OneToMany(() => CoffeeChat, (coffeeChat) => coffeeChat.receiver, {
+    onDelete: 'CASCADE',
+  })
   coffeeChatsReceived: CoffeeChat[];
 
-  @OneToOne(() => DatingPreference, (datingPreference) => datingPreference.user)
+  @OneToOne(
+    () => DatingPreference,
+    (datingPreference) => datingPreference.user,
+    { onDelete: 'CASCADE' },
+  )
   @JoinColumn()
   datingPreference: DatingPreference;
 
   @OneToMany(
     () => AcceptedCoffeeChat,
     (acceptedCoffeeChat) => acceptedCoffeeChat.sender,
+    { onDelete: 'CASCADE' },
   )
   sentAcceptedCoffeeChats: AcceptedCoffeeChat[];
 
   @OneToMany(
     () => AcceptedCoffeeChat,
     (acceptedCoffeeChat) => acceptedCoffeeChat.receiver,
+    { onDelete: 'CASCADE' },
   )
   receivedAcceptedCoffeeChats: AcceptedCoffeeChat[];
 }
