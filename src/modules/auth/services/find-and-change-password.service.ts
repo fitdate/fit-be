@@ -61,10 +61,10 @@ export class FindAndChangePasswordService {
       throw new BadRequestException('이전 비밀번호와 동일합니다.');
     }
 
-    await this.userService.updateUserPassword(
-      user.id,
+    const newPassword = await this.hashService.hash(
       findAndChangePasswordDto.newPassword,
     );
+    await this.userService.updateUserPassword(user.id, newPassword);
 
     return { message: '비밀번호 변경 성공' };
   }
