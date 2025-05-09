@@ -233,6 +233,14 @@ export class AuthController {
     return this.authService.deleteAccount(userId);
   }
 
+  // 회원 복구
+  @ApiOperation({ summary: '회원 복구' })
+  @ApiResponse({ status: 200, description: '회원 복구 성공' })
+  @Patch('restore-account')
+  async restoreAccount(@UserId() userId: string) {
+    return this.authService.restoreAccount(userId);
+  }
+
   // 비밀번호 변경
   @Patch('change-password')
   @ApiOperation({ summary: '비밀번호 변경' })
