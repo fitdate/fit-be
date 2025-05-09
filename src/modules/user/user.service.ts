@@ -380,6 +380,32 @@ export class UserService {
     return user;
   }
 
+  // 이메일, 이름, 전화번호로 사용자 조회
+  async findUserByEmailAndNameAndPhone(
+    email: string,
+    name: string,
+    phone: string,
+  ) {
+    const user = await this.userRepository.findOne({
+      where: { email, name, phone },
+    });
+    return user;
+  }
+
+  // 이름과 전화번호로 사용자 조회
+  async findUserByNameAndPhone(name: string, phone: string) {
+    const user = await this.userRepository.findOne({
+      where: { name, phone },
+    });
+    return user;
+  }
+
+  // 이름으로 사용자 조회
+  async findUserByName(name: string) {
+    const user = await this.userRepository.findOne({ where: { name } });
+    return user;
+  }
+
   // 닉네임으로 사용자 조회
   async findUserByNickname(nickname: string) {
     const user = await this.userRepository.findOne({ where: { nickname } });

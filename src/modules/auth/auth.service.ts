@@ -743,4 +743,148 @@ export class AuthService {
       log('QueryRunner released');
     }
   }
+
+  async restoreAccount(userId: string) {
+    const logBuffer: string[] = [];
+    const log = (message: string) => {
+      logBuffer.push(message);
+      this.logger.log(message);
+    };
+
+    log(`Starting account restore for user: ${userId}`);
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+
+    try {
+      // 1. 사용자 정보 조회 (연관 데이터 포함)
+      const user = await qr.manager.findOne(User, {
+        where: { id: userId },
+        relations: [
+          'profile',
+          'profile.profileImage',
+          'profile.mbti',
+          'profile.userFeedbacks',
+          'profile.userIntroductions',
+          'profile.interestCategory',
+          'likes',
+          'likedBy',
+          'passes',
+          'passedBy',
+          'payments',
+          'coffeeChats',
+          'coffeeChatsReceived',
+          'sentAcceptedCoffeeChats',
+          'receivedAcceptedCoffeeChats',
+        ],
+        withDeleted: true, // softDelete된 데이터도 포함
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 2. 프로필 이미지 복구
+      const profileImages = await qr.manager.find(ProfileImage, {
+        where: { profile: { id: user.profile.id } },
+        withDeleted: true,
+      });
+      if (profileImages.length > 0) {
+        await qr.manager.restore(
+          ProfileImage,
+          profileImages.map((img) => img.id),
+        );
+      }
+
+      // 3. MBTI 복구
+      if (user.profile.mbti) {
+        await qr.manager.restore(Mbti, { id: user.profile.mbti.id });
+      }
+
+      // 4. UserFeedback 복구
+      const userFeedbacks = await qr.manager.find(UserFeedback, {
+        where: { profile: { id: user.profile.id } },
+        withDeleted: true,
+      });
+      if (userFeedbacks.length > 0) {
+        await qr.manager.restore(
+          UserFeedback,
+          userFeedbacks.map((fb) => fb.id),
+        );
+      }
+
+      // 5. UserIntroduction 복구
+      const userIntroductions = await qr.manager.find(UserIntroduction, {
+        where: { profile: { id: user.profile.id } },
+        withDeleted: true,
+      });
+      if (userIntroductions.length > 0) {
+        await qr.manager.restore(
+          UserIntroduction,
+          userIntroductions.map((intro) => intro.id),
+        );
+      }
+
+      // 6. UserInterestCategory 복구
+      const userInterestCategories = await qr.manager.find(
+        UserInterestCategory,
+        {
+          where: { profile: { id: user.profile.id } },
+          withDeleted: true,
+        },
+      );
+      if (userInterestCategories.length > 0) {
+        await qr.manager.restore(
+          UserInterestCategory,
+          userInterestCategories.map((cat) => cat.id),
+        );
+      }
+
+      // 7. 프로필 복구
+      await qr.manager.restore(Profile, user.profile.id);
+
+      // 8. 연관 엔티티 복구 (likes, passes, payments, coffeeChats 등)
+      for (const like of [...user.likes, ...user.likedBy]) {
+        await qr.manager.restore(like.constructor, like.id);
+      }
+      for (const pass of [...user.passes, ...user.passedBy]) {
+        await qr.manager.restore(pass.constructor, pass.id);
+      }
+      for (const payment of user.payments) {
+        await qr.manager.restore(payment.constructor, payment.id);
+      }
+      for (const chat of [...user.coffeeChats, ...user.coffeeChatsReceived]) {
+        await qr.manager.restore(chat.constructor, chat.id);
+      }
+      for (const acc of [
+        ...user.sentAcceptedCoffeeChats,
+        ...user.receivedAcceptedCoffeeChats,
+      ]) {
+        await qr.manager.restore(acc.constructor, acc.id);
+      }
+
+      // 9. User 복구
+      await qr.manager.restore(User, user.id);
+
+      await qr.commitTransaction();
+      log('Account restore completed successfully');
+
+      return { message: '회원 데이터가 원상복구되었습니다.' };
+    } catch (error) {
+      await qr.rollbackTransaction();
+      log('Transaction rolled back due to error');
+      log(`${error instanceof Error ? error.message : '오류 확인해주세요'}`);
+      if (error instanceof Error && error.stack) {
+        log(`Error stack: ${error.stack}`);
+      }
+      throw new InternalServerErrorException(
+        '회원 데이터 복구 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    } finally {
+      await qr.release();
+      log('QueryRunner released');
+    }
+  }
 }
