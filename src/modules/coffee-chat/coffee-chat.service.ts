@@ -157,38 +157,27 @@ export class CoffeeChatService {
     });
   }
 
-  async removeCoffeeChat(
-    userId: string,
-    notificationDto: CreateNotificationDto,
-  ) {
-    if (!notificationDto.receiverId) {
+  async removeCoffeeChat(userId: string, passedUserId: string) {
+    if (!passedUserId) {
       throw new BadRequestException('receiverId가 없습니다.');
     }
 
     const result = await this.coffeeChatRepository.delete({
       sender: { id: userId },
-      receiver: { id: notificationDto.receiverId },
+      receiver: { id: passedUserId },
       status: CoffeeChatStatus.PENDING,
     });
 
     if (result.affected === 0) {
       this.logger.warn(
-        `거절할 커피챗이 존재하지 않습니다. sender: ${userId}, receiver: ${notificationDto.receiverId}`,
+        `거절할 커피챗이 존재하지 않습니다. sender: ${userId}, receiver: ${passedUserId}`,
       );
       throw new BadRequestException('거절할 커피챗이 존재하지 않습니다.');
     }
 
     this.logger.log(
-      `커피챗 거절 완료 - sender: ${userId}, receiver: ${notificationDto.receiverId}`,
+      `커피챗 거절 완료 - sender: ${userId}, receiver: ${passedUserId}`,
     );
-
-    await this.notificationService.create({
-      receiverId: notificationDto.receiverId,
-      title: notificationDto.title,
-      content: notificationDto.content,
-      type: NotificationType.COFFEE_CHAT,
-      data: notificationDto.data,
-    });
   }
 
   async getReceivedCoffeeChatList(userId: string) {
