@@ -35,6 +35,18 @@ export class CoffeeChatController {
     return this.coffeeChatService.acceptCoffeeChat(userId, acceptCoffeeChatDto);
   }
 
+  @ApiOperation({ summary: '커피챗 거절' })
+  @ApiResponse({ status: 200, description: '커피챗 거절 성공' })
+  @ApiResponse({ status: 400, description: '커피챗 거절 실패' })
+  @ApiBody({ type: CreateNotificationDto })
+  @Post('decline')
+  declineCoffeeChat(
+    @UserId() userId: string,
+    @Body() notificationDto: CreateNotificationDto,
+  ) {
+    return this.coffeeChatService.declineCoffeeChat(userId, notificationDto);
+  }
+
   @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })
   @ApiResponse({ status: 200, description: '받은 커피챗 리스트 가져오기 성공' })
   @ApiResponse({ status: 400, description: '받은 커피챗 리스트 가져오기 실패' })
