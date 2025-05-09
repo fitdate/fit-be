@@ -687,7 +687,6 @@ export class UserService {
       const existingImages = user.profile.profileImage || [];
 
       // 2. 기존 이미지와 새 이미지 비교 (key 기준)
-      const existingKeys = existingImages.map((img) => img.key);
       // 새로 추가된 이미지: temp url만 있는 경우(즉, 기존 key에 없는 경우)
       const toAdd = imageUrls.filter((url) => {
         // temp url은 key가 없음, 기존 key와 매칭 안됨
@@ -720,7 +719,13 @@ export class UserService {
 
       // 5. 메인 이미지 처리
       if (imageUrls.length > 0) {
-        // imageUrls[0]에 해당하는 imageUrl 또는 key를 가진 이미지를 메인으로
+        // 모든 이미지를 isMain: false로 초기화
+        await qr.manager.update(
+          ProfileImage,
+          { profile: { id: profileId } },
+          { isMain: false },
+        );
+        // imageUrls[0]에 해당하는 imageUrl 또는 key를 가진 이미지를 isMain: true로 설정
         const mainImage = await qr.manager.findOne(ProfileImage, {
           where: [
             { profile: { id: profileId }, imageUrl: imageUrls[0] },
@@ -728,7 +733,18 @@ export class UserService {
           ],
         });
         if (mainImage) {
-          await this.profileImageService.setMainImage(profileId, mainImage.id);
+          await qr.manager.update(
+            ProfileImage,
+            { id: mainImage.id },
+            { isMain: true },
+          );
+          this.logger.log(
+            `메인 이미지로 설정됨 - profileId: ${profileId}, imageId: ${mainImage.id}`,
+          );
+        } else {
+          this.logger.warn(
+            `메인 이미지 후보를 찾을 수 없음 - profileId: ${profileId}, 기준값: ${imageUrls[0]}`,
+          );
         }
       }
 
