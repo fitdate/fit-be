@@ -30,6 +30,11 @@ import { MulterFile } from 'src/modules/s3/types/multer.types';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { SocialAuthService } from './services/social-auth.service';
 import { AuthProvider } from './types/oatuth.types';
+import { FindPasswordDto } from './dto/find-password.dto';
+import { FindEmailService } from './services/find-email.service';
+import { FindAndChangePasswordDto } from './dto/find-and-change-password.dto';
+import { FindAndChangePasswordService } from './services/find-and-change-password.service';
+import { FindEmailDto } from './dto/find-email.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -37,6 +42,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly socialAuthService: SocialAuthService,
+    private readonly findEmailService: FindEmailService,
+    private readonly findAndChangePasswordService: FindAndChangePasswordService,
   ) {}
 
   // 회원 가입
@@ -123,6 +130,39 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.handleLogout(req, res);
+  }
+
+  // 이메일 찾기
+  @Public()
+  @Post('find-email')
+  @ApiOperation({ summary: '이메일 찾기' })
+  @ApiResponse({ status: 200, description: '이메일 찾기 성공' })
+  async findEmail(@Body() findEmailDto: FindEmailDto) {
+    return this.findEmailService.findEmail(findEmailDto);
+  }
+
+  // 비밀번호 찾기
+  @Public()
+  @Post('find-password')
+  @ApiOperation({ summary: '비밀번호 찾기' })
+  @ApiResponse({ status: 200, description: '비밀번호 찾기 성공' })
+  async findPassword(@Body() findPasswordDto: FindPasswordDto) {
+    return this.findAndChangePasswordService.findPassword(findPasswordDto);
+  }
+
+  // 비밀번호 변경
+  @Public()
+  @Post('find-and-change-password')
+  @ApiOperation({ summary: '비밀번호 변경' })
+  @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
+  async findAndChangePassword(
+    @UserId() userId: string,
+    @Body() findAndChangePasswordDto: FindAndChangePasswordDto,
+  ) {
+    return this.findAndChangePasswordService.findAndChangePassword(
+      userId,
+      findAndChangePasswordDto,
+    );
   }
 
   // Google OAuth 로그인
