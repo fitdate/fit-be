@@ -38,6 +38,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { SessionService } from '../session/session.service';
 import { TokenPayload } from '../token/types/token-payload.types';
+import { CoffeeChat } from '../coffee-chat/entities/coffee-chat.entity';
 
 @Injectable()
 export class AuthService {
@@ -676,6 +677,22 @@ export class AuthService {
       await this.redisService.del(verifiedKey);
       log('Email verification status deleted from Redis');
 
+      // 10. 커피챗 삭제
+      log('Deleting coffee chat');
+      await qr.manager.delete(CoffeeChat, {
+        sender: { id: user.id },
+        receiver: { id: user.id },
+      });
+      log('Coffee chat deleted successfully');
+
+      // 11. Redis에서 session, token 삭제
+      log('Deleting session and token');
+      await this.redisService.del(`session:${user.id}:*`);
+      await this.redisService.del(`active_session:${user.id}:*`);
+      await this.redisService.del(`access_token:${user.id}:*`);
+      await this.redisService.del(`refresh_token:${user.id}:*`);
+      log('Session and token deleted from Redis');
+
       await qr.commitTransaction();
       log('Account deletion completed successfully');
 
@@ -694,49 +711,6 @@ export class AuthService {
     } finally {
       await qr.release();
       log('QueryRunner released');
-    }
-  }
-
-  // 활동 상태 확인 및 갱신
-  async checkAndRefreshActivity(
-    userId: string,
-    tokenId: string,
-    userRole: UserRole,
-    metadata: TokenMetadata,
-    deviceId: string,
-  ): Promise<boolean> {
-    try {
-      // 토큰 유효성 검사
-      const tokenPayload: TokenPayload = {
-        sub: userId,
-        role: userRole,
-        type: 'refresh',
-        tokenId,
-        sessionId: metadata.sessionId,
-        deviceType: metadata.deviceType,
-      };
-
-      const isValid =
-        await this.tokenService.validateRefreshToken(tokenPayload);
-      if (!isValid) {
-        return false;
-      }
-
-      // 토큰 갱신
-      const newTokenPayload: TokenPayload = {
-        ...tokenPayload,
-        type: 'access',
-      };
-
-      await this.tokenService.generateTokens(
-        userId,
-        metadata.deviceType,
-        newTokenPayload,
-      );
-      return true;
-    } catch (error) {
-      this.logger.error(`Activity check failed for user ${userId}:`, error);
-      return false;
     }
   }
 }
