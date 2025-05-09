@@ -144,10 +144,10 @@ export class UserController {
     );
   }
 
-  @Get('user-coffee/:userId')
+  @Get('user-coffee')
   @ApiOperation({
     summary: '사용자 커피 조회',
-    description: '특정 사용자의 커피 개수를 조회합니다.',
+    description: '사용자의 커피 개수를 조회합니다.',
   })
   @ApiResponse({
     status: 200,

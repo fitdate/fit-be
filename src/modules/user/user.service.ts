@@ -193,7 +193,7 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
-    return user?.coffee ? user.coffee : 0;
+    return user?.coffee;
   }
 
   async changePassword(
