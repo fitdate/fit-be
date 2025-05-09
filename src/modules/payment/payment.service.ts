@@ -16,6 +16,16 @@ import {
 } from './types/payment.types';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { UserService } from '../user/user.service';
+
+// 결제 상품 id-quantity 매핑 상수
+const PAYMENT_PRODUCTS = [
+  { id: 1, quantity: 30 },
+  { id: 2, quantity: 60 },
+  { id: 3, quantity: 120 },
+  { id: 4, quantity: 240 },
+  { id: 5, quantity: 500 },
+];
 
 @Injectable()
 export class PaymentService {
@@ -28,6 +38,7 @@ export class PaymentService {
     private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly userService: UserService,
   ) {}
 
   // 결제 정보 생성
@@ -144,6 +155,24 @@ export class PaymentService {
         });
 
         await queryRunner.manager.save(Payment, payment);
+
+        // === 커피 증가 로직 (id별) ===
+        const product = PAYMENT_PRODUCTS.find(
+          (p) => p.id === parseInt(orderId),
+        );
+        if (product) {
+          await this.userService.updateCoffee(
+            userId,
+            (user.coffee || 0) + product.quantity,
+          );
+          this.logger.log(
+            `커피 ${product.quantity}개 지급 완료 (userId: ${userId}, 상품 id: ${orderId})`,
+          );
+        } else {
+          this.logger.warn(`알 수 없는 상품 id: ${orderId}`);
+        }
+        // =========================
+
         await queryRunner.commitTransaction();
         return response.data;
       } catch (error) {

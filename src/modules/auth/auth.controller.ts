@@ -35,6 +35,7 @@ import { FindEmailService } from './services/find-email.service';
 import { FindAndChangePasswordDto } from './dto/find-and-change-password.dto';
 import { FindAndChangePasswordService } from './services/find-and-change-password.service';
 import { FindEmailDto } from './dto/find-email.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -306,5 +307,13 @@ export class AuthController {
       changePasswordDto.newPassword,
       changePasswordDto.confirmPassword,
     );
+  }
+
+  // 토큰 재발급
+  @Post('refresh-token')
+  @ApiOperation({ summary: '토큰 재발급' })
+  @ApiResponse({ status: 200, description: '토큰 재발급 성공' })
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return await this.authService.refreshToken(refreshTokenDto);
   }
 }

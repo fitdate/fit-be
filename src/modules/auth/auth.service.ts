@@ -38,6 +38,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { SessionService } from '../session/session.service';
 import { TokenPayload } from '../token/types/token-payload.types';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtService } from '@nestjs/jwt';
+
+function isTokenPayload(obj: unknown): obj is TokenPayload {
+  return !!obj && typeof obj === 'object' && 'sub' in obj && 'sessionId' in obj;
+}
 
 @Injectable()
 export class AuthService {
@@ -57,6 +63,7 @@ export class AuthService {
     private readonly feedbackService: FeedbackService,
     private readonly introductionService: IntroductionService,
     private readonly sessionService: SessionService,
+    private readonly jwtService: JwtService,
   ) {}
 
   // 회원가입
@@ -433,6 +440,12 @@ export class AuthService {
   ): Promise<LoginResponse> {
     const { email, password } = loginDto;
     const user = await this.validate(email, password);
+
+    if (!user) {
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 일치하지 않습니다.',
+      );
+    }
 
     // 디바이스 ID 추출
     const deviceId: string =
@@ -885,6 +898,44 @@ export class AuthService {
     } finally {
       await qr.release();
       log('QueryRunner released');
+    }
+  }
+
+  // 토큰 재발급
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+    const { refreshToken } = refreshTokenDto;
+    let payload: TokenPayload;
+    try {
+      const decoded: unknown = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.getOrThrow('jwt.refreshTokenSecret', {
+          infer: true,
+        }),
+      });
+
+      if (!isTokenPayload(decoded)) {
+        throw new UnauthorizedException(
+          'refreshToken payload가 올바르지 않습니다.',
+        );
+      }
+
+      payload = decoded;
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const deviceType = payload.deviceType || 'desktop';
+      const tokenId = payload.tokenId || payload.jti || '';
+      const sessionId = payload.sessionId || '';
+
+      const { accessToken, refreshToken: newRefreshToken } =
+        await this.tokenService.generateTokens(payload.sub, deviceType, {
+          ...payload,
+          tokenId,
+          sessionId,
+        });
+
+      this.logger.log('토큰이 성공적으로 재발급되었습니다.');
+      return { accessToken, refreshToken: newRefreshToken };
+    } catch {
+      throw new UnauthorizedException('refreshToken이 유효하지 않습니다.');
     }
   }
 }
