@@ -605,7 +605,7 @@ export class AuthService {
         where: { id: userId },
         relations: [
           'profile',
-          'profile.profileImages',
+          'profile.profileImage',
           'profile.mbti',
           'profile.feedback',
           'profile.introduction',
