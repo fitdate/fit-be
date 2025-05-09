@@ -9,9 +9,7 @@ export class SseService {
   private readonly logger = new Logger(SseService.name);
   private clients = new Map<string, Subject<MessageEvent>>();
 
-  constructor() {
-    this.clients = new Map<string, Subject<MessageEvent>>();
-  }
+  constructor() {}
 
   // 클라이언트 추가
   addClient(userId: string): Subject<MessageEvent> {
