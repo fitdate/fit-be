@@ -89,7 +89,9 @@ export class PaymentService {
         );
       }
 
-      const secretKey = this.configService.get<string>('toss.secretKey');
+      const secretKey = this.configService.get<string>(
+        'TOSS_PAYMENTS_SECRET_KEY',
+      );
       if (!secretKey) {
         this.logger.error('토스페이먼츠 시크릿 키가 설정되지 않음');
         throw new PaymentError(
