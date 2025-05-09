@@ -53,8 +53,8 @@ export class FindAndChangePasswordService {
     }
 
     const isSamePassword = await this.hashService.compare(
-      user.password,
       findAndChangePasswordDto.newPassword,
+      user.password,
     );
 
     if (isSamePassword) {
