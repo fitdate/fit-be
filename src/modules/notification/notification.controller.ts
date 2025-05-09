@@ -23,11 +23,14 @@ import {
 import { Notification } from './entities/notification.entity';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { Logger } from '@nestjs/common';
 
 @ApiTags('Notification')
 @ApiBearerAuth()
 @Controller('notification')
 export class NotificationController {
+  private readonly logger = new Logger(NotificationController.name);
+
   constructor(private readonly notificationService: NotificationService) {}
 
   // SSE 엔드포인트
@@ -36,16 +39,19 @@ export class NotificationController {
     @Param('userId') userId: string,
     @Req() req: RequestWithUser,
   ): Observable<MessageEvent> {
-    // URL 파라미터의 userId와 토큰의 userId가 일치하는지 확인
+    this.logger.debug(`[SSE] 스트림 연결 요청 - 사용자: ${userId}`);
+
     const tokenUserId = req.user?.sub || req.user?.id;
-    if (!tokenUserId) {
-      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    if (!tokenUserId || tokenUserId !== userId) {
+      this.logger.warn(
+        `[SSE] 인증 실패 - 요청 userId: ${userId}, 토큰 userId: ${tokenUserId}`,
+      );
+      return new Observable<MessageEvent>((subscriber) => {
+        subscriber.complete();
+      });
     }
 
-    if (tokenUserId !== userId) {
-      throw new Error('권한이 없습니다.');
-    }
-
+    this.logger.debug(`[SSE] 스트림 연결 성공 - 사용자: ${userId}`);
     return this.notificationService.createNotificationStream(userId).pipe(
       map((notification) => ({
         data: notification,

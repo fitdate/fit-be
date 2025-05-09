@@ -31,7 +31,7 @@ export class Notification extends BaseTable {
 
   @ManyToOne(() => User)
   @JoinColumn()
-  receiver: User;
+  receiver?: User;
 
   @Column({ type: 'uuid' })
   receiverId: string;
