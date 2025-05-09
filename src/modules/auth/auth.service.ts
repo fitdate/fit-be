@@ -640,9 +640,11 @@ export class AuthService {
       log('Profile images soft deleted successfully');
 
       log('Soft deleting MBTI, feedback, introduction, interests');
-      await qr.manager.softDelete(Mbti, {
-        profileId: user.profile.id,
-      });
+      if (user.profile.mbti) {
+        await qr.manager.softDelete(Mbti, {
+          id: user.profile.mbti.id,
+        });
+      }
       await qr.manager.softDelete(UserFeedback, {
         profileId: user.profile.id,
       });
