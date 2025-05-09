@@ -39,12 +39,12 @@ export class CoffeeChatController {
   @ApiResponse({ status: 200, description: '커피챗 거절 성공' })
   @ApiResponse({ status: 400, description: '커피챗 거절 실패' })
   @ApiBody({ type: CreateNotificationDto })
-  @Post('decline')
-  declineCoffeeChat(
+  @Post('remove')
+  removeCoffeeChat(
     @UserId() userId: string,
     @Body() notificationDto: CreateNotificationDto,
   ) {
-    return this.coffeeChatService.declineCoffeeChat(userId, notificationDto);
+    return this.coffeeChatService.removeCoffeeChat(userId, notificationDto);
   }
 
   @ApiOperation({ summary: '받은 커피챗 리스트 가져오기' })
