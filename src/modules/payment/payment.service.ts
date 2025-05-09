@@ -124,7 +124,6 @@ export class PaymentService {
           headers: {
             Authorization: `Basic ${encryptedSecretKey}`,
             'Content-Type': 'application/json',
-            Cookie: `accessToken=${req.cookies.accessToken}`,
           },
           withCredentials: true,
         },
