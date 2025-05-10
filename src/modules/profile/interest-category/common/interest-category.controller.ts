@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { InterestCategoryService } from './interest-category.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { InterestCategory } from '../entities/interest-category.entity';
-
+import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('Interest Category')
 @Controller('interest-category')
 export class InterestCategoryController {
@@ -11,6 +11,7 @@ export class InterestCategoryController {
   ) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: '모든 관심사 카테고리 조회' })
   @ApiResponse({
     status: 200,
@@ -22,6 +23,7 @@ export class InterestCategoryController {
   }
 
   @Get(':name')
+  @Public()
   @ApiOperation({ summary: '특정 관심사 카테고리 조회' })
   @ApiResponse({
     status: 200,

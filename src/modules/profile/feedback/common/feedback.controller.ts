@@ -2,12 +2,13 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { FeedbackService } from './feedback.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Feedback } from '../entities/feedback.entity';
-
+import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('Feedback')
 @Controller('feedback')
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: '모든 피드백 조회' })
   @ApiResponse({
@@ -19,6 +20,7 @@ export class FeedbackController {
     return this.feedbackService.findAllFeedback();
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: '특정 피드백 조회' })
   @ApiResponse({

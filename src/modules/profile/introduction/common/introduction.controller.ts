@@ -2,12 +2,13 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { IntroductionService } from './introduction.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Introduction } from '../entities/introduction.entity';
-
+import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('Introduction')
 @Controller('introduction')
 export class IntroductionController {
   constructor(private readonly introductionService: IntroductionService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: '모든 소개 조회' })
   @ApiResponse({
@@ -19,6 +20,7 @@ export class IntroductionController {
     return this.introductionService.findAllIntroduction();
   }
 
+  @Public()
   @Get(':name')
   @ApiOperation({ summary: '특정 소개 조회' })
   @ApiResponse({
