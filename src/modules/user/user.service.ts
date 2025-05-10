@@ -535,12 +535,12 @@ export class UserService {
 
   // 필터링된 사용자 조회
   async getFilteredUsers(
-    currentUserId: string,
+    userId: string | undefined,
     filteredUsersDto: FilteredUsersDto,
     cursorPaginationDto: CursorPaginationDto,
   ): Promise<{ users: User[]; nextCursor: string | null }> {
     this.logger.debug(
-      `필터링된 사용자 조회 시작 - 현재 사용자: ${currentUserId}, 필터: ${JSON.stringify(
+      `필터링된 사용자 조회 시작 - 현재 사용자: ${userId}, 필터: ${JSON.stringify(
         filteredUsersDto,
       )}`,
     );
@@ -548,7 +548,10 @@ export class UserService {
     const { ageMin, ageMax, minLikes, region } = filteredUsersDto;
     const today = new Date();
 
-    const currentUser = await this.findOne(currentUserId);
+    let currentUser: User | undefined = undefined;
+    if (userId) {
+      currentUser = await this.findOne(userId);
+    }
 
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -565,11 +568,15 @@ export class UserService {
         'profileImage.id',
         'profileImage.imageUrl',
       ])
-      .where('user.id != :userId', { userId: currentUserId })
-      .andWhere('user.deletedAt IS NULL')
-      .andWhere('user.gender = :gender', {
+      .andWhere('user.deletedAt IS NULL');
+
+    // 로그인 유저일 때만 본인 제외, 성별 필터 적용
+    if (currentUser) {
+      qb.andWhere('user.id != :userId', { userId });
+      qb.andWhere('user.gender = :gender', {
         gender: currentUser.gender === '남자' ? '여자' : '남자',
       });
+    }
 
     if (region) {
       qb.andWhere('user.region = :region', { region });
@@ -613,8 +620,12 @@ export class UserService {
     return { users, nextCursor };
   }
 
-  //회원목록 유저 찾기
-  async getUserList(dto: CursorPaginationDto) {
+  // 회원목록 유저 찾기 (로그인/비로그인 통합)
+  async getUserList(dto: CursorPaginationDto, userId?: string) {
+    let currentUser: User | undefined = undefined;
+    if (userId) {
+      currentUser = await this.findOne(userId);
+    }
     const qb = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.profile', 'profile')
@@ -629,10 +640,16 @@ export class UserService {
         'profileImage.id',
         'profileImage.imageUrl',
       ])
-      .where('user.deletedAt IS NULL')
-      .orderBy('user.likeCount', 'DESC')
-      .addOrderBy('user.id', 'ASC')
-      .take(6);
+      .where('user.deletedAt IS NULL');
+
+    if (currentUser) {
+      qb.andWhere('user.id != :userId', { userId: currentUser });
+      qb.andWhere('user.gender = :gender', {
+        gender: currentUser.gender === '남자' ? '여자' : '남자',
+      });
+    }
+
+    qb.orderBy('user.likeCount', 'DESC').addOrderBy('user.id', 'ASC').take(6);
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);

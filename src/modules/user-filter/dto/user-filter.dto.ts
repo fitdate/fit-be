@@ -10,13 +10,6 @@ export class UserFilterDto {
   @IsOptional()
   region?: string;
 
-  // @ApiProperty({
-  //   description: '최대 거리',
-  //   example: 100,
-  // })
-  // @IsNumber()
-  // maxDistance: number;
-
   @ApiProperty({
     description: '최소 나이',
     example: 20,

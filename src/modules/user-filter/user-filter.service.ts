@@ -1,114 +1,59 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { UserFilter } from './entities/user-filter.entity';
 import { UserService } from '../user/user.service';
-import { Repository } from 'typeorm';
-import { UserFilterDto } from './dto/user-filter.dto';
 import { calculateAge } from 'src/common/util/age-calculator.util';
-
+import { UserFilterDto } from './dto/user-filter.dto';
+import { User as UserEntity } from '../user/entities/user.entity';
+import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 @Injectable()
 export class UserFilterService {
   private readonly logger = new Logger(UserFilterService.name);
 
-  constructor(
-    @InjectRepository(UserFilter)
-    private readonly userFilterRepository: Repository<UserFilter>,
-    private readonly userService: UserService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
-  // 사용자 필터 조회
-  async getUserFilter(userId: string) {
-    this.logger.debug(`사용자 ${userId}의 필터 설정을 조회합니다.`);
-    const filter = await this.userFilterRepository.findOne({
-      where: {
-        user: {
-          id: userId,
-        },
-      },
-    });
-    this.logger.debug(`조회된 필터 설정: ${JSON.stringify(filter)}`);
-    return filter;
+  private mapUsersToResponse(users: UserEntity[]) {
+    return users.map((user) => ({
+      id: user.id,
+      nickname: user.nickname,
+      region: user.region,
+      likeCount: user.likeCount,
+      age: calculateAge(user.birthday),
+      profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
+    }));
   }
 
-  // 익명 사용자의 사용자 목록 조회
-  async getUsersForanonymousUser() {
-    this.logger.debug(`익명 사용자의 사용자 목록을 조회합니다.`);
-    const { users, nextCursor } = await this.userService.getUserList({
-      cursor: null,
-      order: ['likeCount_DESC'],
-      take: 6,
-    });
-
-    return {
-      users: users.map((user) => ({
-        id: user.id,
-        nickname: user.nickname,
-        region: user.region,
-        likeCount: user.likeCount,
-        age: calculateAge(user.birthday),
-        profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
-      })),
-      nextCursor,
-    };
-  }
-
-  // 필터링된 사용자 조회
-  async getFilteredUsers(userId: string) {
-    const filter = await this.getUserFilter(userId);
-    const filterDto = {
-      region: filter?.region,
-      ageMin: filter?.minAge ?? 20,
-      ageMax: filter?.maxAge ?? 60,
-      minLikes: filter?.minLikeCount ?? 0,
-    };
-
-    this.logger.debug(`적용될 필터: ${JSON.stringify(filterDto)}`);
-
-    const { users, nextCursor } = await this.userService.getFilteredUsers(
-      userId,
-      filterDto,
+  // 회원목록 조회 (로그인/비로그인인 통합)
+  async getUserList(userId?: string) {
+    this.logger.debug(`사용자 목록을 조회합니다.`);
+    const { users, nextCursor } = await this.userService.getUserList(
       {
         cursor: null,
         order: ['likeCount_DESC'],
         take: 6,
       },
+      userId,
     );
 
     return {
-      users: users.map((user) => ({
-        id: user.id,
-        nickname: user.nickname,
-        region: user.region,
-        likeCount: user.likeCount,
-        age: calculateAge(user.birthday),
-        profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
-      })),
+      users: this.mapUsersToResponse(users),
       nextCursor,
     };
   }
 
-  // 필터 업데이트
-  async updateFilter(userId: string, dto: UserFilterDto) {
-    this.logger.debug(
-      `사용자 ${userId}의 필터 설정을 업데이트합니다: ${JSON.stringify(dto)}`,
+  // 필터된 사용자 목록 조회
+  async getFilteredUserList(
+    userFilterDto: UserFilterDto,
+    cursorPaginationDto: CursorPaginationDto,
+    userId?: string,
+  ) {
+    const { users, nextCursor } = await this.userService.getFilteredUsers(
+      userId,
+      userFilterDto,
+      cursorPaginationDto,
     );
-    let filter = await this.userFilterRepository.findOne({
-      where: { user: { id: userId } },
-    });
 
-    if (!filter) {
-      this.logger.debug('새로운 필터 설정을 생성합니다.');
-      filter = this.userFilterRepository.create({
-        ...dto,
-        user: { id: userId },
-      });
-    } else {
-      this.logger.debug('기존 필터 설정을 업데이트합니다.');
-      Object.assign(filter, dto);
-    }
-
-    const result = await this.userFilterRepository.save(filter);
-    this.logger.debug(`필터 설정 저장 완료: ${JSON.stringify(result)}`);
-    return result;
+    return {
+      users: this.mapUsersToResponse(users),
+      nextCursor,
+    };
   }
 }
