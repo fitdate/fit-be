@@ -42,13 +42,14 @@ export class UserFilterService {
   // 필터된 사용자 목록 조회
   async getFilteredUserList(
     userFilterDto: UserFilterDto,
-    cursorPaginationDto: CursorPaginationDto,
+    cursorPaginationDto?: CursorPaginationDto,
     userId?: string,
   ) {
+    const safeCursorDto = cursorPaginationDto ?? new CursorPaginationDto();
     const { users, nextCursor } = await this.userService.getFilteredUsers(
       userId,
       userFilterDto,
-      cursorPaginationDto,
+      safeCursorDto,
     );
 
     return {

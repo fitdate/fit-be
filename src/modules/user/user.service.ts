@@ -537,7 +537,7 @@ export class UserService {
   async getFilteredUsers(
     userId: string | undefined,
     filteredUsersDto: FilteredUsersDto,
-    cursorPaginationDto: CursorPaginationDto,
+    cursorPaginationDto?: CursorPaginationDto,
   ): Promise<{ users: User[]; nextCursor: string | null }> {
     this.logger.debug(
       `필터링된 사용자 조회 시작 - 현재 사용자: ${userId}, 필터: ${JSON.stringify(
@@ -552,6 +552,8 @@ export class UserService {
     if (userId) {
       currentUser = await this.findOne(userId);
     }
+
+    const safeCursorDto = cursorPaginationDto ?? new CursorPaginationDto();
 
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -604,9 +606,9 @@ export class UserService {
 
     const { nextCursor } =
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, {
-        cursor: cursorPaginationDto.cursor,
-        order: cursorPaginationDto.order,
-        take: cursorPaginationDto.take,
+        cursor: safeCursorDto.cursor,
+        order: safeCursorDto.order,
+        take: safeCursorDto.take,
       });
 
     const users = await qb.getMany();
