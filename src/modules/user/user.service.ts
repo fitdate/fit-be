@@ -592,21 +592,31 @@ export class UserService {
     }
 
     if (ageMin) {
-      const maxBirthYear = today.getFullYear() - ageMin;
-      this.logger.debug(`필터 조건: user.birthday <= ${maxBirthYear}`);
-      qb.andWhere(
-        'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) <= :maxBirthYear',
-        { maxBirthYear },
+      // 만 나이 기준: 오늘 날짜에서 ageMin만큼 뺀 다음날까지 포함
+      const minBirthday = new Date(
+        today.getFullYear() - ageMin,
+        today.getMonth(),
+        today.getDate() + 1,
       );
+      const minBirthdayStr = minBirthday.toISOString().slice(0, 10);
+      this.logger.debug(`필터 조건: user.birthday <= ${minBirthdayStr}`);
+      qb.andWhere('user.birthday <= :minBirthday', {
+        minBirthday: minBirthdayStr,
+      });
     }
 
     if (ageMax) {
-      const minBirthYear = today.getFullYear() - ageMax;
-      this.logger.debug(`필터 조건: user.birthday >= ${minBirthYear}`);
-      qb.andWhere(
-        'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) >= :minBirthYear',
-        { minBirthYear },
+      // 만 나이 기준: 오늘 날짜에서 ageMax+1만큼 뺀 당일 이후부터 포함
+      const maxBirthday = new Date(
+        today.getFullYear() - ageMax - 1,
+        today.getMonth(),
+        today.getDate(),
       );
+      const maxBirthdayStr = maxBirthday.toISOString().slice(0, 10);
+      this.logger.debug(`필터 조건: user.birthday >= ${maxBirthdayStr}`);
+      qb.andWhere('user.birthday >= :maxBirthday', {
+        maxBirthday: maxBirthdayStr,
+      });
     }
 
     if (minLikes) {
