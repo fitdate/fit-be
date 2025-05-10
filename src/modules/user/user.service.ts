@@ -551,6 +551,9 @@ export class UserService {
     let currentUser: User | undefined = undefined;
     if (userId) {
       currentUser = await this.findOne(userId);
+      this.logger.debug(
+        `currentUser.id: ${currentUser.id}, currentUser.gender: ${currentUser.gender}`,
+      );
     }
 
     const safeCursorDto = cursorPaginationDto ?? new CursorPaginationDto();
@@ -574,6 +577,9 @@ export class UserService {
 
     // 로그인 유저일 때만 본인 제외, 성별 필터 적용
     if (currentUser) {
+      this.logger.debug(
+        `필터 조건: user.id != ${userId}, user.gender = ${currentUser.gender === '남자' ? '여자' : '남자'}`,
+      );
       qb.andWhere('user.id != :userId', { userId });
       qb.andWhere('user.gender = :gender', {
         gender: currentUser.gender === '남자' ? '여자' : '남자',
@@ -581,11 +587,13 @@ export class UserService {
     }
 
     if (region) {
+      this.logger.debug(`필터 조건: user.region = ${region}`);
       qb.andWhere('user.region = :region', { region });
     }
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;
+      this.logger.debug(`필터 조건: user.birthday <= ${maxBirthYear}`);
       qb.andWhere(
         'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) <= :maxBirthYear',
         { maxBirthYear },
@@ -594,6 +602,7 @@ export class UserService {
 
     if (ageMax) {
       const minBirthYear = today.getFullYear() - ageMax;
+      this.logger.debug(`필터 조건: user.birthday >= ${minBirthYear}`);
       qb.andWhere(
         'CAST(SUBSTRING(user.birthday, 1, 4) AS INTEGER) >= :minBirthYear',
         { minBirthYear },
@@ -601,6 +610,7 @@ export class UserService {
     }
 
     if (minLikes) {
+      this.logger.debug(`필터 조건: user.likeCount >= ${minLikes}`);
       qb.andWhere('user.likeCount >= :minLikes', { minLikes });
     }
 
@@ -627,6 +637,9 @@ export class UserService {
     let currentUser: User | undefined = undefined;
     if (userId) {
       currentUser = await this.findOne(userId);
+      this.logger.debug(
+        `getUserList currentUser.id: ${currentUser.id}, currentUser.gender: ${currentUser.gender}`,
+      );
     }
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -645,7 +658,10 @@ export class UserService {
       .where('user.deletedAt IS NULL');
 
     if (currentUser) {
-      qb.andWhere('user.id != :userId', { userId: currentUser });
+      this.logger.debug(
+        `getUserList 필터 조건: user.id != ${currentUser.id}, user.gender = ${currentUser.gender === '남자' ? '여자' : '남자'}`,
+      );
+      qb.andWhere('user.id != :userId', { userId: currentUser.id });
       qb.andWhere('user.gender = :gender', {
         gender: currentUser.gender === '남자' ? '여자' : '남자',
       });
@@ -657,6 +673,12 @@ export class UserService {
       await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
 
     const [users, totalCount] = await qb.getManyAndCount();
+
+    this.logger.debug(
+      `getUserList 쿼리 결과 유저 목록: ${users
+        .map((u) => `id: ${u.id}, gender: ${u.gender}`)
+        .join(', ')} `,
+    );
 
     return { users, nextCursor, totalCount };
   }
