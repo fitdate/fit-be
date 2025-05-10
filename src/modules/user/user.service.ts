@@ -650,6 +650,7 @@ export class UserService {
         'user.nickname',
         'user.region',
         'user.likeCount',
+        'user.gender',
         'user.birthday',
         'profile.id',
         'profileImage.id',

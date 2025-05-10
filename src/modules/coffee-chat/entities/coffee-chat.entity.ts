@@ -1,21 +1,18 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  ManyToOne,
-  Column,
-  CreateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { CoffeeChatStatus } from '../enum/coffee-chat-statue.enum';
+import { BaseTable } from 'src/common/entity/base-table.entity';
 @Entity()
-export class CoffeeChat {
+export class CoffeeChat extends BaseTable {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @ManyToOne(() => User, (user) => user.coffeeChats, { onDelete: 'CASCADE' })
   sender: User;
 
-  @ManyToOne(() => User, (user) => user.coffeeChatsReceived, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.coffeeChatsReceived, {
+    onDelete: 'CASCADE',
+  })
   receiver: User;
 
   @Column({
@@ -24,7 +21,4 @@ export class CoffeeChat {
     default: CoffeeChatStatus.PENDING,
   })
   status: CoffeeChatStatus;
-
-  @CreateDateColumn()
-  createdAt: Date;
 }
