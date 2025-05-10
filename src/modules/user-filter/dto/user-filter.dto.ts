@@ -17,7 +17,7 @@ export class UserFilterDto {
   })
   @IsNumber()
   @Min(20)
-  minAge: number = 20;
+  ageMin: number = 20;
 
   @ApiProperty({
     description: '최대 나이',
@@ -26,7 +26,7 @@ export class UserFilterDto {
   })
   @IsNumber()
   @Max(60)
-  maxAge: number = 60;
+  ageMax: number = 60;
 
   @ApiProperty({
     description: '최소 좋아요 수',
@@ -35,5 +35,5 @@ export class UserFilterDto {
   })
   @IsNumber()
   @Min(0)
-  minLikeCount: number = 0;
+  minLikes: number = 0;
 }

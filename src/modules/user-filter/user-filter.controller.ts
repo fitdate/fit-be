@@ -1,6 +1,6 @@
 import { Controller, Get, Body, Query } from '@nestjs/common';
 import { UserFilterService } from './user-filter.service';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { Public } from 'src/common/decorator/public.decorator';
@@ -15,11 +15,6 @@ export class UserFilterController {
   @ApiOperation({
     summary: '회원목록 조회',
     description: '회원목록 조회',
-  })
-  @ApiQuery({
-    name: 'userId',
-    required: false,
-    description: '로그인 유저 ID(없으면 비로그인)',
   })
   async getUserList(@UserId() userId?: string) {
     return this.userFilterService.getUserList(userId);

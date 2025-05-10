@@ -276,7 +276,7 @@ export class AuthController {
   @ApiOperation({ summary: '회원 복구' })
   @ApiResponse({ status: 200, description: '회원 복구 성공' })
   @Patch('restore-account')
-  async restoreAccount(@UserId() userId: string) {
+  async restoreAccount(@Body('userId') userId: string) {
     return this.authService.restoreAccount(userId);
   }
 
