@@ -3,6 +3,7 @@ import { UserFilterService } from './user-filter.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
+import { Public } from 'src/common/decorator/public.decorator';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 @ApiTags('User Filter')
 @Controller('user-filter')
@@ -18,6 +19,7 @@ export class UserFilterController {
     return this.userFilterService.getUserList(userId);
   }
 
+  @Public()
   @Get('public-list')
   @ApiOperation({
     summary: '비로그인 회원목록 조회',
@@ -44,6 +46,7 @@ export class UserFilterController {
     );
   }
 
+  @Public()
   @Get('public-filtered-list')
   @ApiOperation({
     summary: '비로그인 필터된 회원목록 조회',
