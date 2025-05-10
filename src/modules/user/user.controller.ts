@@ -1,20 +1,10 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Patch,
-  Get,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Post, Body, Patch, Get, Param } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { SkipProfileComplete } from '../auth/guard/profile-complete.guard';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { FilteredUsersDto } from './dto/filtered-user.dto';
-import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
 import { ChangePasswordDto } from './dto/change-password-dto';
 import { Public } from 'src/common/decorator/public.decorator';
 @ApiTags('User')
@@ -80,6 +70,14 @@ export class UserController {
     return this.userService.getUserInfo(userId);
   }
 
+  @ApiOperation({
+    summary: '모든 사용자 정보 조회',
+    description: '모든 사용자의 정보를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '모든 사용자의 정보를 성공적으로 조회했습니다.',
+  })
   @Get('all-user-info')
   getAllUserInfo() {
     return this.userService.getAllUserInfo();
@@ -98,22 +96,17 @@ export class UserController {
     return this.userService.findOne(userId);
   }
 
+  @ApiOperation({
+    summary: '닉네임으로 사용자 조회',
+    description: '닉네임으로 사용자를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '닉네임으로 사용자를 성공적으로 조회했습니다.',
+  })
   @Get('user-nickname/:nickname')
   getUserNickname(@Param('nickname') nickname: string) {
     return this.userService.findUserByNickname(nickname);
-  }
-
-  @Get('filtered-users')
-  getFilteredUsers(
-    @UserId() userId: string,
-    @Query() filteredUsersDto: FilteredUsersDto,
-    @Query() cursorPaginationDto: CursorPaginationDto,
-  ) {
-    return this.userService.getFilteredUsers(
-      userId,
-      filteredUsersDto,
-      cursorPaginationDto,
-    );
   }
 
   @ApiOperation({

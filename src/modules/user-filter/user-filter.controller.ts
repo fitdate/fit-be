@@ -3,24 +3,30 @@ import { UserFilterService } from './user-filter.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UserFilterDto } from './dto/user-filter.dto';
 import { CursorPaginationDto } from 'src/common/dto/cursor-pagination.dto';
-import { Public } from 'src/common/decorator/public.decorator';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 @ApiTags('User Filter')
 @Controller('user-filter')
 export class UserFilterController {
   constructor(private readonly userFilterService: UserFilterService) {}
 
-  @Public()
   @Get('list')
   @ApiOperation({
     summary: '회원목록 조회',
     description: '회원목록 조회',
   })
-  async getUserList(@UserId() userId?: string) {
+  async getUserList(@UserId() userId: string) {
     return this.userFilterService.getUserList(userId);
   }
 
-  @Public()
+  @Get('public-list')
+  @ApiOperation({
+    summary: '비로그인 회원목록 조회',
+    description: '비로그인 회원목록 조회',
+  })
+  async getPublicUserList() {
+    return this.userFilterService.getPublicUserList();
+  }
+
   @Get('filtered-list')
   @ApiOperation({
     summary: '필터된 회원목록 조회',
@@ -29,12 +35,27 @@ export class UserFilterController {
   async getFilteredUserList(
     @Query() userFilterDto: UserFilterDto,
     @Query() cursorPaginationDto: CursorPaginationDto,
-    @UserId() userId?: string,
+    @UserId() userId: string,
   ) {
     return this.userFilterService.getFilteredUserList(
+      userId,
       userFilterDto,
       cursorPaginationDto,
-      userId,
+    );
+  }
+
+  @Get('public-filtered-list')
+  @ApiOperation({
+    summary: '비로그인 필터된 회원목록 조회',
+    description: '비로그인 필터된 회원목록 조회',
+  })
+  async getPublicFilteredUserList(
+    @Query() userFilterDto: UserFilterDto,
+    @Query() cursorPaginationDto: CursorPaginationDto,
+  ) {
+    return this.userFilterService.getPublicFilteredUserList(
+      userFilterDto,
+      cursorPaginationDto,
     );
   }
 }

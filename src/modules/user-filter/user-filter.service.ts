@@ -22,7 +22,7 @@ export class UserFilterService {
   }
 
   // 회원목록 조회 (로그인/비로그인인 통합)
-  async getUserList(userId?: string) {
+  async getUserList(userId: string) {
     this.logger.debug(`사용자 목록을 조회합니다.`);
     const { users, nextCursor } = await this.userService.getUserList(
       {
@@ -39,11 +39,28 @@ export class UserFilterService {
     };
   }
 
+  async getPublicUserList() {
+    this.logger.debug(`사용자 목록을 조회합니다.`);
+    const { users, nextCursor } = await this.userService.getUserList(
+      {
+        cursor: null,
+        order: ['likeCount_DESC'],
+        take: 6,
+      },
+      undefined,
+    );
+
+    return {
+      users: this.mapUsersToResponse(users),
+      nextCursor,
+    };
+  }
+
   // 필터된 사용자 목록 조회
   async getFilteredUserList(
+    userId: string,
     userFilterDto: UserFilterDto,
     cursorPaginationDto?: CursorPaginationDto,
-    userId?: string,
   ) {
     const safeCursorDto: CursorPaginationDto = {
       cursor: cursorPaginationDto?.cursor ?? null,
@@ -53,6 +70,28 @@ export class UserFilterService {
     };
     const { users, nextCursor } = await this.userService.getFilteredUsers(
       userId,
+      userFilterDto,
+      safeCursorDto,
+    );
+
+    return {
+      users: this.mapUsersToResponse(users),
+      nextCursor,
+    };
+  }
+
+  async getPublicFilteredUserList(
+    userFilterDto: UserFilterDto,
+    cursorPaginationDto?: CursorPaginationDto,
+  ) {
+    const safeCursorDto: CursorPaginationDto = {
+      cursor: cursorPaginationDto?.cursor ?? null,
+      order: cursorPaginationDto?.order ?? ['id_DESC'],
+      take: cursorPaginationDto?.take ?? 10,
+      seed: cursorPaginationDto?.seed,
+    };
+    const { users, nextCursor } = await this.userService.getFilteredUsers(
+      undefined,
       userFilterDto,
       safeCursorDto,
     );
