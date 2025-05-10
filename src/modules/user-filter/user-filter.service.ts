@@ -45,7 +45,12 @@ export class UserFilterService {
     cursorPaginationDto?: CursorPaginationDto,
     userId?: string,
   ) {
-    const safeCursorDto = cursorPaginationDto ?? new CursorPaginationDto();
+    const safeCursorDto: CursorPaginationDto = {
+      cursor: cursorPaginationDto?.cursor ?? null,
+      order: cursorPaginationDto?.order ?? ['id_DESC'],
+      take: cursorPaginationDto?.take ?? 10,
+      seed: cursorPaginationDto?.seed,
+    };
     const { users, nextCursor } = await this.userService.getFilteredUsers(
       userId,
       userFilterDto,
