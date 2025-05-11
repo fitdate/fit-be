@@ -679,7 +679,7 @@ export class UserService {
 
     // order를 항상 likeCount_DESC, id_ASC로 고정
     const safeOrder = ['likeCount_DESC', 'id_ASC'];
-    qb.orderBy('user.likeCount', 'DESC').addOrderBy('user.id', 'ASC').take(6);
+    qb.orderBy('user.likeCount', 'DESC').addOrderBy('user.id', 'ASC');
 
     // CursorPaginationDto에 order를 명확히 지정
     const cursorDto = {
