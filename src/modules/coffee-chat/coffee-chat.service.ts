@@ -64,6 +64,17 @@ export class CoffeeChatService {
       throw new BadRequestException('자기 자신에게 커피챗을 보낼 수 없습니다.');
     }
 
+    const existingRoom = await this.chatService.findExistingRoom(
+      userId,
+      notificationDto.receiverId,
+    );
+    if (existingRoom) {
+      this.logger.warn(
+        `Existing chat room detected - Sender: ${userId}, Receiver: ${notificationDto.receiverId}`,
+      );
+      throw new BadRequestException('이미 채팅방이 존재하는 사용자입니다.');
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const sender = await this.userService.getCoffeeChatUserById(userId);
       const receiver = await this.userService.getCoffeeChatUserById(

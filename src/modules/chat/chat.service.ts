@@ -49,7 +49,7 @@ export class ChatService {
   }
 
   // 두 사용자 간의 기존 채팅방 조회
-  private async findExistingRoom(userId: string, partnerId: string) {
+  async findExistingRoom(userId: string, partnerId: string) {
     return this.chatRoomRepository
       .createQueryBuilder('chatRoom')
       .innerJoin('chatRoom.users', 'user1', 'user1.id = :userId', { userId })
