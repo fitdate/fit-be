@@ -625,11 +625,10 @@ export class UserService {
     }
 
     const { nextCursor } =
-      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, {
-        cursor: safeCursorDto.cursor,
-        order: safeCursorDto.order,
-        take: safeCursorDto.take,
-      });
+      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(
+        qb,
+        safeCursorDto,
+      );
 
     const users = await qb.getMany();
 
@@ -678,10 +677,21 @@ export class UserService {
       });
     }
 
+    // order를 항상 likeCount_DESC, id_ASC로 고정
+    const safeOrder = ['likeCount_DESC', 'id_ASC'];
     qb.orderBy('user.likeCount', 'DESC').addOrderBy('user.id', 'ASC').take(6);
 
+    // CursorPaginationDto에 order를 명확히 지정
+    const cursorDto = {
+      ...dto,
+      order: safeOrder,
+    };
+
     const { nextCursor } =
-      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(qb, dto);
+      await this.cursorPaginationUtil.applyCursorPaginationParamsToQb(
+        qb,
+        cursorDto,
+      );
 
     const [users, totalCount] = await qb.getManyAndCount();
 
