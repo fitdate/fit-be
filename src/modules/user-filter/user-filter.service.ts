@@ -22,37 +22,37 @@ export class UserFilterService {
   }
 
   // 회원목록 조회 (로그인/비로그인인 통합)
-  async getUserList(userId: string) {
+  async getUserList(userId: string, cursorPaginationDto?: CursorPaginationDto) {
     this.logger.debug(`사용자 목록을 조회합니다.`);
-    const { users, nextCursor } = await this.userService.getUserList(
-      {
-        cursor: null,
-        order: ['likeCount_DESC'],
-        take: 6,
-      },
-      userId,
-    );
+    const safeCursorDto: CursorPaginationDto = {
+      cursor: cursorPaginationDto?.cursor ?? null,
+      order: cursorPaginationDto?.order ?? ['likeCount_DESC'],
+      take: cursorPaginationDto?.take ?? 6,
+      seed: cursorPaginationDto?.seed,
+    };
+    const { users, nextCursor: newNextCursor } =
+      await this.userService.getUserList(safeCursorDto, userId);
 
     return {
       users: this.mapUsersToResponse(users),
-      nextCursor,
+      nextCursor: newNextCursor,
     };
   }
 
-  async getPublicUserList() {
+  async getPublicUserList(cursorPaginationDto?: CursorPaginationDto) {
     this.logger.debug(`사용자 목록을 조회합니다.`);
-    const { users, nextCursor } = await this.userService.getUserList(
-      {
-        cursor: null,
-        order: ['likeCount_DESC'],
-        take: 6,
-      },
-      undefined,
-    );
+    const safeCursorDto: CursorPaginationDto = {
+      cursor: cursorPaginationDto?.cursor ?? null,
+      order: cursorPaginationDto?.order ?? ['likeCount_DESC'],
+      take: cursorPaginationDto?.take ?? 6,
+      seed: cursorPaginationDto?.seed,
+    };
+    const { users, nextCursor: newNextCursor } =
+      await this.userService.getUserList(safeCursorDto, undefined);
 
     return {
       users: this.mapUsersToResponse(users),
-      nextCursor,
+      nextCursor: newNextCursor,
     };
   }
 
@@ -63,7 +63,7 @@ export class UserFilterService {
     cursorPaginationDto?: CursorPaginationDto,
   ) {
     const safeCursorDto: CursorPaginationDto = {
-      cursor: cursorPaginationDto?.cursor ?? null,
+      cursor: null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
       take: cursorPaginationDto?.take ?? 10,
       seed: cursorPaginationDto?.seed,
@@ -85,7 +85,7 @@ export class UserFilterService {
     cursorPaginationDto?: CursorPaginationDto,
   ) {
     const safeCursorDto: CursorPaginationDto = {
-      cursor: cursorPaginationDto?.cursor ?? null,
+      cursor: null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
       take: cursorPaginationDto?.take ?? 10,
       seed: cursorPaginationDto?.seed,
