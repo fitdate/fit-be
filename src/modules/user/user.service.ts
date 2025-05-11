@@ -577,13 +577,12 @@ export class UserService {
 
     // 로그인 유저일 때만 본인 제외, 성별 필터 적용
     if (currentUser) {
+      const oppositeGender = currentUser.gender === '남자' ? '여자' : '남자';
       this.logger.debug(
-        `필터 조건: user.id != ${userId}, user.gender = ${currentUser.gender === '남자' ? '여자' : '남자'}`,
+        `필터 조건: user.id != ${userId}, user.gender = ${oppositeGender}`,
       );
       qb.andWhere('user.id != :userId', { userId });
-      qb.andWhere('user.gender = :gender', {
-        gender: currentUser.gender === '남자' ? '여자' : '남자',
-      });
+      qb.andWhere('user.gender = :gender', { gender: oppositeGender });
     }
 
     if (region) {
