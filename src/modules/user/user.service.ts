@@ -480,6 +480,8 @@ export class UserService {
 
     const qb = this.userRepository
       .createQueryBuilder('user')
+      .leftJoin('user.profile', 'profile')
+      .leftJoin('profile.profileImage', 'profileImage')
       .select([
         'user.id',
         'user.nickname',
