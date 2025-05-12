@@ -18,15 +18,6 @@ import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
 
-// 결제 상품 id-quantity 매핑 상수
-const PAYMENT_PRODUCTS = [
-  { id: 1, quantity: 30 },
-  { id: 2, quantity: 60 },
-  { id: 3, quantity: 120 },
-  { id: 4, quantity: 240 },
-  { id: 5, quantity: 500 },
-];
-
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
@@ -156,20 +147,24 @@ export class PaymentService {
 
         await queryRunner.manager.save(Payment, payment);
 
-        // === 커피 증가 로직 (id별) ===
-        const product = PAYMENT_PRODUCTS.find(
-          (p) => p.id === parseInt(orderId),
-        );
-        if (product) {
+        // === 커피 증가 로직 (orderName에서 숫자 추출) ===
+        let coffeeCount = 0;
+        const match = payment.orderName?.match(/\d+/);
+        if (match) {
+          coffeeCount = parseInt(match[0], 10);
+        }
+        if (coffeeCount > 0) {
           await this.userService.updateCoffee(
             userId,
-            (user.coffee || 0) + product.quantity,
+            (user.coffee || 0) + coffeeCount,
           );
           this.logger.log(
-            `커피 ${product.quantity}개 지급 완료 (userId: ${userId}, 상품 id: ${orderId})`,
+            `커피 ${coffeeCount}개 지급 완료 (userId: ${userId}, orderName: ${payment.orderName})`,
           );
         } else {
-          this.logger.warn(`알 수 없는 상품 id: ${orderId}`);
+          this.logger.warn(
+            `orderName에서 커피 개수 추출 실패: ${payment.orderName}`,
+          );
         }
         // =========================
 
