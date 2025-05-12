@@ -217,36 +217,11 @@ export class AuthService {
         log(`MBTI saved successfully for user: ${user.id}`);
       }
 
-      // 5. 피드백 저장
+      // 5. 자기소개 저장
       if (registerDto.selfintro?.length) {
-        log('Starting feedback save');
-
-        // 피드백 이름으로 Feedback 찾기 (없으면 예외)
-        const feedbacks = await Promise.all(
-          registerDto.selfintro.map(async (feedbackName) => {
-            const existingFeedback =
-              await this.feedbackService.searchFeedbacks(feedbackName);
-            if (existingFeedback.length > 0) {
-              return existingFeedback[0];
-            }
-            throw new UnauthorizedException(
-              `존재하지 않는 피드백입니다: ${feedbackName}`,
-            );
-          }),
-        );
-        const userFeedbacks = feedbacks.map((feedback) => ({
-          profile: { id: profile.id },
-          feedback: { id: feedback.id },
-        }));
-        await qr.manager.save(UserFeedback, userFeedbacks);
-        log(`User feedbacks saved successfully for user: ${user.id}`);
-      }
-
-      // 6. 자기소개 저장
-      if (registerDto.listening?.length) {
         log('Starting introduction save');
         const introductions = await Promise.all(
-          registerDto.listening.map(async (introductionName) => {
+          registerDto.selfintro.map(async (introductionName) => {
             const existingIntroduction =
               await this.introductionService.searchIntroductions(
                 introductionName,
@@ -265,6 +240,29 @@ export class AuthService {
         }));
         await qr.manager.save(UserIntroduction, userIntroductions);
         log(`User introductions saved successfully for user: ${user.id}`);
+      }
+
+      // 6. 피드백 저장
+      if (registerDto.listening?.length) {
+        log('Starting feedback save');
+        const feedbacks = await Promise.all(
+          registerDto.listening.map(async (feedbackName) => {
+            const existingFeedback =
+              await this.feedbackService.searchFeedbacks(feedbackName);
+            if (existingFeedback.length > 0) {
+              return existingFeedback[0];
+            }
+            throw new UnauthorizedException(
+              `존재하지 않는 피드백입니다: ${feedbackName}`,
+            );
+          }),
+        );
+        const userFeedbacks = feedbacks.map((feedback) => ({
+          profile: { id: profile.id },
+          feedback: { id: feedback.id },
+        }));
+        await qr.manager.save(UserFeedback, userFeedbacks);
+        log(`User feedbacks saved successfully for user: ${user.id}`);
       }
 
       // 7. 관심사 저장
