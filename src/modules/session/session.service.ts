@@ -37,6 +37,9 @@ export class SessionService {
       parseTimeToSeconds('7d'),
     );
 
+    this.logger.log(
+      `세션 생성: userId=${userId}, deviceId=${metadata.deviceId}, sessionId=${metadata.sessionId}`,
+    );
     return session;
   }
 
@@ -48,7 +51,9 @@ export class SessionService {
     const storedSession = await this.redisService.get(sessionKey);
 
     if (!storedSession) {
-      this.logger.warn(`Session not found for user ${userId}`);
+      this.logger.warn(
+        `세션 없음: userId=${userId}, deviceId=${metadata.deviceId}`,
+      );
       return false;
     }
 
@@ -57,7 +62,9 @@ export class SessionService {
 
       // 세션이 비활성화되었는지 확인
       if (!session.isActive) {
-        this.logger.warn(`Session is inactive for user ${userId}`);
+        this.logger.warn(
+          `비활성 세션: userId=${userId}, deviceId=${metadata.deviceId}`,
+        );
         return false;
       }
 
@@ -65,7 +72,9 @@ export class SessionService {
       const sessionAge = Date.now() - new Date(session.createdAt).getTime();
       const maxAge = 7 * 24 * 60 * 60 * 1000; // 7일
       if (sessionAge > maxAge) {
-        this.logger.warn(`Session expired for user ${userId}`);
+        this.logger.warn(
+          `세션 만료: userId=${userId}, deviceId=${metadata.deviceId}`,
+        );
         await this.deactivateSession(userId, metadata.deviceId);
         return false;
       }
@@ -77,13 +86,21 @@ export class SessionService {
         session.deviceType === metadata.deviceType;
 
       if (!isValid) {
-        this.logger.warn(`Session metadata mismatch for user ${userId}`);
+        this.logger.warn(
+          `세션 메타데이터 불일치: userId=${userId}, deviceId=${metadata.deviceId}`,
+        );
         return false;
       }
 
+      this.logger.log(
+        `세션 유효: userId=${userId}, deviceId=${metadata.deviceId}`,
+      );
       return true;
     } catch (error) {
-      this.logger.error(`Error validating session for user ${userId}:`, error);
+      this.logger.error(
+        `세션 검증 오류: userId=${userId}, deviceId=${metadata.deviceId}`,
+        error,
+      );
       return false;
     }
   }
@@ -100,6 +117,7 @@ export class SessionService {
         JSON.stringify(session),
         parseTimeToSeconds('7d'),
       );
+      this.logger.log(`세션 활동 갱신: userId=${userId}, deviceId=${deviceId}`);
     }
   }
 
@@ -115,6 +133,7 @@ export class SessionService {
         JSON.stringify(session),
         parseTimeToSeconds('1h'),
       );
+      this.logger.log(`세션 비활성화: userId=${userId}, deviceId=${deviceId}`);
     }
   }
 
@@ -125,23 +144,33 @@ export class SessionService {
       JSON.stringify({ isActive: true }),
       parseTimeToSeconds('15m'),
     );
+    this.logger.log(`활성 세션 갱신: userId=${userId}, deviceId=${deviceId}`);
   }
 
   async isActiveSession(userId: string, deviceId: string): Promise<boolean> {
     const sessionKey = `active_session:${userId}:${deviceId}`;
-    return (await this.redisService.exists(sessionKey)) === 1;
+    const exists = (await this.redisService.exists(sessionKey)) === 1;
+    this.logger.log(
+      `활성 세션 조회: userId=${userId}, deviceId=${deviceId}, isActive=${exists}`,
+    );
+    return exists;
   }
 
   async deleteActiveSession(userId: string, deviceId: string): Promise<void> {
     await this.redisService.del(`active_session:${userId}:${deviceId}`);
+    this.logger.log(`활성 세션 삭제: userId=${userId}, deviceId=${deviceId}`);
   }
 
   async getSession(userId: string, deviceId: string): Promise<Session | null> {
     const sessionKey = `session:${userId}:${deviceId}`;
     const sessionData = await this.redisService.get(sessionKey);
     if (!sessionData) {
+      this.logger.warn(
+        `세션 데이터 없음: userId=${userId}, deviceId=${deviceId}`,
+      );
       return null;
     }
+    this.logger.log(`세션 데이터 조회: userId=${userId}, deviceId=${deviceId}`);
     return JSON.parse(sessionData) as Session;
   }
 
@@ -154,11 +183,15 @@ export class SessionService {
         sessions.push(JSON.parse(data) as Session);
       }
     }
+    this.logger.log(
+      `모든 세션 조회: userId=${userId}, 세션 수=${sessions.length}`,
+    );
     return sessions;
   }
 
   async deleteSession(userId: string, deviceId: string): Promise<void> {
     const sessionKey = `session:${userId}:${deviceId}`;
     await this.redisService.del(sessionKey);
+    this.logger.log(`세션 삭제: userId=${userId}, deviceId=${deviceId}`);
   }
 }

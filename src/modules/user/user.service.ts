@@ -488,6 +488,9 @@ export class UserService {
         'user.region',
         'user.gender',
         'user.likeCount',
+        'profile.id',
+        'profileImage.id',
+        'profileImage.imageUrl',
       ])
       .where('user.id != :userId', { userId: currentUserId })
       .andWhere('user.deletedAt IS NULL')

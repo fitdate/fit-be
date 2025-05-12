@@ -59,6 +59,8 @@ export class DatingPreferenceService {
         height: user.height,
         age: calculateAge(user.birthday),
         likeCount: user.likeCount,
+        profileImageId: user.profile.profileImage[0].id,
+        profileImageUrl: user.profile.profileImage[0].imageUrl,
       })),
       nextCursor,
     };
