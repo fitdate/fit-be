@@ -20,13 +20,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 📦 코드 체크아웃!
+      # 📦 코드 체크아웃
       - name: 📦 Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
-      # 🔧 Node.js 설정!
+      # 🔧 Node.js 설정
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
