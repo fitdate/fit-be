@@ -111,7 +111,7 @@ export class CoffeeChatService {
         receiverId: receiver.id,
         title: notificationDto.title,
         content: notificationDto.content,
-        type: NotificationType.COFFEE_CHAT,
+        type: NotificationType.COFFEE_CHAT_REQUEST,
         data: notificationDto.data,
       });
 
@@ -119,7 +119,7 @@ export class CoffeeChatService {
         senderId: sender.id,
         receiverId: receiver.id,
         coffeeChatId: savedCoffeeChat.id,
-        type: NotificationType.COFFEE_CHAT,
+        type: NotificationType.COFFEE_CHAT_REQUEST,
         status: savedCoffeeChat.status,
       };
     });
@@ -162,7 +162,7 @@ export class CoffeeChatService {
         senderId: coffeeChat.sender.id,
         receiverId: coffeeChat.receiver.id,
         chatRoomId: chatRoom.id,
-        type: NotificationType.COFFEE_CHAT,
+        type: NotificationType.COFFEE_CHAT_ACCEPT,
         status: coffeeChat.status,
       };
     });

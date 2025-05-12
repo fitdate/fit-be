@@ -87,7 +87,7 @@ export class ChatService {
       partnerId,
       userId,
       chatRoom.id,
-      NotificationType.COFFEE_CHAT,
+      NotificationType.COFFEE_CHAT_ACCEPT,
       '커피챗 수락',
       '상대방이 커피챗을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
     );
@@ -101,7 +101,7 @@ export class ChatService {
       partnerId,
       userId,
       chatRoom.id,
-      NotificationType.MATCH,
+      NotificationType.MATCH_ACCEPT,
       '매칭 수락',
       '상대방이 매칭을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
     );

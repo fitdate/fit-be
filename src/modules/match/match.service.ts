@@ -231,7 +231,7 @@ export class MatchService {
 
     await this.notificationService.create({
       receiverId: selectedUserId,
-      type: NotificationType.MATCH,
+      type: NotificationType.MATCH_REQUEST,
       title: '매칭 성공',
       content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
       data: {
@@ -281,7 +281,7 @@ export class MatchService {
       await Promise.all([
         this.notificationService.create({
           receiverId: firstSelectedUserId,
-          type: NotificationType.MATCH,
+          type: NotificationType.MATCH_REQUEST,
           title: '매칭 성공',
           content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
           data: {
@@ -292,7 +292,7 @@ export class MatchService {
         }),
         this.notificationService.create({
           receiverId: secondSelectedUserId,
-          type: NotificationType.MATCH,
+          type: NotificationType.MATCH_REQUEST,
           title: '매칭 성공',
           content: `${currentUser.nickname}님이 매칭을 선택했습니다.`,
           data: {
@@ -328,7 +328,7 @@ export class MatchService {
       match.user1.id === currentUserId ? match.user2.id : match.user1.id;
     await this.notificationService.create({
       receiverId: otherUserId,
-      type: NotificationType.COFFEE_CHAT,
+      type: NotificationType.CHAT,
       title: '채팅방 입장',
       content: `${currentUser.nickname}님이 채팅방에 입장했습니다.`,
       data: {
