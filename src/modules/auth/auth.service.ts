@@ -649,21 +649,19 @@ export class AuthService {
         });
         await this.s3Service.deleteFile(image.key, bucketName);
       }
-      await qr.manager.softRemove(profileImages);
-      log('Profile images soft deleted successfully');
+      await qr.manager.remove(ProfileImage, profileImages);
+      log('Profile images permanently deleted successfully');
 
-      log('Soft deleting MBTI, feedback, introduction, interests');
+      log('Permanently deleting MBTI, feedback, introduction, interests');
       if (user.profile.mbti) {
-        await qr.manager.softDelete(Mbti, {
-          id: user.profile.mbti.id,
-        });
+        await qr.manager.delete(Mbti, { id: user.profile.mbti.id });
       }
       // UserFeedback
       const userFeedbacks = await qr.manager.find(UserFeedback, {
         where: { profile: { id: user.profile.id } },
       });
       if (userFeedbacks.length > 0) {
-        await qr.manager.softDelete(
+        await qr.manager.delete(
           UserFeedback,
           userFeedbacks.map((fb) => fb.id),
         );
@@ -673,7 +671,7 @@ export class AuthService {
         where: { profile: { id: user.profile.id } },
       });
       if (userIntroductions.length > 0) {
-        await qr.manager.softDelete(
+        await qr.manager.delete(
           UserIntroduction,
           userIntroductions.map((intro) => intro.id),
         );
@@ -686,42 +684,42 @@ export class AuthService {
         },
       );
       if (userInterestCategories.length > 0) {
-        await qr.manager.softDelete(
+        await qr.manager.delete(
           UserInterestCategory,
           userInterestCategories.map((cat) => cat.id),
         );
       }
-      log('MBTI, feedback, introduction, interests soft deleted');
+      log('MBTI, feedback, introduction, interests permanently deleted');
 
-      log('Soft deleting profile');
-      await qr.manager.softRemove(Profile, user.profile);
-      log('Profile soft deleted successfully');
+      log('Permanently deleting profile');
+      await qr.manager.delete(Profile, user.profile.id);
+      log('Profile permanently deleted successfully');
 
-      log('Soft deleting related entities');
+      log('Permanently deleting related entities');
       for (const like of [...user.likes, ...user.likedBy]) {
-        await qr.manager.softRemove(like);
+        await qr.manager.delete(like.constructor, like.id);
       }
       for (const pass of [...user.passes, ...user.passedBy]) {
-        await qr.manager.softRemove(pass);
+        await qr.manager.delete(pass.constructor, pass.id);
       }
       for (const payment of user.payments) {
-        await qr.manager.softRemove(payment);
+        await qr.manager.delete(payment.constructor, payment.id);
       }
       for (const chat of [...user.coffeeChats, ...user.coffeeChatsReceived]) {
-        await qr.manager.softRemove(chat);
+        await qr.manager.delete(chat.constructor, chat.id);
       }
       for (const acc of [
         ...user.sentAcceptedCoffeeChats,
         ...user.receivedAcceptedCoffeeChats,
       ]) {
-        await qr.manager.softRemove(acc);
+        await qr.manager.delete(acc.constructor, acc.id);
       }
-      log('Related entities soft deleted');
+      log('Related entities permanently deleted');
 
-      // 6. User soft delete
-      log('Soft deleting user');
-      await qr.manager.softRemove(user);
-      log('User soft deleted successfully');
+      // 6. User permanent delete
+      log('Permanently deleting user');
+      await qr.manager.delete(User, user.id);
+      log('User permanently deleted successfully');
 
       // 7. Redis에서 인증 상태 삭제
       const verifiedKey = `email-verified:${user.email}`;
