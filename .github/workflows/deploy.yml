@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 📦 코드 체크아웃
+      # 📦 코드 체크아웃!
       - name: 📦 Checkout repository
         uses: actions/checkout@v3
         with:
