@@ -110,7 +110,7 @@ export class RegisterDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  mbti?: string[];
+  mbti?: string;
 
   @ApiProperty({
     description: '자기소개',

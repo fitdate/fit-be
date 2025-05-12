@@ -208,10 +208,10 @@ export class AuthService {
       }
 
       // 4. MBTI 저장
-      if (registerDto.mbti?.[0]) {
+      if (registerDto.mbti) {
         log('Starting MBTI save');
         await qr.manager.save(Mbti, {
-          mbti: registerDto.mbti[0],
+          mbti: registerDto.mbti,
           profile: { id: profile.id },
         });
         log(`MBTI saved successfully for user: ${user.id}`);
