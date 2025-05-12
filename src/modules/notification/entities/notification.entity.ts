@@ -29,7 +29,7 @@ export class Notification extends BaseTable {
   })
   type: NotificationType;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn()
   receiver?: User;
 
