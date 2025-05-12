@@ -589,7 +589,7 @@ export class AuthService {
   }
 
   // 회원 탈퇴
-  async deleteAccount(userId: string) {
+  async deleteAccount(userId: string, res: Response) {
     const logBuffer: string[] = [];
     const log = (message: string) => {
       logBuffer.push(message);
@@ -728,6 +728,24 @@ export class AuthService {
 
       await qr.commitTransaction();
       log('Account deletion completed successfully');
+
+      // 회원탈퇴 시 토큰 쿠키 삭제
+      res.cookie('accessToken', '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        domain: '.fit-date.co.kr',
+        path: '/',
+        maxAge: 0,
+      });
+      res.cookie('refreshToken', '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        domain: '.fit-date.co.kr',
+        path: '/',
+        maxAge: 0,
+      });
 
       return { message: '회원탈퇴가 완료되었습니다.' };
     } catch (error) {

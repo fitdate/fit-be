@@ -268,8 +268,11 @@ export class AuthController {
   @ApiOperation({ summary: '회원 탈퇴' })
   @ApiResponse({ status: 200, description: '회원 탈퇴 성공' })
   @Delete('delete-account')
-  async deleteAccount(@UserId() userId: string) {
-    return this.authService.deleteAccount(userId);
+  async deleteAccount(
+    @UserId() userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.deleteAccount(userId, res);
   }
 
   // 비밀번호 변경
