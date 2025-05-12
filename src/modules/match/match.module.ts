@@ -12,6 +12,7 @@ import { MatchSelection } from './entities/match-selection.entity';
 import { MatchResultService } from './match-result.service';
 import { MatchResultController } from './match-result.controller';
 import { PassModule } from '../pass/pass.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PassModule } from '../pass/pass.module';
     NotificationModule,
     UserModule,
     PassModule,
+    ChatModule,
   ],
   controllers: [MatchController, MatchResultController],
   providers: [MatchService, MatchResultService],

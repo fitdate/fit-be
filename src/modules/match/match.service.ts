@@ -15,6 +15,7 @@ import { NotificationType } from '../../common/enum/notification.enum';
 import { UserService } from '../user/user.service';
 import { User } from '../user/entities/user.entity';
 import { PassService } from '../pass/pass.service';
+import { ChatService } from '../chat/chat.service';
 
 @Injectable()
 export class MatchService {
@@ -30,6 +31,7 @@ export class MatchService {
     private readonly notificationService: NotificationService,
     private readonly userService: UserService,
     private readonly passService: PassService,
+    private readonly chatService: ChatService,
   ) {}
 
   // 성별에 따른 사용자 필터링
@@ -219,6 +221,18 @@ export class MatchService {
     selectedUserId: string,
     currentUserId: string,
   ): Promise<void> {
+    // 이미 채팅방이 있는지 확인
+    const existingRoom = await this.chatService.findExistingRoom(
+      currentUserId,
+      selectedUserId,
+    );
+    if (existingRoom) {
+      this.logger.warn(
+        `[sendSelectionNotification] 이미 채팅방이 있습니다. userId: ${currentUserId}, selectedUserId: ${selectedUserId}`,
+      );
+      throw new Error('이미 채팅방이 있습니다.');
+    }
+
     const match = await this.findByMatchId(matchId);
     if (!match) {
       throw new NotFoundException('매치를 찾을 수 없습니다.');
@@ -250,6 +264,28 @@ export class MatchService {
     firstSelectedUserId: string,
     secondSelectedUserId: string,
   ): Promise<void> {
+    // 첫 번째 유저와 채팅방 존재 여부 확인
+    const existingRoom1 = await this.chatService.findExistingRoom(
+      currentUserId,
+      firstSelectedUserId,
+    );
+    if (existingRoom1) {
+      this.logger.warn(
+        `[sendAllSelectionNotification] 이미 채팅방이 있습니다. userId: ${currentUserId}, selectedUserId: ${firstSelectedUserId}`,
+      );
+      throw new Error('이미 채팅방이 있습니다.');
+    }
+    // 두 번째 유저와 채팅방 존재 여부 확인
+    const existingRoom2 = await this.chatService.findExistingRoom(
+      currentUserId,
+      secondSelectedUserId,
+    );
+    if (existingRoom2) {
+      this.logger.warn(
+        `[sendAllSelectionNotification] 이미 채팅방이 있습니다. userId: ${currentUserId}, selectedUserId: ${secondSelectedUserId}`,
+      );
+      throw new Error('이미 채팅방이 있습니다.');
+    }
     try {
       const match = await this.findByMatchId(matchId);
       if (!match) {
