@@ -20,15 +20,12 @@ export class UserInterestCategoryService {
     const userInterestCategories: UserInterestCategory[] = [];
 
     for (const name of dto.interestCategoryNames) {
-      let interestCategory = (
+      const interestCategory = (
         await this.interestCategoryService.searchInterestCategories(name)
       )[0];
 
       if (!interestCategory) {
-        interestCategory =
-          await this.interestCategoryService.createInterestCategory({
-            name,
-          });
+        throw new NotFoundException(`존재하지 않는 관심사입니다: ${name}`);
       }
 
       const userInterestCategory = this.userInterestCategoryRepository.create({

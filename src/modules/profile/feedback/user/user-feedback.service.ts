@@ -19,11 +19,9 @@ export class UserFeedbackService {
     const userFeedbacks: UserFeedback[] = [];
 
     for (const name of dto.feedbackNames) {
-      let feedback = (await this.feedbackService.searchFeedbacks(name))[0];
+      const feedback = (await this.feedbackService.searchFeedbacks(name))[0];
       if (!feedback) {
-        feedback = await this.feedbackService.createFeedbackCategory({
-          name,
-        });
+        throw new NotFoundException(`존재하지 않는 피드백입니다: ${name}`);
       }
       const userFeedback = this.userFeedbackRepository.create({
         feedback: { id: feedback.id },
