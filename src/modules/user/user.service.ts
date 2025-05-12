@@ -496,8 +496,14 @@ export class UserService {
         'profileImage.imageUrl',
       ])
       .where('user.id != :userId', { userId: currentUserId })
-      .andWhere('user.deletedAt IS NULL')
-      .andWhere('user.gender != :gender', { gender: currentUser.gender });
+      .andWhere('user.deletedAt IS NULL');
+
+    const oppositeGender = currentUser.gender === '남자' ? '여자' : '남자';
+    this.logger.debug(
+      `필터 조건: user.id != ${currentUserId}, user.gender = ${oppositeGender}`,
+    );
+    qb.andWhere('user.id != :userId', { userId: currentUserId });
+    qb.andWhere('user.gender = :gender', { gender: oppositeGender });
 
     if (ageMin) {
       const maxBirthYear = today.getFullYear() - ageMin;
