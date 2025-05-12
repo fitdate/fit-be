@@ -629,47 +629,7 @@ export class AuthService {
         throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
       }
 
-      log('Permanently deleting MBTI, feedback, introduction, interests');
-      // 1. UserFeedback 삭제
-      const userFeedbacks = await qr.manager.find(UserFeedback, {
-        where: { profile: { id: user.profile.id } },
-      });
-      if (userFeedbacks.length > 0) {
-        await qr.manager.delete(
-          UserFeedback,
-          userFeedbacks.map((fb) => fb.id),
-        );
-      }
-      // 2. UserIntroduction 삭제
-      const userIntroductions = await qr.manager.find(UserIntroduction, {
-        where: { profile: { id: user.profile.id } },
-      });
-      if (userIntroductions.length > 0) {
-        await qr.manager.delete(
-          UserIntroduction,
-          userIntroductions.map((intro) => intro.id),
-        );
-      }
-      // 3. UserInterestCategory 삭제
-      const userInterestCategories = await qr.manager.find(
-        UserInterestCategory,
-        {
-          where: { profile: { id: user.profile.id } },
-        },
-      );
-      if (userInterestCategories.length > 0) {
-        await qr.manager.delete(
-          UserInterestCategory,
-          userInterestCategories.map((cat) => cat.id),
-        );
-      }
-      // 4. MBTI 삭제
-      if (user.profile.mbti) {
-        await qr.manager.delete(Mbti, { id: user.profile.mbti.id });
-      }
-      log('MBTI, feedback, introduction, interests permanently deleted');
-
-      // 5. 프로필 이미지 삭제 (이미지 파일 및 DB row)
+      // 1. 프로필 이미지 삭제 (S3 + DB)
       log('Deleting profile images');
       const profileImages = await qr.manager.find(ProfileImage, {
         where: { profile: { id: user.profile.id } },
@@ -682,6 +642,45 @@ export class AuthService {
       }
       await qr.manager.remove(ProfileImage, profileImages);
       log('Profile images permanently deleted successfully');
+
+      // 2. UserFeedback 삭제
+      const userFeedbacks = await qr.manager.find(UserFeedback, {
+        where: { profile: { id: user.profile.id } },
+      });
+      if (userFeedbacks.length > 0) {
+        await qr.manager.delete(
+          UserFeedback,
+          userFeedbacks.map((fb) => fb.id),
+        );
+      }
+      // 3. UserIntroduction 삭제
+      const userIntroductions = await qr.manager.find(UserIntroduction, {
+        where: { profile: { id: user.profile.id } },
+      });
+      if (userIntroductions.length > 0) {
+        await qr.manager.delete(
+          UserIntroduction,
+          userIntroductions.map((intro) => intro.id),
+        );
+      }
+      // 4. UserInterestCategory 삭제
+      const userInterestCategories = await qr.manager.find(
+        UserInterestCategory,
+        {
+          where: { profile: { id: user.profile.id } },
+        },
+      );
+      if (userInterestCategories.length > 0) {
+        await qr.manager.delete(
+          UserInterestCategory,
+          userInterestCategories.map((cat) => cat.id),
+        );
+      }
+      // 5. MBTI 삭제
+      if (user.profile.mbti) {
+        await qr.manager.delete(Mbti, { id: user.profile.mbti.id });
+      }
+      log('MBTI, feedback, introduction, interests permanently deleted');
 
       // 6. 프로필 삭제 (가장 마지막!)
       log('Permanently deleting profile');
