@@ -154,9 +154,10 @@ export class PaymentService {
           coffeeCount = parseInt(match[0], 10);
         }
         if (coffeeCount > 0) {
-          await this.userService.updateCoffee(
-            userId,
-            (user.coffee || 0) + coffeeCount,
+          await queryRunner.manager.update(
+            User,
+            { id: userId },
+            { coffee: (user.coffee || 0) + coffeeCount },
           );
           this.logger.log(
             `커피 ${coffeeCount}개 지급 완료 (userId: ${userId}, orderName: ${payment.orderName})`,
