@@ -104,12 +104,29 @@ export class RegisterDto {
 
   @ApiProperty({
     description: 'MBTI',
-    example: ['ISTJ'],
-    type: [String],
+    example: 'ISTJ',
+    type: String,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @IsString()
+  @IsIn([
+    'ISTJ',
+    'ISFJ',
+    'INFJ',
+    'INTJ',
+    'ISTP',
+    'ISFP',
+    'INFP',
+    'INTP',
+    'ESTP',
+    'ESFP',
+    'ENFP',
+    'ENTP',
+    'ESTJ',
+    'ESFJ',
+    'ENFJ',
+    'ENTJ',
+  ])
   mbti?: string;
 
   @ApiProperty({
