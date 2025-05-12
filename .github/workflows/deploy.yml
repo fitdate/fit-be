@@ -20,13 +20,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 📦 코드 체크아웃!
+      # 📦 코드 체크아웃
       - name: 📦 Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
-      # 🔧 Node.js 설정
+      # 🔧 Node.js 설정!
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -150,11 +150,6 @@ jobs:
             
             echo '🔄 Docker Hub 로그인 중...'
             echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-
-            # Docker 네트워크 생성 및 확인
-            echo '🌐 Docker 네트워크 설정 중...'
-            docker network create fit-network || true
-            docker network ls | grep fit-network
 
             # 환경 변수 설정
             echo 'DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}' > /home/ubuntu/.env
