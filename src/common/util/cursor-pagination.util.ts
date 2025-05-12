@@ -47,7 +47,7 @@ export class CursorPaginationUtil {
         }
 
         const whereClause = conditions.join(' OR ');
-        qb.andWhere(whereClause, params);
+        qb.andWhere(`(${whereClause})`, params);
       } catch (error) {
         // cursor가 유효하지 않은 경우 무시하고 계속 진행
         console.warn('Invalid cursor format:', error);
