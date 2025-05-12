@@ -27,10 +27,7 @@ import { TokenService } from '../token/token.service';
 import { RequestWithUser } from './types/request.types';
 import { EmailAuthService } from './services/email-auth.service';
 import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
-import { CreateInterestCategoryDto } from '../profile/interest-category/dto/create-interest-category.dto';
 import { FeedbackService } from '../profile/feedback/common/feedback.service';
-import { CreateFeedbackDto } from '../profile/feedback/dto/create-feedback.dto';
-import { CreateIntroductionDto } from '../profile/introduction/dto/create-introduction.dto';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
 import { TokenMetadata } from '../token/types/token-payload.types';
 import { UAParser } from 'ua-parser-js';
@@ -224,7 +221,7 @@ export class AuthService {
       if (registerDto.selfintro?.length) {
         log('Starting feedback save');
 
-        // 피드백 이름으로 Feedback 찾기 또는 생성하기
+        // 피드백 이름으로 Feedback 찾기 (없으면 예외)
         const feedbacks = await Promise.all(
           registerDto.selfintro.map(async (feedbackName) => {
             const existingFeedback =
@@ -232,10 +229,9 @@ export class AuthService {
             if (existingFeedback.length > 0) {
               return existingFeedback[0];
             }
-
-            log(`Creating new feedback: ${feedbackName}`);
-            const createDto: CreateFeedbackDto = { name: feedbackName };
-            return this.feedbackService.createFeedbackCategory(createDto);
+            throw new UnauthorizedException(
+              `존재하지 않는 피드백입니다: ${feedbackName}`,
+            );
           }),
         );
         const userFeedbacks = feedbacks.map((feedback) => ({
@@ -258,10 +254,9 @@ export class AuthService {
             if (existingIntroduction.length > 0) {
               return existingIntroduction[0];
             }
-
-            log(`Creating new introduction: ${introductionName}`);
-            const createDto: CreateIntroductionDto = { name: introductionName };
-            return this.introductionService.createIntroduction(createDto);
+            throw new UnauthorizedException(
+              `존재하지 않는 자기소개입니다: ${introductionName}`,
+            );
           }),
         );
         const userIntroductions = introductions.map((introduction) => ({
@@ -286,11 +281,8 @@ export class AuthService {
               log(`Found existing interest category: ${interestName}`);
               return existingCategories[0];
             }
-
-            log(`Creating new interest category: ${interestName}`);
-            const createDto: CreateInterestCategoryDto = { name: interestName };
-            return this.interestCategoryService.createInterestCategory(
-              createDto,
+            throw new UnauthorizedException(
+              `존재하지 않는 관심사입니다: ${interestName}`,
             );
           }),
         );
