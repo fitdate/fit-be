@@ -46,10 +46,10 @@ export class SessionGateway
 
   @SubscribeMessage('get:user:status')
   async handleGetUserStatus(client: Socket, payload: { userIds: string[] }) {
-    const metadata = this.extractMetadata(client);
-    this.logger.log(
-      `유저 상태 조회 요청: userIds=${payload.userIds.join(',')}, 요청자 userId=${metadata.userId}`,
-    );
+    // const metadata = this.extractMetadata(client);
+    // this.logger.log(
+    //   `유저 상태 조회 요청: userIds=${payload.userIds.join(',')}, 요청자 userId=${metadata.userId}`,
+    // );
     const statuses = await Promise.all(
       payload.userIds.map(async (userId) => {
         const isActive = await this.sessionService.isActiveSession(userId);
