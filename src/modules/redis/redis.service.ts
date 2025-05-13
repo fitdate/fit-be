@@ -54,17 +54,20 @@ export class RedisService
     return storedId === tokenId;
   }
 
+  // 액세스 토큰 유효성 검증
   async isAccessTokenValid(token: string): Promise<boolean> {
     const key = `access_token:${token}`;
     const exists = await this.redisClient.exists(key);
     return exists === 1;
   }
 
+  // 액세스 토큰 저장
   async saveAccessToken(token: string, userId: string): Promise<void> {
     const key = `access_token:${token}`;
     await this.redisClient.set(key, userId, 'EX', 300); // 5 minutes TTL
   }
 
+  // 액세스 토큰 삭제
   async deleteAccessToken(token: string): Promise<void> {
     const key = `access_token:${token}`;
     await this.redisClient.del(key);
@@ -95,10 +98,12 @@ export class RedisService
     return await this.redisClient.del(key);
   }
 
+  // 여러 키 삭제
   async delMultiple(...keys: string[]): Promise<number> {
     return await this.redisClient.del(...keys);
   }
 
+  // 키 패턴 조회
   async keys(pattern: string): Promise<string[]> {
     return await this.redisClient.keys(pattern);
   }
@@ -121,10 +126,12 @@ export class RedisService
     return await this.redisClient.zremrangebyrank(key, start, end);
   }
 
+  // 키 만료 시간 조회
   async ttl(key: string): Promise<number> {
     return await this.redisClient.ttl(key);
   }
 
+  // 키 존재 여부 확인
   async exists(key: string): Promise<number> {
     return await this.redisClient.exists(key);
   }

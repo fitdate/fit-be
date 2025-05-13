@@ -9,6 +9,7 @@ export class FindEmailService {
 
   constructor(private readonly userService: UserService) {}
 
+  // 이메일 찾기
   async findEmail(findEmailDto: FindEmailDto) {
     this.logger.log(
       `이메일 찾기 시도: 이름=${findEmailDto.name}, 전화번호=${findEmailDto.phone}`,

@@ -17,6 +17,7 @@ export class FindAndChangePasswordService {
     private readonly hashService: HashService,
   ) {}
 
+  // 비밀번호 찾기
   async findPassword(findPasswordDto: FindPasswordDto) {
     const user = await this.userService.findUserByEmailAndNameAndPhone(
       findPasswordDto.email,
@@ -34,6 +35,7 @@ export class FindAndChangePasswordService {
     return { userId: user.id };
   }
 
+  // 비밀번호 변경
   async findAndChangePassword(
     findAndChangePasswordDto: FindAndChangePasswordDto,
   ) {

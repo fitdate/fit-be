@@ -61,11 +61,9 @@ export class SocialAuthService {
       }
     }
 
-    // 세션 ID 생성
     const sessionId = uuidv4();
     const tokenId = uuidv4();
 
-    // 메타데이터 생성
     const userAgentStr = req.headers['user-agent'] || 'unknown';
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket.remoteAddress || 'unknown',
@@ -73,10 +71,8 @@ export class SocialAuthService {
       sessionId,
     };
 
-    // 세션 생성
     await this.sessionService.createSession(user.id, tokenId, metadata);
 
-    // 토큰 생성
     const tokenPayload: TokenPayload = {
       sub: user.id,
       role: user.role,
@@ -110,6 +106,7 @@ export class SocialAuthService {
     };
 
     const isProfileComplete = user.isProfileComplete || false;
+    // 프론트엔드에서 프로필 수정 페이지 작성하면 리다이렉트 경로 변경하기!
     const redirectPath = isProfileComplete ? '/' : '/complete-profile';
 
     return {

@@ -29,6 +29,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
+  // 구글 로그인 검증
   async validate(
     accessToken: string,
     refreshToken: string,

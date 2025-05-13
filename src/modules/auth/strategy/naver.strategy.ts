@@ -38,6 +38,7 @@ export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
     });
   }
 
+  // 네이버 로그인 검증
   async validate(
     accessToken: string,
     refreshToken: string,

@@ -10,6 +10,7 @@ export class SessionService {
 
   constructor(private readonly redisService: RedisService) {}
 
+  // 세션 생성
   async createSession(
     userId: string,
     tokenId: string,
@@ -39,6 +40,7 @@ export class SessionService {
     return session;
   }
 
+  // 세션 검증(maxAge: 7일)
   async validateSession(
     userId: string,
     metadata: TokenMetadata,
@@ -54,22 +56,19 @@ export class SessionService {
     try {
       const session = JSON.parse(storedSession) as Session;
 
-      // 세션이 비활성화되었는지 확인
       if (!session.isActive) {
         this.logger.warn(`비활성 세션: userId=${userId}`);
         return false;
       }
 
-      // 세션 만료 시간 확인 (7일)
       const sessionAge = Date.now() - new Date(session.createdAt).getTime();
-      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7일
+      const maxAge = 7 * 24 * 60 * 60 * 1000;
       if (sessionAge > maxAge) {
         this.logger.warn(`세션 만료: userId=${userId}`);
         await this.deactivateSession(userId);
         return false;
       }
 
-      // 메타데이터 검증
       const isValid =
         session.ip === metadata.ip && session.userAgent === metadata.userAgent;
 
@@ -86,6 +85,7 @@ export class SessionService {
     }
   }
 
+  // 세션 활동 갱신
   async updateSessionActivity(userId: string): Promise<void> {
     const sessionKey = `session:${userId}`;
     const storedSession = await this.redisService.get(sessionKey);
@@ -102,6 +102,7 @@ export class SessionService {
     }
   }
 
+  // 세션 비활성화
   async deactivateSession(userId: string): Promise<void> {
     const sessionKey = `session:${userId}`;
     const storedSession = await this.redisService.get(sessionKey);
@@ -118,6 +119,7 @@ export class SessionService {
     }
   }
 
+  // 활성 세션 갱신
   async updateActiveSession(userId: string): Promise<void> {
     const sessionKey = `active_session:${userId}`;
     await this.redisService.set(
@@ -128,6 +130,7 @@ export class SessionService {
     this.logger.log(`활성 세션 갱신: userId=${userId}`);
   }
 
+  // 활성 세션 조회
   async isActiveSession(userId: string): Promise<boolean> {
     const sessionKey = `active_session:${userId}`;
     const exists = (await this.redisService.exists(sessionKey)) === 1;
@@ -135,11 +138,13 @@ export class SessionService {
     return exists;
   }
 
+  // 활성 세션 삭제
   async deleteActiveSession(userId: string): Promise<void> {
     await this.redisService.del(`active_session:${userId}`);
     this.logger.log(`활성 세션 삭제: userId=${userId}`);
   }
 
+  // 세션 조회
   async getSession(userId: string): Promise<Session | null> {
     const sessionKey = `session:${userId}`;
     const sessionData = await this.redisService.get(sessionKey);
@@ -151,6 +156,7 @@ export class SessionService {
     return JSON.parse(sessionData) as Session;
   }
 
+  // 모든 세션 조회
   async getAllSessions(userId: string): Promise<Session[]> {
     const keys = await this.redisService.keys(`session:${userId}`);
     const sessions: Session[] = [];
@@ -166,6 +172,7 @@ export class SessionService {
     return sessions;
   }
 
+  // 세션 삭제
   async deleteSession(userId: string): Promise<void> {
     const sessionKey = `session:${userId}`;
     await this.redisService.del(sessionKey);

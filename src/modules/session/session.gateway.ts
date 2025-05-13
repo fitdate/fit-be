@@ -35,6 +35,7 @@ export class SessionGateway
     private readonly tokenService: TokenService,
   ) {}
 
+  // 클라이언트 연결 처리
   async handleConnection(client: Socket) {
     this.logger.log(
       `client.handshake: ${JSON.stringify(client.handshake)}, client.id: ${client.id}`,
@@ -55,6 +56,7 @@ export class SessionGateway
     }
   }
 
+  // 유저 상태 조회 요청 처리
   @SubscribeMessage('get:user:status')
   async handleGetUserStatus(
     @ConnectedSocket() client: Socket,
@@ -75,6 +77,7 @@ export class SessionGateway
     return statuses;
   }
 
+  // 클라이언트 연결 해제 처리
   async handleDisconnect(client: Socket) {
     try {
       const metadata = this.extractMetadata(client);
@@ -91,11 +94,11 @@ export class SessionGateway
     }
   }
 
+  // 쿠키에서 토큰 추출 및 검증
   private extractMetadata(client: Socket): { userId: string } {
     this.logger.debug(`Headers: ${JSON.stringify(client.handshake.headers)}`);
     this.logger.debug(`Cookies: ${client.handshake.headers.cookie}`);
 
-    // 1. headers.cookie에서 토큰 추출
     const cookieHeader = client.handshake.headers.cookie;
     if (!cookieHeader) {
       this.logger.error('쿠키가 제공되지 않았습니다.');
@@ -103,7 +106,6 @@ export class SessionGateway
     }
 
     try {
-      // 모든 쿠키 파싱
       const cookiePairs = cookieHeader.split(';');
       this.logger.debug(`Cookie pairs: ${JSON.stringify(cookiePairs)}`);
 
@@ -113,7 +115,6 @@ export class SessionGateway
 
         if (key === 'accessToken') {
           this.logger.debug(`Found access token in headers: ${value}`);
-          // 토큰 검증
           return this.tokenService.validateAccessTokenFromCookie(value);
         }
       }

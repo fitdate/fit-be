@@ -39,6 +39,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     });
   }
 
+  // 카카오 로그인 검증
   async validate(
     accessToken: string,
     refreshToken: string,
