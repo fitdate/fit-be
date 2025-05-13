@@ -10,6 +10,10 @@ import { SessionService } from './session.service';
 import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { AllConfig } from 'src/common/config/config.types';
+import { TokenService } from '../token/token.service';
+
 @WebSocketGateway({
   cors: {
     origin: 'https://www.fit-date.co.kr',
@@ -27,6 +31,8 @@ export class SessionGateway
   constructor(
     private readonly sessionService: SessionService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService<AllConfig>,
+    private readonly tokenService: TokenService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -86,21 +92,39 @@ export class SessionGateway
   }
 
   private extractMetadata(client: Socket): { userId: string } {
-    const token = client.handshake.auth.token as string;
-    if (!token) {
-      this.logger.error('토큰이 제공되지 않았습니다.');
-      throw new Error('No token provided');
+    this.logger.debug(`Headers: ${JSON.stringify(client.handshake.headers)}`);
+    this.logger.debug(`Cookies: ${client.handshake.headers.cookie}`);
+
+    // 1. headers.cookie에서 토큰 추출
+    const cookieHeader = client.handshake.headers.cookie;
+    if (!cookieHeader) {
+      this.logger.error('쿠키가 제공되지 않았습니다.');
+      throw new Error('No cookies provided');
     }
 
-    const decoded = this.jwtService.verify<{ sub: string }>(token);
-    if (!decoded.sub) {
-      this.logger.error('토큰 payload가 올바르지 않습니다.');
-      throw new Error('Invalid token payload');
-    }
+    try {
+      // 모든 쿠키 파싱
+      const cookiePairs = cookieHeader.split(';');
+      this.logger.debug(`Cookie pairs: ${JSON.stringify(cookiePairs)}`);
 
-    this.logger.log(`메타데이터 추출: userId=${decoded.sub}`);
-    return {
-      userId: decoded.sub,
-    };
+      for (const pair of cookiePairs) {
+        const [key, value] = pair.trim().split('=');
+        this.logger.debug(`Checking cookie: ${key}=${value}`);
+
+        if (key === 'accessToken') {
+          this.logger.debug(`Found access token in headers: ${value}`);
+          // 토큰 검증
+          return this.tokenService.validateAccessTokenFromCookie(value);
+        }
+      }
+
+      this.logger.error('accessToken이 쿠키에 없습니다.');
+      throw new Error('No access token in cookies');
+    } catch (error) {
+      this.logger.error(
+        `토큰 검증 실패: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new Error('Invalid token');
+    }
   }
 }

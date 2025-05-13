@@ -430,4 +430,43 @@ export class TokenService {
       refreshOptions: this.createCookieOptions(refreshTokenMaxAge, origin),
     };
   }
+
+  // 액세스 토큰 검증 (쿠키에서)
+  validateAccessTokenFromCookie(token: string): { userId: string } {
+    try {
+      this.logger.debug(
+        '[Token Validation] Starting access token validation from cookie',
+      );
+      const decoded = this.jwtService.verify<{ sub: string; type: string }>(
+        token,
+        {
+          secret: this.configService.getOrThrow('jwt.accessTokenSecret', {
+            infer: true,
+          }),
+        },
+      );
+
+      if (decoded.type !== 'access') {
+        this.logger.warn('[Token Validation] Invalid token type');
+        throw new UnauthorizedException('잘못된 토큰 타입입니다.');
+      }
+
+      if (!decoded.sub) {
+        this.logger.warn('[Token Validation] Invalid token payload');
+        throw new UnauthorizedException('토큰 payload가 올바르지 않습니다.');
+      }
+
+      this.logger.debug(
+        `[Token Validation] Successfully validated token for user: ${decoded.sub}`,
+      );
+      return {
+        userId: decoded.sub,
+      };
+    } catch (error) {
+      this.logger.error(
+        `[Token Validation] Token validation failed: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+    }
+  }
 }
