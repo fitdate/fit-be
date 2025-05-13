@@ -8,7 +8,16 @@ import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { SubscribeMessage } from '@nestjs/websockets';
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: 'https://www.fit-date.co.kr',
+    methods: ['GET'],
+    credentials: true,
+    allowedHeaders: ['Content-Type'],
+  },
+  path: '/socket.io/',
+  transports: ['websocket'],
+})
 export class SessionGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
