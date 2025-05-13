@@ -5,6 +5,8 @@ import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
 import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
+import { CoffeeChatResponse } from './types/coffee-chat.types';
+
 @Controller('coffee-chat')
 export class CoffeeChatController {
   private readonly logger = new Logger(CoffeeChatController.name);
@@ -19,7 +21,7 @@ export class CoffeeChatController {
   sendCoffeeChat(
     @UserId() userId: string,
     @Body() notificationDto: CreateNotificationDto,
-  ) {
+  ): Promise<CoffeeChatResponse> {
     return this.coffeeChatService.sendCoffeeChat(userId, notificationDto);
   }
 
@@ -31,7 +33,7 @@ export class CoffeeChatController {
   acceptCoffeeChat(
     @UserId() userId: string,
     @Body() acceptCoffeeChatDto: AcceptCoffeeChatDto,
-  ) {
+  ): Promise<CoffeeChatResponse> {
     return this.coffeeChatService.acceptCoffeeChat(userId, acceptCoffeeChatDto);
   }
 

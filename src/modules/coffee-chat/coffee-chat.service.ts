@@ -11,22 +11,8 @@ import { NotificationService } from 'src/modules/notification/notification.servi
 import { CreateNotificationDto } from 'src/modules/notification/dto/create-notification.dto';
 import { NotificationType } from 'src/common/enum/notification.enum';
 import { AcceptCoffeeChatDto } from './dto/accept-coffee-chat.dto';
-import { User } from '../user/entities/user.entity';
 import { ChatRoom } from '../chat/entities/chat-room.entity';
-
-interface CoffeeChatResponse {
-  senderId: string;
-  receiverId: string;
-  coffeeChatId?: string;
-  chatRoomId?: string;
-  type: NotificationType;
-  status: CoffeeChatStatus;
-}
-
-interface CoffeeChatUser extends User {
-  coffee: number;
-  nickname: string;
-}
+import { CoffeeChatResponse, CoffeeChatUser } from './types/coffee-chat.types';
 
 @Injectable()
 export class CoffeeChatService {
