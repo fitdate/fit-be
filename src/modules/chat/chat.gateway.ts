@@ -19,7 +19,7 @@ import { UserService } from '../user/user.service';
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   },
-  path: '/socket.io/',
+  path: '/socket.io/chat',
   transports: ['websocket'],
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
