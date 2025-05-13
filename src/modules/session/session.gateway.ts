@@ -2,12 +2,14 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketGateway,
+  SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { SessionService } from './session.service';
 import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { SubscribeMessage } from '@nestjs/websockets';
 @WebSocketGateway({
   cors: {
     origin: 'https://www.fit-date.co.kr',
@@ -45,13 +47,16 @@ export class SessionGateway
   }
 
   @SubscribeMessage('get:user:status')
-  async handleGetUserStatus(client: Socket, payload: { userIds: string[] }) {
-    // const metadata = this.extractMetadata(client);
-    // this.logger.log(
-    //   `유저 상태 조회 요청: userIds=${payload.userIds.join(',')}, 요청자 userId=${metadata.userId}`,
-    // );
+  async handleGetUserStatus(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { userIds: string[] },
+  ) {
+    const metadata = this.extractMetadata(client);
+    this.logger.log(
+      `유저 상태 조회 요청: userIds=${data.userIds.join(',')}, 요청자 userId=${metadata.userId}`,
+    );
     const statuses = await Promise.all(
-      payload.userIds.map(async (userId) => {
+      data.userIds.map(async (userId) => {
         const isActive = await this.sessionService.isActiveSession(userId);
         return { userId, isActive };
       }),
