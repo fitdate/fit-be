@@ -7,7 +7,6 @@ import { SessionService } from './session.service';
 import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { SocketMetadata, JwtPayload } from './types/session.types';
 import { SubscribeMessage } from '@nestjs/websockets';
 @WebSocketGateway()
 export class SessionGateway
@@ -23,13 +22,10 @@ export class SessionGateway
     try {
       const metadata = this.extractMetadata(client);
       this.logger.log(
-        `클라이언트 연결: userId=${metadata.userId}, deviceId=${metadata.deviceId}, clientId=${client.id}`,
+        `클라이언트 연결: userId=${metadata.userId}, clientId=${client.id}`,
       );
-      await this.sessionService.updateActiveSession(
-        metadata.userId,
-        metadata.deviceId,
-      );
-      await client.join(`${metadata.userId}:${metadata.deviceId}`);
+      await this.sessionService.updateActiveSession(metadata.userId);
+      await client.join(`${metadata.userId}`);
       this.logger.log(`Client connected: ${client.id}`);
     } catch (error) {
       this.logger.error(
@@ -47,10 +43,7 @@ export class SessionGateway
     );
     const statuses = await Promise.all(
       payload.userIds.map(async (userId) => {
-        const isActive = await this.sessionService.isActiveSession(
-          userId,
-          metadata.deviceId,
-        );
+        const isActive = await this.sessionService.isActiveSession(userId);
         return { userId, isActive };
       }),
     );
@@ -63,13 +56,10 @@ export class SessionGateway
     try {
       const metadata = this.extractMetadata(client);
       this.logger.log(
-        `클라이언트 연결 해제: userId=${metadata.userId}, deviceId=${metadata.deviceId}, clientId=${client.id}`,
+        `클라이언트 연결 해제: userId=${metadata.userId}, clientId=${client.id}`,
       );
-      await this.sessionService.deleteActiveSession(
-        metadata.userId,
-        metadata.deviceId,
-      );
-      await client.leave(`${metadata.userId}:${metadata.deviceId}`);
+      await this.sessionService.deleteActiveSession(metadata.userId);
+      await client.leave(`${metadata.userId}`);
       this.logger.log(`Client disconnected: ${client.id}`);
     } catch (error) {
       this.logger.error(
@@ -78,25 +68,22 @@ export class SessionGateway
     }
   }
 
-  private extractMetadata(client: Socket): SocketMetadata {
+  private extractMetadata(client: Socket): { userId: string } {
     const token = client.handshake.auth.token as string;
     if (!token) {
       this.logger.error('토큰이 제공되지 않았습니다.');
       throw new Error('No token provided');
     }
 
-    const decoded = this.jwtService.verify<JwtPayload>(token);
-    if (!decoded.sub || !decoded.deviceId) {
+    const decoded = this.jwtService.verify<{ sub: string }>(token);
+    if (!decoded.sub) {
       this.logger.error('토큰 payload가 올바르지 않습니다.');
       throw new Error('Invalid token payload');
     }
 
-    this.logger.log(
-      `메타데이터 추출: userId=${decoded.sub}, deviceId=${decoded.deviceId}`,
-    );
+    this.logger.log(`메타데이터 추출: userId=${decoded.sub}`);
     return {
       userId: decoded.sub,
-      deviceId: decoded.deviceId,
     };
   }
 }

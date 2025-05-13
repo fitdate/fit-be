@@ -11,7 +11,6 @@ import {
   TokenMetadata,
   TokenPayload,
 } from '../../token/types/token-payload.types';
-import { UAParser } from 'ua-parser-js';
 import { v4 as uuidv4 } from 'uuid';
 import { SessionService } from '../../session/session.service';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
@@ -62,37 +61,15 @@ export class SocialAuthService {
       }
     }
 
-    // 디바이스 ID 추출
-    const deviceId =
-      (typeof req.headers['x-device-id'] === 'string' &&
-        req.headers['x-device-id']) ||
-      (req.cookies &&
-        typeof req.cookies.deviceId === 'string' &&
-        req.cookies.deviceId) ||
-      'unknown-device';
-
     // 세션 ID 생성
     const sessionId = uuidv4();
     const tokenId = uuidv4();
 
     // 메타데이터 생성
     const userAgentStr = req.headers['user-agent'] || 'unknown';
-    const parser = new UAParser(userAgentStr);
-    const device = parser.getDevice();
-    const deviceType = device && device.type ? device.type : 'desktop';
-    const browserInfo = parser.getBrowser();
-    const browser =
-      browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
-    const osInfo = parser.getOS();
-    const os = osInfo && osInfo.name ? osInfo.name : 'unknown';
-
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket.remoteAddress || 'unknown',
       userAgent: userAgentStr,
-      deviceId,
-      deviceType,
-      browser,
-      os,
       sessionId,
     };
 
@@ -106,12 +83,10 @@ export class SocialAuthService {
       type: 'access',
       tokenId,
       sessionId,
-      deviceType,
     };
 
     const tokens = await this.tokenService.generateTokens(
       user.id,
-      deviceType,
       tokenPayload,
     );
 

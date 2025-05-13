@@ -30,7 +30,6 @@ import { InterestCategoryService } from '../profile/interest-category/common/int
 import { FeedbackService } from '../profile/feedback/common/feedback.service';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
 import { TokenMetadata } from '../token/types/token-payload.types';
-import { UAParser } from 'ua-parser-js';
 import { v4 as uuidv4 } from 'uuid';
 import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { SessionService } from '../session/session.service';
@@ -437,39 +436,21 @@ export class AuthService {
       );
     }
 
-    // 디바이스 ID 추출
-    const deviceId: string =
-      (req.cookies?.deviceId as string) ||
-      (req.headers['x-device-id'] as string) ||
-      'unknown-device';
-
     // 세션 ID와 토큰 ID 생성
     const sessionId = uuidv4();
     const tokenId = uuidv4();
 
     // 메타데이터 생성
     const userAgentStr = req.headers['user-agent'] || 'unknown';
-    const parser = new UAParser(userAgentStr);
-    const device = parser.getDevice();
-    const deviceType = device?.type || 'desktop';
-    const browserInfo = parser.getBrowser();
-    const browser = browserInfo?.name || 'unknown';
-    const osInfo = parser.getOS();
-    const os = osInfo?.name || 'unknown';
-
     const metadata: TokenMetadata = {
       ip: req.ip || req.socket?.remoteAddress || 'unknown',
       userAgent: userAgentStr,
-      deviceId,
-      deviceType,
-      browser,
-      os,
       sessionId,
     };
 
     // 세션 생성
     await this.sessionService.createSession(user.id, tokenId, metadata);
-    await this.sessionService.updateActiveSession(user.id, deviceId);
+    await this.sessionService.updateActiveSession(user.id);
 
     // 토큰 생성
     const tokenPayload: TokenPayload = {
@@ -478,12 +459,10 @@ export class AuthService {
       type: 'access',
       tokenId,
       sessionId,
-      deviceType,
     };
 
     const tokens = await this.tokenService.generateTokens(
       user.id,
-      deviceType,
       tokenPayload,
     );
 
@@ -544,18 +523,14 @@ export class AuthService {
 
       const userId = req.user?.sub;
       const tokenId = (req.user as { tokenId?: string })?.tokenId;
-      const deviceId: string =
-        (req.cookies?.deviceId as string) ||
-        (req.headers['x-device-id'] as string) ||
-        'unknown-device';
 
       if (userId) {
-        await this.sessionService.deleteSession(userId, deviceId);
-        await this.sessionService.deleteActiveSession(userId, deviceId);
+        await this.sessionService.deleteSession(userId);
+        await this.sessionService.deleteActiveSession(userId);
       }
 
       if (userId && tokenId) {
-        await this.tokenService.deleteRefreshToken(userId, deviceId, tokenId);
+        await this.tokenService.deleteRefreshToken(userId, tokenId);
       }
 
       return {
@@ -784,13 +759,11 @@ export class AuthService {
 
       payload = decoded;
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const deviceType = payload.deviceType || 'desktop';
       const tokenId = payload.tokenId || payload.jti || '';
       const sessionId = payload.sessionId || '';
 
       const { accessToken, refreshToken: newRefreshToken } =
-        await this.tokenService.generateTokens(payload.sub, deviceType, {
+        await this.tokenService.generateTokens(payload.sub, {
           ...payload,
           tokenId,
           sessionId,

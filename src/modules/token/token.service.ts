@@ -43,7 +43,6 @@ export class TokenService {
   // 토큰 생성
   async generateTokens(
     userId: string,
-    deviceType: string,
     tokenPayload: TokenPayload,
   ): Promise<{
     accessToken: string;
@@ -65,7 +64,6 @@ export class TokenService {
 
       const refreshToken = this.generateRefreshToken(
         userId,
-        deviceType,
         tokenPayload.tokenId,
         tokenPayload.sessionId,
       );
@@ -144,7 +142,6 @@ export class TokenService {
   // Refresh Token 생성 및 Redis 저장
   private generateRefreshToken(
     userId: string,
-    deviceType: string,
     tokenId: string,
     sessionId: string,
   ): string {
@@ -166,7 +163,6 @@ export class TokenService {
           type: 'refresh',
           jti: tokenId,
           sessionId,
-          deviceType,
         },
         {
           secret: refreshTokenSecret,
@@ -210,11 +206,7 @@ export class TokenService {
       const tokenExpiry = await this.redisService.ttl(redisKey);
       if (tokenExpiry <= 0) {
         this.logger.warn(`Refresh token expired for user ${tokenPayload.sub}`);
-        await this.deleteRefreshToken(
-          tokenPayload.sub,
-          tokenPayload.tokenId,
-          tokenPayload.sessionId,
-        );
+        await this.deleteRefreshToken(tokenPayload.sub, tokenPayload.tokenId);
         return false;
       }
 
@@ -228,14 +220,14 @@ export class TokenService {
   }
 
   // Refresh Token 삭제
-  async deleteRefreshToken(
-    userId: string,
-    tokenId: string,
-    sessionId: string,
-  ): Promise<void> {
+  async deleteRefreshToken(userId: string, tokenId: string): Promise<void> {
     try {
-      const redisKey = this.createRefreshTokenKey(userId, tokenId, sessionId);
-      await this.redisService.del(redisKey);
+      // sessionId는 알 수 없으므로, 해당 userId와 tokenId로 시작하는 모든 refresh_token 키를 삭제
+      const pattern = `refresh_token:${userId}:${tokenId}:*`;
+      const keys = await this.redisService.keys(pattern);
+      for (const key of keys) {
+        await this.redisService.del(key);
+      }
     } catch (error) {
       this.logger.error(
         `Refresh token deletion failed: ${error instanceof Error ? error.message : error}`,
@@ -402,19 +394,16 @@ export class TokenService {
   // 토큰 생성 및 설정
   async generateAndSetTokens(
     userId: string,
-    deviceType: string,
     tokenPayload: TokenPayload,
     origin?: string,
   ): Promise<JwtTokenResponse> {
     this.logger.debug('Generating tokens for user:', {
       userId,
-      deviceType,
       tokenPayload,
     });
 
     const { accessToken, refreshToken } = await this.generateTokens(
       userId,
-      deviceType,
       tokenPayload,
     );
 

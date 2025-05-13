@@ -13,7 +13,6 @@ import {
   TokenMetadata,
   TokenPayload,
 } from '../../token/types/token-payload.types';
-import { UAParser } from 'ua-parser-js';
 import { v4 as uuidv4 } from 'uuid';
 import { SessionService } from '../../session/session.service';
 
@@ -71,57 +70,17 @@ export class ActiveInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // deviceId 안전 추출
-    let deviceId: string = 'unknown-device';
-    if (typeof request.headers['x-device-id'] === 'string') {
-      deviceId = request.headers['x-device-id'] as string;
-    } else if (
-      request.cookies &&
-      typeof request.cookies.deviceId === 'string'
-    ) {
-      deviceId = request.cookies.deviceId;
-    }
-
-    // deviceId가 쿠키에 없으면 백엔드에서 HttpOnly 쿠키로 내려줌
-    if (!request.cookies?.deviceId || request.cookies.deviceId !== deviceId) {
-      response.cookie('deviceId', deviceId, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        domain: '.fit-date.co.kr',
-        path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 30, // 30일
-      });
-      this.logger.debug(
-        `[쿠키 설정] deviceId=${deviceId}, HttpOnly=true, Secure=true`,
-      );
-    }
-
-    // 메타데이터 생성
     const userAgentStr = request.headers['user-agent'] || 'unknown';
-    const parser = new UAParser(userAgentStr);
-    const device = parser.getDevice();
-    const deviceType: string = device && device.type ? device.type : 'desktop';
-    const browserInfo = parser.getBrowser();
-    const browser: string =
-      browserInfo && browserInfo.name ? browserInfo.name : 'unknown';
-    const osInfo = parser.getOS();
-    const os: string = osInfo && osInfo.name ? osInfo.name : 'unknown';
-
     // 세션 ID 생성 또는 기존 세션 ID 사용
     const sessionId = user.sessionId || uuidv4();
 
     const metadata: TokenMetadata = {
       ip: request.ip || request.socket.remoteAddress || 'unknown',
       userAgent: userAgentStr,
-      deviceId,
-      deviceType,
-      browser,
-      os,
       sessionId,
     };
 
-    // 세션 검증
+    // 세션 검증 (userId만 사용)
     const isValidSession = await this.sessionService.validateSession(
       user.sub,
       metadata,
@@ -135,14 +94,8 @@ export class ActiveInterceptor implements NestInterceptor {
       );
     }
 
-    // 인증 세션 활동 업데이트
-    await this.sessionService.updateSessionActivity(
-      user.sub,
-      metadata.deviceId,
-    );
-
-    // 활동 세션 업데이트
-    await this.sessionService.updateActiveSession(user.sub, metadata.deviceId);
+    await this.sessionService.updateSessionActivity(user.sub);
+    await this.sessionService.updateActiveSession(user.sub);
 
     // 슬라이딩 윈도우: accessToken 만료까지 5분 이하 남았을 때 accessToken만 갱신
     try {
@@ -172,21 +125,16 @@ export class ActiveInterceptor implements NestInterceptor {
             role: user.role as UserRole,
             type: 'access',
             tokenId: uuidv4(),
-            deviceType,
             sessionId: user.sessionId,
           };
 
           const { accessToken } = await this.tokenService.generateTokens(
             user.sub,
-            deviceType,
             tokenPayload,
           );
 
           // 세션 업데이트
-          await this.sessionService.updateSessionActivity(
-            user.sub,
-            metadata.deviceId,
-          );
+          await this.sessionService.updateSessionActivity(user.sub);
 
           const accessTokenTtl =
             this.configService.get('jwt.accessTokenTtl', { infer: true }) ||
