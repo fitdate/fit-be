@@ -82,6 +82,21 @@ export class ActiveInterceptor implements NestInterceptor {
       deviceId = request.cookies.deviceId;
     }
 
+    // deviceId가 쿠키에 없으면 백엔드에서 HttpOnly 쿠키로 내려줌
+    if (!request.cookies?.deviceId || request.cookies.deviceId !== deviceId) {
+      response.cookie('deviceId', deviceId, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        domain: '.fit-date.co.kr',
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30일
+      });
+      this.logger.debug(
+        `[쿠키 설정] deviceId=${deviceId}, HttpOnly=true, Secure=true`,
+      );
+    }
+
     // 메타데이터 생성
     const userAgentStr = request.headers['user-agent'] || 'unknown';
     const parser = new UAParser(userAgentStr);
