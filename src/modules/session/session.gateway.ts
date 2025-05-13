@@ -30,6 +30,9 @@ export class SessionGateway
   ) {}
 
   async handleConnection(client: Socket) {
+    this.logger.log(
+      `client.handshake: ${JSON.stringify(client.handshake)}, client.id: ${client.id}`,
+    );
     try {
       const metadata = this.extractMetadata(client);
       this.logger.log(
