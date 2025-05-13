@@ -11,11 +11,11 @@ import { SubscribeMessage } from '@nestjs/websockets';
 @WebSocketGateway({
   cors: {
     origin: 'https://www.fit-date.co.kr',
-    methods: ['GET'],
+    methods: ['GET', 'POST'],
     credentials: true,
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   },
-  path: '/socket.io/status',
+  path: '/socket.io/status/',
   transports: ['websocket'],
 })
 export class SessionGateway
