@@ -6,6 +6,9 @@ import { RequestMethod } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { Request, Response, NextFunction } from 'express';
 
+// 한국 시간대 설정
+process.env.TZ = 'Asia/Seoul';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'debug', 'log', 'verbose'],
