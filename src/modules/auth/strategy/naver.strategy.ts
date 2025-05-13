@@ -1,19 +1,19 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Profile, Strategy } from 'passport-naver';
+import { Profile, Strategy } from 'passport-naver-v2';
 import { AllConfig } from 'src/common/config/config.types';
 import { AuthProvider } from '../types/oatuth.types';
 import { SocialAuthService } from '../services/social-auth.service';
 import { Request } from 'express';
 
-interface NaverProfile extends Profile {
+type NaverProfile = Profile & {
   emails: { value: string; verified: boolean }[];
   displayName: string;
   _json: {
     email?: string;
   };
-}
+};
 
 @Injectable()
 export class NaverStrategy extends PassportStrategy(Strategy, 'naver') {
