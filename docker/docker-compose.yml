@@ -37,6 +37,7 @@ services:
       - ENV_FILE=.env.blue
       - DB_HOST=postgres
       - DB_PORT=5432
+      - TZ=Asia/Seoul
     networks:
       - redis-network
       - postgres-network
@@ -74,6 +75,7 @@ services:
       - ENV_FILE=.env.green
       - DB_HOST=postgres
       - DB_PORT=5432
+      - TZ=Asia/Seoul
     networks:
       - redis-network
       - postgres-network
