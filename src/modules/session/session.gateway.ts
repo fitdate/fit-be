@@ -15,7 +15,7 @@ import { SubscribeMessage } from '@nestjs/websockets';
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   },
-  path: '/socket.io/status/',
+  path: '/socket.io/status',
   transports: ['websocket'],
 })
 export class SessionGateway
