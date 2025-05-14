@@ -92,9 +92,18 @@ export class AuthService {
     const existingUser = await this.userService.findUserByEmail(
       registerDto.email,
     );
+
     if (existingUser) {
-      // 소셜 로그인 유저인 경우, 프로필 완성 여부에 따라 처리
-      if (existingUser.authProvider !== AuthProvider.EMAIL) {
+      log(
+        `기존 유저 발견: ${existingUser.id}, authProvider: ${existingUser.authProvider}`,
+      );
+
+      // 소셜 로그인 유저인 경우
+      if (
+        existingUser.authProvider === AuthProvider.KAKAO ||
+        existingUser.authProvider === AuthProvider.NAVER ||
+        existingUser.authProvider === AuthProvider.GOOGLE
+      ) {
         if (existingUser.isProfileComplete) {
           throw new UnauthorizedException(
             `${existingUser.authProvider}로 가입한 유저입니다. 소셜 로그인을 이용해주세요.`,
@@ -102,6 +111,7 @@ export class AuthService {
         } else {
           // 프로필이 미완성인 소셜 유저는 회원가입 진행
           log(`기존 소셜 유저 프로필 완성: ${existingUser.id}`);
+
           // 닉네임 중복 확인
           const existingNickname = await this.userService.findUserByNickname(
             registerDto.nickname,
