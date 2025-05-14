@@ -16,7 +16,6 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { EmailLoginDto } from './dto/email-login.dto';
 import { Public } from '../../common/decorator/public.decorator';
-import { AuthGuard } from '@nestjs/passport';
 import { Response, Request } from 'express';
 import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
@@ -42,6 +41,7 @@ import { FindEmailDto } from './dto/find-email.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ConfigService } from '@nestjs/config';
 import { FindEmailService } from './services/find-email.service';
+import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -185,7 +185,7 @@ export class AuthController {
     description: '소셜 로그인 제공자 (google, kakao, naver)',
   })
   @ApiResponse({ status: 302, description: '소셜 로그인 페이지로 리다이렉트' })
-  @UseGuards(AuthGuard(':provider'))
+  @UseGuards(DynamicAuthGuard)
   socialLogin() {}
 
   // 소셜 로그인 콜백
