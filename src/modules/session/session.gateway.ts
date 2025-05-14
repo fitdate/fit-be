@@ -37,17 +37,17 @@ export class SessionGateway
 
   // 클라이언트 연결 처리
   async handleConnection(client: Socket) {
-    this.logger.log(
-      `client.handshake: ${JSON.stringify(client.handshake)}, client.id: ${client.id}`,
-    );
+    // this.logger.log(
+    //   `client.handshake: ${JSON.stringify(client.handshake)}, client.id: ${client.id}`,
+    // );
     try {
       const metadata = this.extractMetadata(client);
-      this.logger.log(
-        `클라이언트 연결: userId=${metadata.userId}, clientId=${client.id}`,
-      );
+      // this.logger.log(
+      //   `클라이언트 연결: userId=${metadata.userId}, clientId=${client.id}`,
+      // );
       await this.sessionService.updateActiveSession(metadata.userId);
       await client.join(`${metadata.userId}`);
-      this.logger.log(`Client connected: ${client.id}`);
+      // this.logger.log(`Client connected: ${client.id}`);
     } catch (error) {
       this.logger.error(
         `연결 오류: ${error instanceof Error ? error.message : error}`,
@@ -63,9 +63,9 @@ export class SessionGateway
     @MessageBody() data: { userIds: string[] },
   ) {
     const metadata = this.extractMetadata(client);
-    this.logger.log(
-      `유저 상태 조회 요청: userIds=${data.userIds.join(',')}, 요청자 userId=${metadata.userId}`,
-    );
+    // this.logger.log(
+    //   `유저 상태 조회 요청: userIds=${data.userIds.join(',')}, 요청자 userId=${metadata.userId}`,
+    // );
     const statuses = await Promise.all(
       data.userIds.map(async (userId) => {
         const isActive = await this.sessionService.isActiveSession(userId);
@@ -73,7 +73,7 @@ export class SessionGateway
       }),
     );
     client.emit('userStatus', statuses);
-    this.logger.log(`유저 상태 응답: ${JSON.stringify(statuses)}`);
+    // this.logger.log(`유저 상태 응답: ${JSON.stringify(statuses)}`);
     return statuses;
   }
 
@@ -81,12 +81,12 @@ export class SessionGateway
   async handleDisconnect(client: Socket) {
     try {
       const metadata = this.extractMetadata(client);
-      this.logger.log(
-        `클라이언트 연결 해제: userId=${metadata.userId}, clientId=${client.id}`,
-      );
+      // this.logger.log(
+      //   `클라이언트 연결 해제: userId=${metadata.userId}, clientId=${client.id}`,
+      // );
       await this.sessionService.deleteActiveSession(metadata.userId);
       await client.leave(`${metadata.userId}`);
-      this.logger.log(`Client disconnected: ${client.id}`);
+      // this.logger.log(`Client disconnected: ${client.id}`);
     } catch (error) {
       this.logger.error(
         `연결 해제 오류: ${error instanceof Error ? error.message : error}`,
@@ -96,8 +96,8 @@ export class SessionGateway
 
   // 쿠키에서 토큰 추출 및 검증
   private extractMetadata(client: Socket): { userId: string } {
-    this.logger.debug(`Headers: ${JSON.stringify(client.handshake.headers)}`);
-    this.logger.debug(`Cookies: ${client.handshake.headers.cookie}`);
+    // this.logger.debug(`Headers: ${JSON.stringify(client.handshake.headers)}`);
+    // this.logger.debug(`Cookies: ${client.handshake.headers.cookie}`);
 
     const cookieHeader = client.handshake.headers.cookie;
     if (!cookieHeader) {
@@ -107,14 +107,14 @@ export class SessionGateway
 
     try {
       const cookiePairs = cookieHeader.split(';');
-      this.logger.debug(`Cookie pairs: ${JSON.stringify(cookiePairs)}`);
+      // this.logger.debug(`Cookie pairs: ${JSON.stringify(cookiePairs)}`);
 
       for (const pair of cookiePairs) {
         const [key, value] = pair.trim().split('=');
-        this.logger.debug(`Checking cookie: ${key}=${value}`);
+        // this.logger.debug(`Checking cookie: ${key}=${value}`);
 
         if (key === 'accessToken') {
-          this.logger.debug(`Found access token in headers: ${value}`);
+          // this.logger.debug(`Found access token in headers: ${value}`);
           return this.tokenService.validateAccessTokenFromCookie(value);
         }
       }

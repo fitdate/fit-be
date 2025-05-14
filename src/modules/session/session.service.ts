@@ -34,9 +34,9 @@ export class SessionService {
       parseTimeToSeconds('7d'),
     );
 
-    this.logger.log(
-      `세션 생성: userId=${userId}, sessionId=${metadata.sessionId}`,
-    );
+    // this.logger.log(
+    //   `세션 생성: userId=${userId}, sessionId=${metadata.sessionId}`,
+    // );
     return session;
   }
 
@@ -49,7 +49,7 @@ export class SessionService {
     const storedSession = await this.redisService.get(sessionKey);
 
     if (!storedSession) {
-      this.logger.warn(`세션 없음: userId=${userId}`);
+      // this.logger.warn(`세션 없음: userId=${userId}`);
       return false;
     }
 
@@ -98,7 +98,7 @@ export class SessionService {
         JSON.stringify(session),
         parseTimeToSeconds('7d'),
       );
-      this.logger.log(`세션 활동 갱신: userId=${userId}`);
+      // this.logger.log(`세션 활동 갱신: userId=${userId}`);
     }
   }
 
@@ -115,7 +115,7 @@ export class SessionService {
         JSON.stringify(session),
         parseTimeToSeconds('1h'),
       );
-      this.logger.log(`세션 비활성화: userId=${userId}`);
+      // this.logger.log(`세션 비활성화: userId=${userId}`);
     }
   }
 
@@ -127,21 +127,21 @@ export class SessionService {
       JSON.stringify({ isActive: true }),
       parseTimeToSeconds('15m'),
     );
-    this.logger.log(`활성 세션 갱신: userId=${userId}`);
+    // this.logger.log(`활성 세션 갱신: userId=${userId}`);
   }
 
   // 활성 세션 조회
   async isActiveSession(userId: string): Promise<boolean> {
     const sessionKey = `active_session:${userId}`;
     const exists = (await this.redisService.exists(sessionKey)) === 1;
-    this.logger.log(`활성 세션 조회: userId=${userId}, isActive=${exists}`);
+    // this.logger.log(`활성 세션 조회: userId=${userId}, isActive=${exists}`);
     return exists;
   }
 
   // 활성 세션 삭제
   async deleteActiveSession(userId: string): Promise<void> {
     await this.redisService.del(`active_session:${userId}`);
-    this.logger.log(`활성 세션 삭제: userId=${userId}`);
+    // this.logger.log(`활성 세션 삭제: userId=${userId}`);
   }
 
   // 세션 조회
@@ -152,7 +152,7 @@ export class SessionService {
       this.logger.warn(`세션 데이터 없음: userId=${userId}`);
       return null;
     }
-    this.logger.log(`세션 데이터 조회: userId=${userId}`);
+    // this.logger.log(`세션 데이터 조회: userId=${userId}`);
     return JSON.parse(sessionData) as Session;
   }
 
@@ -166,9 +166,9 @@ export class SessionService {
         sessions.push(JSON.parse(data) as Session);
       }
     }
-    this.logger.log(
-      `모든 세션 조회: userId=${userId}, 세션 수=${sessions.length}`,
-    );
+    // this.logger.log(
+    //   `모든 세션 조회: userId=${userId}, 세션 수=${sessions.length}`,
+    // );
     return sessions;
   }
 
@@ -176,6 +176,6 @@ export class SessionService {
   async deleteSession(userId: string): Promise<void> {
     const sessionKey = `session:${userId}`;
     await this.redisService.del(sessionKey);
-    this.logger.log(`세션 삭제: userId=${userId}`);
+    // this.logger.log(`세션 삭제: userId=${userId}`);
   }
 }
