@@ -75,13 +75,12 @@ export class UpdateUserDto {
 
   @ApiProperty({
     description: 'MBTI',
-    example: ['ISTJ'],
-    type: [String],
+    example: 'ISTJ',
+    type: String,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  mbti?: string[];
+  @IsString()
+  mbti?: string;
 
   @ApiProperty({
     description: '자기소개',
