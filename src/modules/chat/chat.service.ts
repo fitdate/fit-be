@@ -103,7 +103,7 @@ export class ChatService {
       chatRoom.id,
       NotificationType.MATCH_ACCEPT,
       '매칭 수락',
-      '상대방이 매칭을 수락했습니다. 채팅방에서 대화를 시작해보세요!',
+      '상대방이 매칭을 수락했습니다. 매칭 결과를 확인해보세요!',
     );
     return { ...chatRoom, isSuccess: true };
   }
