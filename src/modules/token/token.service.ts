@@ -341,27 +341,30 @@ export class TokenService {
       'localhost',
       'api.fit-date.co.kr',
       'www.fit-date.co.kr',
+      'fit-date.co.kr',
       this.configService.get('app.host', { infer: true }) || undefined,
     ].filter(Boolean);
 
     if (origin) {
       try {
-        const hostname = new URL(origin).hostname;
-        const isAllowed = allowedDomains.some((d) => hostname === d);
+        const url = new URL(origin);
+        const hostname = url.hostname;
+        const isAllowed = allowedDomains.some(
+          (d) => hostname === d || hostname.endsWith(`.${d}`),
+        );
         if (!isAllowed) {
           this.logger.warn(`허용되지 않은 origin: ${origin}`);
           throw new UnauthorizedException('허용되지 않은 origin입니다.');
         }
-        domain = hostname;
+        domain = '.fit-date.co.kr';
         this.logger.debug(`origin 기반 도메인 사용: ${domain}`);
       } catch {
-        domain = undefined;
-        this.logger.warn('origin 파싱 실패, 도메인 미설정');
-        throw new UnauthorizedException('유효하지 않은 origin입니다.');
+        domain = '.fit-date.co.kr';
+        this.logger.warn('origin 파싱 실패, 기본 도메인 사용');
       }
     } else {
-      domain = this.configService.get('app.host', { infer: true }) || undefined;
-      this.logger.debug(`app.host 기반 도메인 사용: ${domain}`);
+      domain = '.fit-date.co.kr';
+      this.logger.debug(`기본 도메인 사용: ${domain}`);
     }
 
     const options: CookieOptions = {
@@ -369,7 +372,7 @@ export class TokenService {
       secure: true,
       sameSite: 'none',
       maxAge,
-      domain: '.fit-date.co.kr',
+      domain,
       path: '/',
     };
 
