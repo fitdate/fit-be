@@ -19,13 +19,7 @@ import { Response, Request } from 'express';
 import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { RequestWithUser } from './types/request.types';
@@ -170,20 +164,44 @@ export class AuthController {
     );
   }
 
-  // 소셜 로그인 시작
+  // 구글 소셜 로그인 시작
   @SkipProfileComplete()
   @Public()
-  @Get(':provider')
-  @ApiOperation({ summary: '소셜 로그인 시작' })
-  @ApiParam({
-    name: 'provider',
-    required: true,
-    enum: ['google', 'kakao', 'naver'],
-    example: 'google',
-    description: '소셜 로그인 제공자 (google, kakao, naver)',
+  @Get('google')
+  @ApiOperation({ summary: '구글 소셜 로그인 시작' })
+  @ApiResponse({
+    status: 302,
+    description: '구글 소셜 로그인 페이지로 리다이렉트',
   })
-  @ApiResponse({ status: 302, description: '소셜 로그인 페이지로 리다이렉트' })
-  socialLogin() {}
+  socialLoginGoogle() {
+    this.logger.log('구글 소셜 로그인 시작');
+  }
+
+  // 카카오 소셜 로그인 시작
+  @SkipProfileComplete()
+  @Public()
+  @Get('kakao')
+  @ApiOperation({ summary: '카카오 소셜 로그인 시작' })
+  @ApiResponse({
+    status: 302,
+    description: '카카오 소셜 로그인 페이지로 리다이렉트',
+  })
+  socialLoginKakao() {
+    this.logger.log('카카오 소셜 로그인 시작');
+  }
+
+  // 네이버 소셜 로그인 시작
+  @SkipProfileComplete()
+  @Public()
+  @Get('naver')
+  @ApiOperation({ summary: '네이버 소셜 로그인 시작' })
+  @ApiResponse({
+    status: 302,
+    description: '네이버 소셜 로그인 페이지로 리다이렉트',
+  })
+  socialLoginNaver() {
+    this.logger.log('네이버 소셜 로그인 시작');
+  }
 
   // 소셜 로그인 콜백
   @SkipProfileComplete()
