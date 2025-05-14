@@ -3,7 +3,6 @@ import {
   Post,
   Body,
   Get,
-  UseGuards,
   Req,
   Res,
   Delete,
@@ -41,7 +40,6 @@ import { FindEmailDto } from './dto/find-email.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ConfigService } from '@nestjs/config';
 import { FindEmailService } from './services/find-email.service';
-import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -185,7 +183,6 @@ export class AuthController {
     description: '소셜 로그인 제공자 (google, kakao, naver)',
   })
   @ApiResponse({ status: 302, description: '소셜 로그인 페이지로 리다이렉트' })
-  @UseGuards(DynamicAuthGuard)
   socialLogin() {}
 
   // 소셜 로그인 콜백
