@@ -295,8 +295,8 @@ export class SocialAuthService {
 
       // 프로필 완성 여부에 따라 리다이렉트 URL 결정
       const redirectUrl = existingUser.isProfileComplete
-        ? `${data.redirectUri}/main`
-        : `${data.redirectUri}/register`;
+        ? `https://www.fit-date.co.kr/home`
+        : `https://www.fit-date.co.kr/social-signup`;
 
       // 세션 및 토큰 생성
       const sessionId = uuidv4();
@@ -358,7 +358,7 @@ export class SocialAuthService {
       this.logger.log(`신규 유저 생성 완료: ${newUser.id}`);
 
       return {
-        redirectUrl: `${data.redirectUri}/register`,
+        redirectUrl: `https://www.fit-date.co.kr/social-signup`,
         user: {
           id: newUser.id,
           email: newUser.email,

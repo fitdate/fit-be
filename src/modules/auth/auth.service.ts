@@ -96,13 +96,187 @@ export class AuthService {
       registerDto.email,
     );
     if (existingUser) {
-      if (
-        existingUser.authProvider !== AuthProvider.EMAIL &&
-        existingUser.isProfileComplete
-      ) {
-        throw new UnauthorizedException(
-          `${existingUser.authProvider}로 가입한 유저입니다. 소셜 로그인을 이용해주세요.`,
-        );
+      // 소셜 로그인 유저인 경우, 프로필 완성 여부에 따라 처리
+      if (existingUser.authProvider !== AuthProvider.EMAIL) {
+        if (existingUser.isProfileComplete) {
+          throw new UnauthorizedException(
+            `${existingUser.authProvider}로 가입한 유저입니다. 소셜 로그인을 이용해주세요.`,
+          );
+        } else {
+          // 프로필이 미완성인 소셜 유저는 회원가입 진행
+          log(`기존 소셜 유저 프로필 완성: ${existingUser.id}`);
+
+          // 닉네임 중복 확인
+          const existingNickname = await this.userService.findUserByNickname(
+            registerDto.nickname,
+          );
+          if (existingNickname && existingNickname.id !== existingUser.id) {
+            throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
+          }
+
+          // 전화번호 중복 확인
+          const existingPhone = await this.userService.findUserByPhone(
+            registerDto.phone,
+          );
+          if (existingPhone && existingPhone.id !== existingUser.id) {
+            throw new UnauthorizedException('이미 존재하는 전화번호입니다.');
+          }
+
+          const qr = this.dataSource.createQueryRunner();
+          await qr.connect();
+          await qr.startTransaction();
+
+          try {
+            // 1. 프로필 이미지 저장
+            if (registerDto.images?.length) {
+              log(`Found ${registerDto.images.length} images to process`);
+              const profileImages =
+                await this.profileImageService.processImagesInChunks(
+                  registerDto.images,
+                  existingUser.profile.id,
+                  log,
+                );
+
+              if (profileImages.length > 0) {
+                const savedImages = await qr.manager.save(
+                  ProfileImage,
+                  profileImages,
+                );
+                log(`Saved ${savedImages.length} profile images to database`);
+
+                if (savedImages.length < 2) {
+                  throw new UnauthorizedException(
+                    '프로필 이미지는 최소 2장 이상이어야 합니다.',
+                  );
+                }
+              }
+            } else {
+              throw new UnauthorizedException(
+                '프로필 이미지는 최소 2장 이상이어야 합니다.',
+              );
+            }
+
+            // 2. MBTI 저장
+            if (registerDto.mbti) {
+              await qr.manager.save(Mbti, {
+                mbti: registerDto.mbti,
+                profile: { id: existingUser.profile.id },
+              });
+            }
+
+            // 3. 자기소개 저장
+            if (registerDto.selfintro?.length) {
+              const introductions = await Promise.all(
+                registerDto.selfintro.map(async (introductionName) => {
+                  const existingIntroduction =
+                    await this.introductionService.searchIntroductions(
+                      introductionName,
+                    );
+                  if (existingIntroduction.length > 0) {
+                    return existingIntroduction[0];
+                  }
+                  throw new UnauthorizedException(
+                    `존재하지 않는 자기소개입니다: ${introductionName}`,
+                  );
+                }),
+              );
+              const userIntroductions = introductions.map((introduction) => ({
+                profile: { id: existingUser.profile.id },
+                introduction: { id: introduction.id },
+              }));
+              await qr.manager.save(UserIntroduction, userIntroductions);
+            }
+
+            // 4. 피드백 저장
+            if (registerDto.listening?.length) {
+              const feedbacks = await Promise.all(
+                registerDto.listening.map(async (feedbackName) => {
+                  const existingFeedback =
+                    await this.feedbackService.searchFeedbacks(feedbackName);
+                  if (existingFeedback.length > 0) {
+                    return existingFeedback[0];
+                  }
+                  throw new UnauthorizedException(
+                    `존재하지 않는 피드백입니다: ${feedbackName}`,
+                  );
+                }),
+              );
+              const userFeedbacks = feedbacks.map((feedback) => ({
+                profile: { id: existingUser.profile.id },
+                feedback: { id: feedback.id },
+              }));
+              await qr.manager.save(UserFeedback, userFeedbacks);
+            }
+
+            // 5. 관심사 저장
+            if (registerDto.interests?.length) {
+              const interestCategories = await Promise.all(
+                registerDto.interests.map(async (interestName) => {
+                  const existingCategories =
+                    await this.interestCategoryService.searchInterestCategories(
+                      interestName,
+                    );
+                  if (existingCategories.length > 0) {
+                    return existingCategories[0];
+                  }
+                  throw new UnauthorizedException(
+                    `존재하지 않는 관심사입니다: ${interestName}`,
+                  );
+                }),
+              );
+              const userInterestCategories = interestCategories.map(
+                (category) => ({
+                  profile: { id: existingUser.profile.id },
+                  interestCategory: { id: category.id },
+                }),
+              );
+              await qr.manager.save(
+                UserInterestCategory,
+                userInterestCategories,
+              );
+            }
+
+            // 6. 유저 정보 업데이트
+            await qr.manager.update(
+              User,
+              { id: existingUser.id },
+              {
+                nickname: registerDto.nickname,
+                name: registerDto.name,
+                birthday: registerDto.birthday,
+                height: registerDto.height,
+                gender: registerDto.gender,
+                region: registerDto.region,
+                phone: registerDto.phone,
+                job: registerDto.job,
+                isProfileComplete: true,
+              },
+            );
+
+            await qr.commitTransaction();
+            log('Transaction committed successfully');
+
+            // 업데이트된 유저 정보 조회
+            const updatedUser = await this.userService.findOne(existingUser.id);
+            return { user: updatedUser };
+          } catch (error) {
+            await qr.rollbackTransaction();
+            log('Transaction rolled back due to error');
+            log(
+              `${error instanceof Error ? error.message : '오류 확인해주세요'}`,
+            );
+            if (error instanceof Error && error.stack) {
+              log(`Error stack: ${error.stack}`);
+            }
+            throw new InternalServerErrorException(
+              '회원가입 중 오류가 발생했습니다.',
+              { cause: error },
+            );
+          } finally {
+            await qr.release();
+            log('QueryRunner released');
+          }
+        }
       }
       throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
