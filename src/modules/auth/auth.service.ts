@@ -105,7 +105,7 @@ export class AuthService {
         } else {
           // 프로필이 미완성인 소셜 유저는 회원가입 진행
           log(`기존 소셜 유저 프로필 완성: ${existingUser.id}`);
-
+          
           // 닉네임 중복 확인
           const existingNickname = await this.userService.findUserByNickname(
             registerDto.nickname,
@@ -277,8 +277,10 @@ export class AuthService {
             log('QueryRunner released');
           }
         }
+      } else if (!socialUser) {
+        // 일반 이메일 회원가입인 경우에만 이메일 중복 에러
+        throw new UnauthorizedException('이미 존재하는 이메일입니다.');
       }
-      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
 
     // 닉네임 중복 확인
