@@ -203,40 +203,111 @@ export class AuthController {
     this.logger.log('네이버 소셜 로그인 시작');
   }
 
-  // 소셜 로그인 콜백
+  // 구글 소셜 로그인 콜백
   @SkipProfileComplete()
   @Public()
-  @Post('social/callback')
-  @ApiOperation({ summary: '소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)' })
+  @Post('google/callback')
+  @ApiOperation({ summary: '구글 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', example: '실제 소셜 인증 후 받은 code' },
+        redirectUri: {
+          type: 'string',
+          example: 'https://your-frontend.com/social/callback',
+        },
+      },
+      required: ['code', 'redirectUri'],
+    },
+    description: 'code는 소셜 인증 후 프론트엔드 콜백 URL에서 추출하여 입력하세요.',
+  })
+  @ApiResponse({ status: 200, description: '구글 소셜 로그인 성공' })
+  async googleCallbackPost(
+    @Body('code') code: string,
+    @Body('redirectUri') redirectUri: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.logger.log('구글 소셜 로그인 POST 콜백 처리 시작');
+    return this.socialAuthService.handleSocialCallbackPost(
+      { code, provider: 'google', redirectUri },
+      req,
+      res,
+    );
+  }
+
+  // 카카오 소셜 로그인 콜백
+  @SkipProfileComplete()
+  @Public()
+  @Post('kakao/callback')
+  @ApiOperation({
+    summary: '카카오 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', example: '실제 소셜 인증 후 받은 code' },
+        redirectUri: {
+          type: 'string',
+          example: 'https://your-frontend.com/social/callback',
+        },
+      },
+      required: ['code', 'redirectUri'],
+    },
+    description:
+      'code는 소셜 인증 후 프론트엔드 콜백 URL에서 추출하여 입력하세요.',
+  })
+  @ApiResponse({ status: 200, description: '카카오 소셜 로그인 성공' })
+  async kakaoCallbackPost(
+    @Body('code') code: string,
+    @Body('redirectUri') redirectUri: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.logger.log('카카오 소셜 로그인 POST 콜백 처리 시작');
+    return this.socialAuthService.handleSocialCallbackPost(
+      { code, provider: 'kakao', redirectUri },
+      req,
+      res,
+    );
+  }
+
+  // 네이버 소셜 로그인 콜백
+  @SkipProfileComplete()
+  @Public()
+  @Post('naver/callback')
+  @ApiOperation({
+    summary: '네이버 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)',
+  })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         code: { type: 'string', example: '실제 소셜 인증 후 받은 code' },
         state: { type: 'string', example: '실제 소셜 인증 후 받은 state' },
-        provider: { type: 'string', example: 'google' },
         redirectUri: {
           type: 'string',
           example: 'https://your-frontend.com/social/callback',
         },
       },
-      required: ['code', 'provider', 'redirectUri'],
+      required: ['code', 'state', 'redirectUri'],
     },
     description:
       'code, state는 소셜 인증 후 프론트엔드 콜백 URL에서 추출하여 입력하세요.',
   })
-  @ApiResponse({ status: 200, description: '소셜 로그인 성공' })
-  async socialCallbackPost(
+  @ApiResponse({ status: 200, description: '네이버 소셜 로그인 성공' })
+  async naverCallbackPost(
     @Body('code') code: string,
     @Body('state') state: string,
-    @Body('provider') provider: string,
     @Body('redirectUri') redirectUri: string,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    this.logger.log('소셜 로그인 POST 콜백 처리 시작');
+    this.logger.log('네이버 소셜 로그인 POST 콜백 처리 시작');
     return this.socialAuthService.handleSocialCallbackPost(
-      { code, state, provider, redirectUri },
+      { code, state, provider: 'naver', redirectUri },
       req,
       res,
     );
