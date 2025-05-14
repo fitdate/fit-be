@@ -9,8 +9,10 @@ import {
   IsOptional,
   IsArray,
   IsNumber,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { AuthProvider } from '../types/oatuth.types';
 
 export class RegisterDto {
   @ApiProperty({
@@ -170,4 +172,12 @@ export class RegisterDto {
   @IsArray()
   @IsString({ each: true })
   images?: string[];
+
+  @ApiProperty({
+    description: '인증 방식',
+    example: 'email',
+  })
+  @IsNotEmpty()
+  @IsEnum(AuthProvider)
+  authProvider?: AuthProvider;
 }

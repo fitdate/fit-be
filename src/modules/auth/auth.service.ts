@@ -68,15 +68,27 @@ export class AuthService {
       logBuffer.push(message);
       this.logger.log(message);
     };
+    let socialUser = false;
 
-    // log(`Attempting to register new user with email: ${registerDto.email}`);
+    // 소셜 로그인으로 회원가입을 할 경우 이메일 인증 여부 스킵
+    if (
+      registerDto.authProvider === AuthProvider.KAKAO ||
+      registerDto.authProvider === AuthProvider.NAVER ||
+      registerDto.authProvider === AuthProvider.GOOGLE
+    ) {
+      socialUser = true;
+      log(`소셜 로그인 유저 회원가입: ${registerDto.authProvider}`);
+    }
 
-    // 이메일 인증 여부 확인
-    // const isEmailVerified = await this.emailAuthService.checkEmailVerification(
-    //   registerDto.email,
-    // );
-    // if (!isEmailVerified) {
-    //   throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    // if (!socialUser) {
+    //   log(`Attempting to register new user with email: ${registerDto.email}`);
+
+    //   // 이메일 인증 여부 확인
+    //   const isEmailVerified =
+    //     await this.emailAuthService.checkEmailVerification(registerDto.email);
+    //   if (!isEmailVerified) {
+    //     throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    //   }
     // }
 
     // 기존 유저 확인
@@ -84,6 +96,14 @@ export class AuthService {
       registerDto.email,
     );
     if (existingUser) {
+      if (
+        existingUser.authProvider !== AuthProvider.EMAIL &&
+        existingUser.isProfileComplete
+      ) {
+        throw new UnauthorizedException(
+          `${existingUser.authProvider}로 가입한 유저입니다. 소셜 로그인을 이용해주세요.`,
+        );
+      }
       throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
 
@@ -103,13 +123,20 @@ export class AuthService {
       throw new UnauthorizedException('이미 존재하는 전화번호입니다.');
     }
 
-    // 비밀번호 확인
-    if (registerDto.password !== registerDto.confirmPassword) {
-      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+    // 비밀번호 확인 (소셜 로그인이 아닌 경우에만)
+    if (!socialUser) {
+      if (registerDto.password !== registerDto.confirmPassword) {
+        throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
+      }
+      if (!registerDto.password) {
+        throw new UnauthorizedException('비밀번호를 입력해주세요.');
+      }
     }
 
-    // 비밀번호 해싱
-    const hashedPassword = await this.hashService.hash(registerDto.password);
+    // 비밀번호 해싱 (소셜 로그인이 아닌 경우에만)
+    const hashedPassword = socialUser
+      ? null
+      : await this.hashService.hash(registerDto.password);
 
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
@@ -123,22 +150,39 @@ export class AuthService {
 
       // 2. 유저 생성
       log('Starting user creation');
-      const user = await qr.manager.save(User, {
-        email: registerDto.email,
-        password: hashedPassword,
-        nickname: registerDto.nickname,
-        name: registerDto.name,
-        birthday: registerDto.birthday,
-        height: registerDto.height,
-        gender: registerDto.gender,
-        region: registerDto.region,
-        phone: registerDto.phone,
-        role: UserRole.USER,
-        isProfileComplete: false,
-        authProvider: AuthProvider.EMAIL,
-        job: registerDto.job,
-        profile: { id: profile.id },
-      });
+      const userData = socialUser
+        ? {
+            email: registerDto.email,
+            authProvider: registerDto.authProvider,
+            nickname: registerDto.nickname,
+            name: registerDto.name,
+            birthday: registerDto.birthday,
+            height: registerDto.height,
+            gender: registerDto.gender,
+            region: registerDto.region,
+            phone: registerDto.phone,
+            job: registerDto.job,
+            isProfileComplete: false,
+            password: null as string | null,
+            profile: { id: profile.id },
+          }
+        : {
+            email: registerDto.email,
+            password: hashedPassword,
+            nickname: registerDto.nickname,
+            name: registerDto.name,
+            birthday: registerDto.birthday,
+            height: registerDto.height,
+            gender: registerDto.gender,
+            region: registerDto.region,
+            phone: registerDto.phone,
+            role: UserRole.USER,
+            isProfileComplete: false,
+            authProvider: AuthProvider.EMAIL,
+            job: registerDto.job,
+            profile: { id: profile.id },
+          };
+      const user = (await qr.manager.save(User, userData)) as User;
       log(`User created successfully with ID: ${user.id}`);
 
       // 3. 프로필 이미지 저장
@@ -305,12 +349,14 @@ export class AuthService {
       await qr.commitTransaction();
       log('Transaction committed successfully');
 
-      // 회원가입 성공 시 Redis에서 인증 상태 삭제
-      // const verifiedKey = `email-verified:${registerDto.email}`;
-      // await this.redisService.del(verifiedKey);
-      // log(
-      //   `Email verification status deleted from Redis for: ${registerDto.email}`,
-      // );
+      if (!socialUser) {
+        // 회원가입 성공 시 Redis에서 인증 상태 삭제
+        // const verifiedKey = `email-verified:${registerDto.email}`;
+        // await this.redisService.del(verifiedKey);
+        // log(
+        //   `Email verification status deleted from Redis for: ${registerDto.email}`,
+        // );
+      }
 
       return { user, profile };
     } catch (error) {
@@ -405,10 +451,9 @@ export class AuthService {
       );
     }
 
-    const isPasswordValid = await this.hashService.compare(
-      password,
-      user.password,
-    );
+    const isPasswordValid = user.password
+      ? await this.hashService.compare(password, user.password)
+      : false;
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(

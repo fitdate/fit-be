@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsBoolean,
 } from 'class-validator';
 import { BaseTable } from 'src/common/entity/base-table.entity';
 import { Expose } from 'class-transformer';
@@ -23,4 +24,14 @@ export class CreateUserSocialDto extends BaseTable {
   @IsEnum(AuthProvider)
   @IsNotEmpty()
   authProvider: AuthProvider;
+
+  @Expose()
+  @IsBoolean()
+  @IsOptional()
+  isProfileComplete?: boolean;
+
+  @Expose()
+  @IsString()
+  @IsOptional()
+  password?: string | null;
 }

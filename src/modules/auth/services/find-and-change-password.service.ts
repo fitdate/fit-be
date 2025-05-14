@@ -3,11 +3,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from 'src/modules/user/user.service';
 import { HashService } from '../hash/hash.service';
 import { FindPasswordDto } from '../dto/find-password.dto';
 import { FindAndChangePasswordDto } from '../dto/find-and-change-password.dto';
+import { AuthProvider } from '../types/oatuth.types';
+
 @Injectable()
 export class FindAndChangePasswordService {
   protected readonly logger = new Logger(FindAndChangePasswordService.name);
@@ -31,7 +34,13 @@ export class FindAndChangePasswordService {
       );
     }
 
-    // 나중에 이메일 검증 하던가 하는게 좋음
+    // 소셜 로그인 사용자 체크
+    if (user.authProvider !== AuthProvider.EMAIL) {
+      throw new UnauthorizedException(
+        `${user.authProvider}로 가입한 계정입니다. 소셜 로그인을 이용해주세요.`,
+      );
+    }
+
     return { userId: user.id };
   }
 
@@ -47,11 +56,23 @@ export class FindAndChangePasswordService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
+    // 소셜 로그인 사용자 체크
+    if (user.authProvider !== AuthProvider.EMAIL) {
+      throw new UnauthorizedException(
+        `${user.authProvider}로 가입한 계정입니다. 소셜 로그인을 이용해주세요.`,
+      );
+    }
+
     if (
       findAndChangePasswordDto.newPassword !==
       findAndChangePasswordDto.confirmPassword
     ) {
       throw new BadRequestException('비밀번호가 일치하지 않습니다.');
+    }
+
+    // 비밀번호가 null인 경우 체크
+    if (!user.password) {
+      throw new UnauthorizedException('비밀번호가 설정되지 않은 계정입니다.');
     }
 
     const isSamePassword = await this.hashService.compare(

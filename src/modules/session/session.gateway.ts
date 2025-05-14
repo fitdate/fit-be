@@ -62,6 +62,7 @@ export class SessionGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { userIds: string[] },
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const metadata = this.extractMetadata(client);
     // this.logger.log(
     //   `유저 상태 조회 요청: userIds=${data.userIds.join(',')}, 요청자 userId=${metadata.userId}`,

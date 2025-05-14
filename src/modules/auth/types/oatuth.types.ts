@@ -33,3 +33,53 @@ export interface SocialUserInfo {
   isProfileComplete?: boolean;
   authProvider: AuthProvider;
 }
+
+export interface SocialTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+  scope?: string;
+}
+
+export interface GoogleUserInfo {
+  id: string;
+  email: string;
+  verified_email: boolean;
+  name: string;
+  given_name: string;
+  family_name: string;
+  picture: string;
+  locale: string;
+}
+
+export interface KakaoUserInfo {
+  id: number;
+  kakao_account: {
+    email: string;
+    email_verified: boolean;
+    profile: {
+      nickname: string;
+      profile_image_url: string;
+    };
+  };
+}
+
+export interface NaverUserInfo {
+  response: {
+    id: string;
+    email: string;
+    name: string;
+    nickname: string;
+    profile_image: string;
+  };
+}
+
+export interface SocialLoginResponse {
+  redirectUrl: string;
+  user: {
+    id: string;
+    email: string;
+    isProfileComplete: boolean;
+  };
+}

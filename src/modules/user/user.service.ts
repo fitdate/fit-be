@@ -29,6 +29,7 @@ import { CreateInterestCategoryDto } from '../profile/interest-category/dto/crea
 import { InterestCategoryService } from '../profile/interest-category/common/interest-category.service';
 import { ProfileImageService } from '../profile/profile-image/profile-image.service';
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
+import { AuthProvider } from '../auth/types/oatuth.types';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -202,6 +203,16 @@ export class UserService {
     newPassword: string,
   ) {
     const user = await this.findOne(userId);
+
+    if (user.authProvider !== AuthProvider.EMAIL) {
+      throw new UnauthorizedException(
+        '소셜 로그인 유저는 비밀번호를 변경할 수 없습니다.',
+      );
+    }
+
+    if (!user.password) {
+      throw new UnauthorizedException('비밀번호가 설정되어 있지 않습니다.');
+    }
 
     const isPasswordValid = await this.hashService.compare(
       oldPassword,

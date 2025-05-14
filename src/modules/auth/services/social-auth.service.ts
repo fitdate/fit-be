@@ -2,8 +2,15 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from 'src/common/config/config.types';
 import { Request, Response } from 'express';
-import { AuthProvider } from '../types/oatuth.types';
-import { SocialUserInfo } from '../types/oatuth.types';
+import {
+  AuthProvider,
+  SocialTokenResponse,
+  GoogleUserInfo,
+  KakaoUserInfo,
+  NaverUserInfo,
+  SocialUserInfo,
+  SocialLoginResponse,
+} from '../types/oatuth.types';
 import { JwtTokenResponse } from '../types/auth.types';
 import { UserService } from '../../user/user.service';
 import { TokenService } from '../../token/token.service';
@@ -14,6 +21,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { SessionService } from '../../session/session.service';
 import axios from 'axios';
+import { CreateUserSocialDto } from '../../user/dto/create-user-social.dto';
 
 @Injectable()
 export class SocialAuthService {
@@ -42,19 +50,31 @@ export class SocialAuthService {
       };
     }
   > {
+    this.logger.log(
+      `소셜 로그인 처리 시작: ${userData.email}, provider: ${userData.authProvider}`,
+    );
+
     if (redirectUri && !this.validateRedirectUri(redirectUri)) {
       throw new UnauthorizedException('Invalid redirect URI');
     }
 
     let user = await this.userService.findUserByEmail(userData.email);
+    this.logger.log(
+      `기존 유저 조회 결과: ${user ? '존재함' : '존재하지 않음'}`,
+    );
 
     if (!user) {
       try {
+        this.logger.log('신규 소셜 유저 생성 시작');
         user = await this.userService.createSocialUser({
           email: userData.email,
           authProvider: userData.authProvider,
+          isProfileComplete: false,
+          password: null,
         });
+        this.logger.log(`신규 소셜 유저 생성 완료: ${user.id}`);
       } catch (error) {
+        this.logger.error('소셜 유저 생성 실패:', error);
         throw new UnauthorizedException(
           '소셜 로그인 사용자 생성에 실패했습니다.',
           { cause: error },
@@ -62,6 +82,8 @@ export class SocialAuthService {
       }
     }
 
+    // 로그인 처리
+    this.logger.log('로그인 처리 시작');
     const sessionId = uuidv4();
     const tokenId = uuidv4();
 
@@ -73,6 +95,7 @@ export class SocialAuthService {
     };
 
     await this.sessionService.createSession(user.id, tokenId, metadata);
+    this.logger.log(`세션 생성 완료: ${sessionId}`);
 
     const tokenPayload: TokenPayload = {
       sub: user.id,
@@ -88,18 +111,12 @@ export class SocialAuthService {
       tokenPayload,
       origin,
     );
-
-    const isProfileComplete = user.isProfileComplete || false;
-    const redirectPath = isProfileComplete
-      ? redirectUri || '/'
-      : redirectUri
-        ? `${redirectUri}?profile=incomplete`
-        : '/complete-profile';
+    this.logger.log('토큰 생성 완료');
 
     return {
       ...tokenResponse,
-      isProfileComplete,
-      redirectUrl: redirectPath,
+      isProfileComplete: user.isProfileComplete || false,
+      redirectUrl: redirectUri || '/',
       user: {
         id: user.id,
         email: user.email,
@@ -149,8 +166,11 @@ export class SocialAuthService {
   }
 
   // 구글 유저 정보 가져오기
-  async getGoogleUserInfo(code: string, redirectUri: string) {
-    const tokenRes = await axios.post(
+  async getGoogleUserInfo(
+    code: string,
+    redirectUri: string,
+  ): Promise<{ email: string }> {
+    const tokenRes = await axios.post<SocialTokenResponse>(
       'https://oauth2.googleapis.com/token',
       {
         code,
@@ -166,22 +186,26 @@ export class SocialAuthService {
       },
       { headers: { 'Content-Type': 'application/json' } },
     );
-    const tokenData: any = tokenRes.data;
+    const tokenData = tokenRes.data;
     this.logger.log(`구글 tokenData: ${JSON.stringify(tokenData)}`);
-    const userRes = await axios.get(
+
+    const userRes = await axios.get<GoogleUserInfo>(
       'https://www.googleapis.com/oauth2/v2/userinfo',
       {
         headers: { Authorization: `Bearer ${tokenData.access_token}` },
       },
     );
-    const userInfo: any = userRes.data;
+    const userInfo = userRes.data;
     this.logger.log(`구글 userInfo: ${JSON.stringify(userInfo)}`);
     return { email: userInfo.email };
   }
 
   // 카카오 유저 정보 가져오기
-  async getKakaoUserInfo(code: string, redirectUri: string) {
-    const tokenRes = await axios.post(
+  async getKakaoUserInfo(
+    code: string,
+    redirectUri: string,
+  ): Promise<{ email: string }> {
+    const tokenRes = await axios.post<SocialTokenResponse>(
       'https://kauth.kakao.com/oauth/token',
       new URLSearchParams({
         grant_type: 'authorization_code',
@@ -197,19 +221,26 @@ export class SocialAuthService {
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
     );
-    const tokenData: any = tokenRes.data;
+    const tokenData = tokenRes.data;
     this.logger.log(`카카오 tokenData: ${JSON.stringify(tokenData)}`);
-    const userRes = await axios.get('https://kapi.kakao.com/v2/user/me', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const userInfo: any = userRes.data;
+
+    const userRes = await axios.get<KakaoUserInfo>(
+      'https://kapi.kakao.com/v2/user/me',
+      {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      },
+    );
+    const userInfo = userRes.data;
     this.logger.log(`카카오 userInfo: ${JSON.stringify(userInfo)}`);
-    return { email: userInfo.kakao_account?.email };
+    return { email: userInfo.kakao_account.email };
   }
 
   // 네이버 유저 정보 가져오기
-  async getNaverUserInfo(code: string, state: string, redirectUri: string) {
-    const tokenRes = await axios.post(
+  async getNaverUserInfo(
+    code: string,
+    redirectUri: string,
+  ): Promise<{ email: string }> {
+    const tokenRes = await axios.post<SocialTokenResponse>(
       'https://nid.naver.com/oauth2.0/token',
       new URLSearchParams({
         grant_type: 'authorization_code',
@@ -221,65 +252,120 @@ export class SocialAuthService {
           { infer: true },
         ),
         code,
-        state,
         redirect_uri: redirectUri,
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
     );
-    const tokenData: any = tokenRes.data;
+    const tokenData = tokenRes.data;
     this.logger.log(`네이버 tokenData: ${JSON.stringify(tokenData)}`);
-    const userRes = await axios.get('https://openapi.naver.com/v1/nid/me', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const userInfo: any = userRes.data;
+
+    const userRes = await axios.get<NaverUserInfo>(
+      'https://openapi.naver.com/v1/nid/me',
+      {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      },
+    );
+    const userInfo = userRes.data;
     this.logger.log(`네이버 userInfo: ${JSON.stringify(userInfo)}`);
-    return { email: userInfo.response?.email };
+    return { email: userInfo.response.email };
   }
 
   // 소셜 로그인 POST 콜백
   async handleSocialCallbackPost(
-    {
-      code,
-      state,
-      provider,
-      redirectUri,
-    }: { code: string; state?: string; provider: string; redirectUri?: string },
+    data: {
+      code: string;
+      provider: AuthProvider;
+      redirectUri: string;
+      state?: string;
+    },
     req: Request,
     res: Response,
-  ) {
-    this.logger.log(`소셜 로그인 POST 콜백 처리 중: provider=${provider}`);
-    if (!provider || !redirectUri) {
-      throw new UnauthorizedException(
-        'provider 또는 redirectUri가 누락되었습니다.',
+  ): Promise<SocialLoginResponse> {
+    this.logger.log(`소셜 로그인 처리 시작: ${data.provider}`);
+
+    // 소셜 로그인 토큰 및 사용자 정보 가져오기
+    const userInfo = await this.getSocialUserInfo(data);
+    this.logger.log(`소셜 사용자 정보: ${JSON.stringify(userInfo)}`);
+
+    // 기존 유저 확인
+    const existingUser = await this.userService.findUserByEmail(userInfo.email);
+
+    if (existingUser) {
+      this.logger.log(`기존 유저 발견: ${existingUser.id}`);
+
+      // 프로필 완성 여부에 따라 리다이렉트 URL 결정
+      const redirectUrl = existingUser.isProfileComplete
+        ? `${data.redirectUri}/main`
+        : `${data.redirectUri}/register`;
+
+      // 세션 및 토큰 생성
+      const sessionId = uuidv4();
+      const tokenId = uuidv4();
+      const metadata: TokenMetadata = {
+        ip: req.ip || req.socket?.remoteAddress || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        sessionId,
+      };
+
+      // 세션 생성
+      await this.sessionService.createSession(
+        existingUser.id,
+        tokenId,
+        metadata,
       );
+      await this.sessionService.updateActiveSession(existingUser.id);
+
+      // 토큰 생성
+      const tokenPayload: TokenPayload = {
+        sub: existingUser.id,
+        role: existingUser.role,
+        type: 'access',
+        tokenId,
+        sessionId,
+      };
+
+      const tokens = await this.tokenService.generateAndSetTokens(
+        existingUser.id,
+        tokenPayload,
+        data.redirectUri,
+      );
+
+      // 쿠키 설정
+      res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
+      if (tokens.refreshToken && tokens.refreshOptions) {
+        res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
+      }
+
+      return {
+        redirectUrl,
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          isProfileComplete: existingUser.isProfileComplete,
+        },
+      };
+    } else {
+      this.logger.log('신규 유저 생성');
+
+      // 신규 유저 생성
+      const createUserDto: CreateUserSocialDto = {
+        email: userInfo.email,
+        authProvider: data.provider,
+        isProfileComplete: false,
+      };
+
+      const newUser = await this.userService.createSocialUser(createUserDto);
+      this.logger.log(`신규 유저 생성 완료: ${newUser.id}`);
+
+      return {
+        redirectUrl: `${data.redirectUri}/register`,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          isProfileComplete: false,
+        },
+      };
     }
-    let userInfo: { email: string } | null = null;
-    switch (provider) {
-      case 'google':
-        userInfo = await this.getGoogleUserInfo(code, redirectUri);
-        break;
-      case 'kakao':
-        userInfo = await this.getKakaoUserInfo(code, redirectUri);
-        break;
-      case 'naver':
-        if (!state) throw new UnauthorizedException('state가 누락되었습니다.');
-        userInfo = await this.getNaverUserInfo(code, state, redirectUri);
-        break;
-      default:
-        throw new UnauthorizedException('지원하지 않는 소셜 로그인입니다.');
-    }
-    if (!userInfo?.email)
-      throw new UnauthorizedException('소셜 사용자 정보 획득 실패');
-    const result = await this.processSocialLogin(
-      { email: userInfo.email, authProvider: provider as AuthProvider },
-      req,
-      redirectUri,
-    );
-    res.cookie('accessToken', result.accessToken, result.accessOptions);
-    if (result.refreshToken && result.refreshOptions) {
-      res.cookie('refreshToken', result.refreshToken, result.refreshOptions);
-    }
-    return result;
   }
 
   private validateRedirectUri(redirectUri: string): boolean {
@@ -288,5 +374,54 @@ export class SocialAuthService {
         .get<string>('app.allowedRedirectUris', { infer: true })
         ?.split(',') || [];
     return allowedUris.some((uri) => redirectUri.startsWith(uri));
+  }
+
+  // 소셜 로그인 유저 상태 확인
+  async checkSocialUserStatus(
+    email: string,
+    provider: AuthProvider,
+  ): Promise<{
+    exists: boolean;
+    isProfileComplete: boolean;
+    userId?: string;
+    authProvider?: string;
+  }> {
+    this.logger.log(
+      `소셜 유저 상태 확인 시작: ${email}, provider: ${provider}`,
+    );
+    const user = await this.userService.findUserByEmail(email);
+    this.logger.log(`유저 조회 결과: ${user ? '존재함' : '존재하지 않음'}`);
+
+    if (!user) {
+      return {
+        exists: false,
+        isProfileComplete: false,
+      };
+    }
+
+    return {
+      exists: true,
+      isProfileComplete: user.isProfileComplete || false,
+      userId: user.id,
+      authProvider: user.authProvider,
+    };
+  }
+
+  private async getSocialUserInfo(data: {
+    code: string;
+    provider: AuthProvider;
+    redirectUri: string;
+    state?: string;
+  }): Promise<{ email: string }> {
+    switch (data.provider) {
+      case AuthProvider.GOOGLE:
+        return this.getGoogleUserInfo(data.code, data.redirectUri);
+      case AuthProvider.KAKAO:
+        return this.getKakaoUserInfo(data.code, data.redirectUri);
+      case AuthProvider.NAVER:
+        return this.getNaverUserInfo(data.code, data.redirectUri);
+      default:
+        throw new UnauthorizedException('지원하지 않는 소셜 로그인입니다.');
+    }
   }
 }

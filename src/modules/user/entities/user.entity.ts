@@ -28,8 +28,8 @@ export class User extends BaseTable {
   @Column({ unique: true, nullable: false })
   email: string;
 
-  @Column({ nullable: true })
-  password: string;
+  @Column({ nullable: true, type: 'varchar', default: null })
+  password: string | null;
 
   @Column({ unique: true, nullable: true })
   nickname: string;
