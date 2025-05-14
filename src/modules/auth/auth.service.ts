@@ -100,9 +100,10 @@ export class AuthService {
 
       // 소셜 로그인 유저인 경우
       if (
-        existingUser.authProvider === AuthProvider.KAKAO ||
-        existingUser.authProvider === AuthProvider.NAVER ||
-        existingUser.authProvider === AuthProvider.GOOGLE
+        registerDto.authProvider &&
+        (registerDto.authProvider === AuthProvider.KAKAO ||
+          registerDto.authProvider === AuthProvider.NAVER ||
+          registerDto.authProvider === AuthProvider.GOOGLE)
       ) {
         if (existingUser.isProfileComplete) {
           throw new UnauthorizedException(
