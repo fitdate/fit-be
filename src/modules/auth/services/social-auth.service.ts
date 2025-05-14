@@ -341,6 +341,7 @@ export class SocialAuthService {
         user: {
           id: existingUser.id,
           email: existingUser.email,
+          authProvider: existingUser.authProvider,
           isProfileComplete: existingUser.isProfileComplete,
         },
       };
@@ -362,6 +363,7 @@ export class SocialAuthService {
         user: {
           id: newUser.id,
           email: newUser.email,
+          authProvider: newUser.authProvider,
           isProfileComplete: false,
         },
       };

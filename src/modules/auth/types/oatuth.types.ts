@@ -80,6 +80,7 @@ export interface SocialLoginResponse {
   user: {
     id: string;
     email: string;
+    authProvider: AuthProvider;
     isProfileComplete: boolean;
   };
 }
