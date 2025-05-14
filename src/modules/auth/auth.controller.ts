@@ -11,7 +11,6 @@ import {
   Patch,
   Logger,
   Query,
-  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -21,13 +20,7 @@ import { Response, Request } from 'express';
 import { SkipProfileComplete } from './guard/profile-complete.guard';
 import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
 import { RequestWithUser } from './types/request.types';
@@ -304,20 +297,41 @@ export class AuthController {
     );
   }
 
+  // 카카오 소셜 로그인 콜백 (GET)
   @SkipProfileComplete()
   @Public()
   @Get('kakao/callback')
   @ApiOperation({
-    summary: '카카오 소셜 로그인 콜백(GET, 카카오 리다이렉트)',
+    summary: '카카오 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)',
   })
-  @ApiParam({
-    name: 'code',
-    required: true,
-    description: '카카오 인증 후 받은 code',
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', example: '실제 소셜 인증 후 받은 code' },
+        redirectUri: {
+          type: 'string',
+          example: 'https://your-frontend.com/social/callback',
+        },
+      },
+      required: ['code', 'redirectUri'],
+    },
+    description:
+      'code는 소셜 인증 후 프론트엔드 콜백 URL에서 추출하여 입력하세요.',
   })
-  kakaoCallbackGet(@Param('code') code: string, @Res() res: Response) {
+  @ApiResponse({ status: 200, description: '카카오 소셜 로그인 성공' })
+  async kakaoCallbackGet(
+    @Query('code') code: string,
+    @Query('redirectUri') redirectUri: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     this.logger.log('카카오 소셜 로그인 GET 콜백 처리 시작');
-    res.redirect(`/auth/kakao/callback?code=${code}`);
+    return this.socialAuthService.handleSocialCallbackPost(
+      { code, provider: 'kakao', redirectUri },
+      req,
+      res,
+    );
   }
 
   // 네이버 소셜 로그인 콜백
