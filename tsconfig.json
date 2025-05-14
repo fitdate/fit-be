@@ -22,7 +22,12 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "types": ["node"],
-    "typeRoots": ["./node_modules/@types"]
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src/**/*", "*.cjs", "typeorm.config.ts"]
+  "include": [
+    "src/**/*",
+    "src/types/*.d.ts",
+    "*.cjs",
+    "typeorm.config.ts"
+  ]
 }

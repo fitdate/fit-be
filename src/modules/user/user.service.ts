@@ -348,12 +348,8 @@ export class UserService {
   async createSocialUser(
     createUserSocialDto: CreateUserSocialDto,
   ): Promise<User> {
-    const timestamp = Date.now();
-
     const socialUser = {
       ...createUserSocialDto,
-      password: `SOCIAL_LOGIN_${timestamp}`,
-      nickname: `닉네임을 입력해주세요`,
       isProfileComplete: false,
     };
 

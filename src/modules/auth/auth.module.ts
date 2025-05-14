@@ -7,7 +7,6 @@ import { BcryptService } from './hash/bcrypt.service';
 import { UserModule } from '../user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategy/jwt.strategy';
-import { GoogleStrategy } from './strategy/google.strategy';
 import { MailerModule } from '../mailer/mailer.module';
 import { RedisModule } from '../redis/redis.module';
 import { LocationModule } from '../location/location.module';
@@ -19,8 +18,6 @@ import { EmailAuthService } from './services/email-auth.service';
 import { InterestCategoryModule } from '../profile/interest-category/common/interest-category.module';
 import { IntroductionModule } from '../profile/introduction/common/introduction.module';
 import { TokenModule } from '../token/token.module';
-import { KakaoStrategy } from './strategy/kakao.stragegy';
-import { NaverStrategy } from './strategy/naver.strategy';
 import { SessionModule } from '../session/session.module';
 import { FindEmailService } from './services/find-email.service';
 import { FindAndChangePasswordService } from './services/find-and-change-password.service';
@@ -50,9 +47,6 @@ import { FindAndChangePasswordService } from './services/find-and-change-passwor
     SocialAuthService,
     EmailAuthService,
     JwtStrategy,
-    GoogleStrategy,
-    KakaoStrategy,
-    NaverStrategy,
     FindEmailService,
     FindAndChangePasswordService,
   ],

@@ -31,7 +31,6 @@ import { FeedbackService } from '../profile/feedback/common/feedback.service';
 import { IntroductionService } from '../profile/introduction/common/introduction.service';
 import { TokenMetadata } from '../token/types/token-payload.types';
 import { v4 as uuidv4 } from 'uuid';
-import { parseTimeToSeconds } from 'src/common/util/time.util';
 import { SessionService } from '../session/session.service';
 import { TokenPayload } from '../token/types/token-payload.types';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -452,7 +451,7 @@ export class AuthService {
     await this.sessionService.createSession(user.id, tokenId, metadata);
     await this.sessionService.updateActiveSession(user.id);
 
-    // 토큰 생성
+    // 토큰 생성 및 쿠키 옵션 통합
     const tokenPayload: TokenPayload = {
       sub: user.id,
       role: user.role,
@@ -461,37 +460,16 @@ export class AuthService {
       sessionId,
     };
 
-    const tokens = await this.tokenService.generateTokens(
+    const origin = req.headers.origin;
+    const tokens = await this.tokenService.generateAndSetTokens(
       user.id,
       tokenPayload,
+      origin,
     );
 
-    const accessTokenTtl =
-      this.configService.get('jwt.accessTokenTtl', { infer: true }) || '30m';
-    const refreshTokenTtl =
-      this.configService.get('jwt.refreshTokenTtl', { infer: true }) || '7d';
-
-    const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-    const refreshTokenMaxAge = parseTimeToSeconds(refreshTokenTtl) * 1000;
-
-    res.cookie('accessToken', tokens.accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      domain: '.fit-date.co.kr',
-      path: '/',
-      maxAge: accessTokenMaxAge,
-    });
-
-    if (tokens.refreshToken) {
-      res.cookie('refreshToken', tokens.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        domain: '.fit-date.co.kr',
-        path: '/',
-        maxAge: refreshTokenMaxAge,
-      });
+    res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
+    if (tokens.refreshToken && tokens.refreshOptions) {
+      res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
     }
 
     this.logger.debug(`쿠키가 성공적으로 설정되었습니다.`);

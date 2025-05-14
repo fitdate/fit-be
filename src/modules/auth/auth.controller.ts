@@ -6,11 +6,11 @@ import {
   UseGuards,
   Req,
   Res,
-  BadRequestException,
   Delete,
   UploadedFiles,
   UseInterceptors,
   Patch,
+  Logger,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -29,22 +29,24 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MulterFile } from 'src/modules/s3/types/multer.types';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { SocialAuthService } from './services/social-auth.service';
-import { AuthProvider } from './types/oatuth.types';
 import { FindPasswordDto } from './dto/find-password.dto';
-import { FindEmailService } from './services/find-email.service';
 import { FindAndChangePasswordDto } from './dto/find-and-change-password.dto';
 import { FindAndChangePasswordService } from './services/find-and-change-password.service';
 import { FindEmailDto } from './dto/find-email.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ConfigService } from '@nestjs/config';
+import { FindEmailService } from './services/find-email.service';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   constructor(
     private readonly authService: AuthService,
     private readonly socialAuthService: SocialAuthService,
     private readonly findEmailService: FindEmailService,
     private readonly findAndChangePasswordService: FindAndChangePasswordService,
+    private readonly configService: ConfigService,
   ) {}
 
   // 회원 가입
@@ -164,104 +166,35 @@ export class AuthController {
     );
   }
 
-  // Google OAuth 로그인
+  // 소셜 로그인 시작
   @SkipProfileComplete()
   @Public()
-  @Get('google')
-  @ApiOperation({
-    summary: '구글 로그인 시작',
-    description: '구글 OAuth 로그인을 시작합니다.',
-  })
-  @ApiResponse({
-    status: 302,
-    description: '구글 로그인 페이지로 리다이렉트',
-  })
-  @UseGuards(AuthGuard('google'))
-  googleAuth() {}
+  @Get(':provider')
+  @ApiOperation({ summary: '소셜 로그인 시작' })
+  @ApiResponse({ status: 302, description: '소셜 로그인 페이지로 리다이렉트' })
+  @UseGuards(AuthGuard(':provider'))
+  socialLogin() {}
 
-  // Google OAuth 콜백
+  // 소셜 로그인 콜백 (프론트엔드 콜백 URL 방식)
   @SkipProfileComplete()
   @Public()
-  @Get('google/login/callback')
-  @ApiOperation({
-    summary: '구글 로그인 콜백',
-  })
-  @ApiResponse({
-    status: 302,
-    description: '프론트엔드로 리다이렉트',
-  })
-  @UseGuards(AuthGuard('google'))
-  async googleCallback(@Req() req: Request, @Res() res: Response) {
-    return this.handleSocialCallback(req, res, AuthProvider.GOOGLE);
-  }
-
-  // Kakao OAuth 로그인
-  @SkipProfileComplete()
-  @Public()
-  @Get('kakao')
-  @ApiOperation({ summary: '카카오 로그인 시작' })
-  @ApiResponse({
-    status: 302,
-    description: '카카오 로그인 페이지로 리다이렉트',
-  })
-  @UseGuards(AuthGuard('kakao'))
-  kakaoAuth() {}
-
-  // Kakao OAuth 콜백
-  @SkipProfileComplete()
-  @Public()
-  @Get('kakao/login/callback')
-  @ApiOperation({ summary: '카카오 로그인 콜백' })
-  @ApiResponse({ status: 302, description: '프론트엔드로 리다이렉트' })
-  @UseGuards(AuthGuard('kakao'))
-  async kakaoCallback(@Req() req: Request, @Res() res: Response) {
-    return this.handleSocialCallback(req, res, AuthProvider.KAKAO);
-  }
-
-  // Naver OAuth 로그인
-  @SkipProfileComplete()
-  @Public()
-  @Get('naver')
-  @ApiOperation({ summary: '네이버 로그인 시작' })
-  @ApiResponse({
-    status: 302,
-    description: '네이버 로그인 페이지로 리다이렉트',
-  })
-  @UseGuards(AuthGuard('naver'))
-  naverAuth() {}
-
-  // Naver OAuth 콜백
-  @SkipProfileComplete()
-  @Public()
-  @Get('naver/login/callback')
-  @ApiOperation({ summary: '네이버 로그인 콜백' })
-  @ApiResponse({
-    status: 302,
-    description: '프론트엔드로 리다이렉트',
-  })
-  @UseGuards(AuthGuard('naver'))
-  async naverCallback(@Req() req: Request, @Res() res: Response) {
-    return this.handleSocialCallback(req, res, AuthProvider.NAVER);
-  }
-
-  private async handleSocialCallback(
-    req: Request,
-    res: Response,
-    authProvider: AuthProvider,
+  @Post('social/callback')
+  @ApiOperation({ summary: '소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)' })
+  @ApiResponse({ status: 200, description: '소셜 로그인 성공' })
+  async socialCallbackPost(
+    @Body('code') code: string,
+    @Body('state') state: string,
+    @Body('provider') provider: string,
+    @Body('redirectUri') redirectUri: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    try {
-      const redirectUrl = await this.socialAuthService.handleSocialCallback(
-        req.user as { email: string },
-        authProvider,
-        req,
-        res,
-      );
-      return res.redirect(redirectUrl);
-    } catch (error) {
-      throw new BadRequestException(`${authProvider} 로그인에 실패했습니다.`, {
-        cause: error,
-      });
-    }
+    this.logger.log('소셜 로그인 POST 콜백 처리 시작');
+    return this.socialAuthService.handleSocialCallbackPost(
+      { code, state, provider, redirectUri },
+      req,
+      res,
+    );
   }
 
   // 회원 탈퇴
