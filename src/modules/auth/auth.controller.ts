@@ -11,6 +11,7 @@ import {
   Patch,
   Logger,
   Query,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -25,7 +26,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { LoginResponse } from './types/auth.types';
 import { UserId } from 'src/common/decorator/get-user.decorator';
@@ -309,12 +310,12 @@ export class AuthController {
   @ApiOperation({
     summary: '카카오 소셜 로그인 콜백(GET, 카카오 리다이렉트)',
   })
-  @ApiQuery({
+  @ApiParam({
     name: 'code',
     required: true,
     description: '카카오 인증 후 받은 code',
   })
-  kakaoCallbackGet(@Query('code') code: string, @Res() res: Response) {
+  kakaoCallbackGet(@Param('code') code: string, @Res() res: Response) {
     this.logger.log('카카오 소셜 로그인 GET 콜백 처리 시작');
     res.redirect(`/auth/kakao/callback?code=${code}`);
   }
