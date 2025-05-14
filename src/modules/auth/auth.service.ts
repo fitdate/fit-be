@@ -68,28 +68,25 @@ export class AuthService {
       logBuffer.push(message);
       this.logger.log(message);
     };
-    let socialUser = false;
 
     // 소셜 로그인으로 회원가입을 할 경우 이메일 인증 여부 스킵
-    if (
-      registerDto.authProvider === AuthProvider.KAKAO ||
-      registerDto.authProvider === AuthProvider.NAVER ||
-      registerDto.authProvider === AuthProvider.GOOGLE
-    ) {
-      socialUser = true;
+    const isSocialUser =
+      registerDto.authProvider &&
+      (registerDto.authProvider === AuthProvider.KAKAO ||
+        registerDto.authProvider === AuthProvider.NAVER ||
+        registerDto.authProvider === AuthProvider.GOOGLE);
+
+    if (isSocialUser) {
       log(`소셜 로그인 유저 회원가입: ${registerDto.authProvider}`);
+    } else {
+      //   // 이메일 인증 여부 확인
+      //   const isEmailVerified =
+      //     await this.emailAuthService.checkEmailVerification(registerDto.email);
+      //   if (!isEmailVerified) {
+      //     throw new UnauthorizedException('이메일 인증이 필요합니다.');
+      //   }
+      // }
     }
-
-    // if (!socialUser) {
-    //   log(`Attempting to register new user with email: ${registerDto.email}`);
-
-    //   // 이메일 인증 여부 확인
-    //   const isEmailVerified =
-    //     await this.emailAuthService.checkEmailVerification(registerDto.email);
-    //   if (!isEmailVerified) {
-    //     throw new UnauthorizedException('이메일 인증이 필요합니다.');
-    //   }
-    // }
 
     // 기존 유저 확인
     const existingUser = await this.userService.findUserByEmail(
@@ -105,7 +102,6 @@ export class AuthService {
         } else {
           // 프로필이 미완성인 소셜 유저는 회원가입 진행
           log(`기존 소셜 유저 프로필 완성: ${existingUser.id}`);
-          
           // 닉네임 중복 확인
           const existingNickname = await this.userService.findUserByNickname(
             registerDto.nickname,
@@ -277,7 +273,7 @@ export class AuthService {
             log('QueryRunner released');
           }
         }
-      } else if (!socialUser) {
+      } else if (!isSocialUser) {
         // 일반 이메일 회원가입인 경우에만 이메일 중복 에러
         throw new UnauthorizedException('이미 존재하는 이메일입니다.');
       }
@@ -300,7 +296,7 @@ export class AuthService {
     }
 
     // 비밀번호 확인 (소셜 로그인이 아닌 경우에만)
-    if (!socialUser) {
+    if (!isSocialUser) {
       if (registerDto.password !== registerDto.confirmPassword) {
         throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
       }
@@ -310,7 +306,7 @@ export class AuthService {
     }
 
     // 비밀번호 해싱 (소셜 로그인이 아닌 경우에만)
-    const hashedPassword = socialUser
+    const hashedPassword = isSocialUser
       ? null
       : await this.hashService.hash(registerDto.password);
 
@@ -326,7 +322,7 @@ export class AuthService {
 
       // 2. 유저 생성
       log('Starting user creation');
-      const userData = socialUser
+      const userData = isSocialUser
         ? {
             email: registerDto.email,
             authProvider: registerDto.authProvider,
@@ -525,7 +521,7 @@ export class AuthService {
       await qr.commitTransaction();
       log('Transaction committed successfully');
 
-      if (!socialUser) {
+      if (!isSocialUser) {
         // 회원가입 성공 시 Redis에서 인증 상태 삭제
         // const verifiedKey = `email-verified:${registerDto.email}`;
         // await this.redisService.del(verifiedKey);
