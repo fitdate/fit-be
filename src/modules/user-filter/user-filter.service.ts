@@ -11,21 +11,19 @@ export class UserFilterService {
   constructor(private readonly userService: UserService) {}
 
   private mapUsersToResponse(users: UserEntity[]) {
-    return users
-      .filter((user) => user.isProfileComplete)
-      .map((user) => ({
-        id: user.id,
-        nickname: user.nickname,
-        region: user.region,
-        likeCount: user.likeCount,
-        age: calculateAge(user.birthday),
-        profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
-      }));
+    return users.map((user) => ({
+      id: user.id,
+      nickname: user.nickname,
+      region: user.region,
+      likeCount: user.likeCount,
+      age: calculateAge(user.birthday),
+      profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
+    }));
   }
 
   // 회원목록 조회 (로그인/비로그인인 통합)
   async getUserList(userId: string, cursorPaginationDto?: CursorPaginationDto) {
-    this.logger.debug(`사용자 목록을 조회합니다.`);
+    this.logger.log(`사용자 목록을 조회합니다. userId: ${userId}`);
     const safeCursorDto: CursorPaginationDto = {
       cursor: cursorPaginationDto?.cursor ?? null,
       order: cursorPaginationDto?.order ?? ['likeCount_DESC'],
@@ -35,6 +33,7 @@ export class UserFilterService {
     const { users, nextCursor: newNextCursor } =
       await this.userService.getUserList(safeCursorDto, userId);
 
+    this.logger.log(`조회된 사용자 수: ${users.length}`);
     return {
       users: this.mapUsersToResponse(users),
       nextCursor: newNextCursor,
@@ -42,7 +41,7 @@ export class UserFilterService {
   }
 
   async getPublicUserList(cursorPaginationDto?: CursorPaginationDto) {
-    this.logger.debug(`사용자 목록을 조회합니다.`);
+    this.logger.log(`비로그인 사용자 목록을 조회합니다.`);
     const safeCursorDto: CursorPaginationDto = {
       cursor: cursorPaginationDto?.cursor ?? null,
       order: cursorPaginationDto?.order ?? ['likeCount_DESC'],
@@ -52,6 +51,7 @@ export class UserFilterService {
     const { users, nextCursor: newNextCursor } =
       await this.userService.getUserList(safeCursorDto, undefined);
 
+    this.logger.log(`조회된 사용자 수: ${users.length}`);
     return {
       users: this.mapUsersToResponse(users),
       nextCursor: newNextCursor,
@@ -64,6 +64,9 @@ export class UserFilterService {
     userFilterDto: UserFilterDto,
     cursorPaginationDto?: CursorPaginationDto,
   ) {
+    this.logger.log(
+      `필터된 사용자 목록을 조회합니다. userId: ${userId}, filter: ${JSON.stringify(userFilterDto)}`,
+    );
     const safeCursorDto: CursorPaginationDto = {
       cursor: cursorPaginationDto?.cursor ?? null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
@@ -76,6 +79,7 @@ export class UserFilterService {
       safeCursorDto,
     );
 
+    this.logger.log(`조회된 필터된 사용자 수: ${users.length}`);
     return {
       users: this.mapUsersToResponse(users),
       nextCursor,
@@ -86,6 +90,9 @@ export class UserFilterService {
     userFilterDto: UserFilterDto,
     cursorPaginationDto?: CursorPaginationDto,
   ) {
+    this.logger.log(
+      `비로그인 필터된 사용자 목록을 조회합니다. filter: ${JSON.stringify(userFilterDto)}`,
+    );
     const safeCursorDto: CursorPaginationDto = {
       cursor: null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
@@ -98,6 +105,7 @@ export class UserFilterService {
       safeCursorDto,
     );
 
+    this.logger.log(`조회된 필터된 사용자 수: ${users.length}`);
     return {
       users: this.mapUsersToResponse(users),
       nextCursor,

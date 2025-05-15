@@ -610,11 +610,15 @@ export class UserService {
         'user.gender',
         'user.likeCount',
         'user.region',
+        'user.isProfileComplete',
         'profile.id',
         'profileImage.id',
         'profileImage.imageUrl',
       ])
-      .andWhere('user.deletedAt IS NULL');
+      .andWhere('user.deletedAt IS NULL')
+      .andWhere('user.isProfileComplete = :isProfileComplete', {
+        isProfileComplete: true,
+      });
 
     // 로그인 유저일 때만 본인 제외, 성별 필터 적용
     if (currentUser) {
