@@ -342,10 +342,14 @@ export class AuthService {
       this.logger.log(message);
     };
 
-    log(`Starting social register for user ID: ${userId}`);
+    log('=== Social Register Service ===');
+    log(`UserId: ${userId}`);
+    log(`Register DTO: ${JSON.stringify(socialRegisterDto, null, 2)}`);
 
     // 기존 유저 확인
     const user = await this.userService.findOne(userId);
+    log(`Found user: ${JSON.stringify(user, null, 2)}`);
+
     if (!user) {
       throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
     }

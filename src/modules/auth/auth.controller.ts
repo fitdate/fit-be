@@ -43,6 +43,7 @@ import { ConfigService } from '@nestjs/config';
 import { FindEmailService } from './services/find-email.service';
 import { AuthProvider } from './types/oatuth.types';
 import { SocialRegisterDto } from './dto/social-register.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -54,6 +55,7 @@ export class AuthController {
     private readonly findEmailService: FindEmailService,
     private readonly findAndChangePasswordService: FindAndChangePasswordService,
     private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   // 회원 가입
@@ -75,7 +77,6 @@ export class AuthController {
 
   // 소셜 회원 가입
   @SkipProfileComplete()
-  @Public()
   @Post('social-register')
   @ApiOperation({ summary: '소셜 회원 가입' })
   @ApiResponse({ status: 201, description: '소셜 회원 가입 성공' })
@@ -83,6 +84,13 @@ export class AuthController {
     @UserId() userId: string,
     @Body() socialRegisterDto: SocialRegisterDto,
   ) {
+    this.logger.log('=== Social Register Request ===');
+    this.logger.log(`UserId from token: ${userId}`);
+    this.logger.log(
+      `Request Body: ${JSON.stringify(socialRegisterDto, null, 2)}`,
+    );
+    this.logger.log('=============================');
+
     return this.authService.socialRegister(userId, socialRegisterDto);
   }
 
