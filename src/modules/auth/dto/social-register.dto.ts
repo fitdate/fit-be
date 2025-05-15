@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsBoolean,
   IsNotEmpty,
   IsString,
   IsArray,
@@ -17,14 +16,6 @@ export class SocialRegisterDto {
   @IsNotEmpty()
   @IsString()
   name: string;
-
-  @ApiProperty({
-    description: '프로필 완료 여부',
-    example: true,
-  })
-  @IsNotEmpty()
-  @IsBoolean()
-  isProfileComplete: boolean;
 
   @ApiProperty({
     description: '키',

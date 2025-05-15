@@ -395,7 +395,6 @@ export class AuthService {
         region: socialRegisterDto.region,
         phone: socialRegisterDto.phone,
         role: UserRole.USER,
-        isProfileComplete: socialRegisterDto.isProfileComplete,
         job: socialRegisterDto.job,
         profile: { id: profile.id },
       });
