@@ -49,7 +49,7 @@ export class SessionService {
     const storedSession = await this.redisService.get(sessionKey);
 
     if (!storedSession) {
-      // this.logger.warn(`세션 없음: userId=${userId}`);
+      this.logger.warn(`세션 없음: userId=${userId}`);
       return false;
     }
 
@@ -66,14 +66,6 @@ export class SessionService {
       if (sessionAge > maxAge) {
         this.logger.warn(`세션 만료: userId=${userId}`);
         await this.deactivateSession(userId);
-        return false;
-      }
-
-      const isValid =
-        session.ip === metadata.ip && session.userAgent === metadata.userAgent;
-
-      if (!isValid) {
-        this.logger.warn(`세션 메타데이터 불일치: userId=${userId}`);
         return false;
       }
 

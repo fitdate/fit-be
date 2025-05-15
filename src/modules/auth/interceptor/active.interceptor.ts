@@ -80,85 +80,104 @@ export class ActiveInterceptor implements NestInterceptor {
       sessionId,
     };
 
-    // 세션 검증 (userId만 사용)
-    const isValidSession = await this.sessionService.validateSession(
-      user.sub,
-      metadata,
-    );
-    if (!isValidSession) {
-      this.logger.warn(
-        `[Session Validation] Invalid session for user ${user.sub}`,
-      );
-      throw new UnauthorizedException(
-        '세션이 만료되었습니다. 다시 로그인해주세요.',
-      );
-    }
-
-    await this.sessionService.updateSessionActivity(user.sub);
-    await this.sessionService.updateActiveSession(user.sub);
-
-    // 슬라이딩 윈도우: accessToken 만료까지 5분 이하 남았을 때 accessToken만 갱신
     try {
-      const decoded: unknown = this.jwtService.decode(user.token);
-      if (
-        decoded &&
-        typeof decoded === 'object' &&
-        'exp' in decoded &&
-        typeof (decoded as { exp: number }).exp === 'number'
-      ) {
-        const exp = (decoded as { exp: number }).exp;
-        const now = Math.floor(Date.now() / 1000);
-        const remaining = exp - now;
-        const slidingWindow = 5 * 60; // 5분(초)
+      // 세션 검증 (userId만 사용)
+      const isValidSession = await this.sessionService.validateSession(
+        user.sub,
+        metadata,
+      );
 
-        if (remaining > 0 && remaining <= slidingWindow) {
-          this.logger.debug('[슬라이딩] accessToken만 갱신합니다.');
+      if (!isValidSession) {
+        this.logger.warn(
+          `[Session Validation] Invalid session for user ${user.sub}`,
+        );
+        // 기존 세션 삭제
+        await this.sessionService.deleteSession(user.sub);
+        await this.sessionService.deleteActiveSession(user.sub);
+        this.logger.log(
+          `[Session] Existing sessions deleted for user ${user.sub}`,
+        );
 
-          if (!user.sessionId) {
-            throw new UnauthorizedException(
-              '세션이 만료되었습니다. 다시 로그인해주세요.',
+        // 세션 재생성
+        const tokenId = uuidv4();
+        await this.sessionService.createSession(user.sub, tokenId, metadata);
+        await this.sessionService.updateActiveSession(user.sub);
+        this.logger.log(`[Session] New session created for user ${user.sub}`);
+      } else {
+        // 기존 세션 업데이트
+        await this.sessionService.updateSessionActivity(user.sub);
+        await this.sessionService.updateActiveSession(user.sub);
+        this.logger.debug(`[Session] Session updated for user ${user.sub}`);
+      }
+
+      // 슬라이딩 윈도우: accessToken 만료까지 5분 이하 남았을 때 accessToken만 갱신
+      try {
+        const decoded: unknown = this.jwtService.decode(user.token);
+        if (
+          decoded &&
+          typeof decoded === 'object' &&
+          'exp' in decoded &&
+          typeof (decoded as { exp: number }).exp === 'number'
+        ) {
+          const exp = (decoded as { exp: number }).exp;
+          const now = Math.floor(Date.now() / 1000);
+          const remaining = exp - now;
+          const slidingWindow = 5 * 60; // 5분(초)
+
+          if (remaining > 0 && remaining <= slidingWindow) {
+            this.logger.debug('[슬라이딩] accessToken만 갱신합니다.');
+
+            if (!user.sessionId) {
+              throw new UnauthorizedException(
+                '세션이 만료되었습니다. 다시 로그인해주세요.',
+              );
+            }
+
+            const tokenPayload: TokenPayload = {
+              sub: user.sub,
+              role: user.role as UserRole,
+              type: 'access',
+              tokenId: uuidv4(),
+              sessionId: user.sessionId,
+            };
+
+            const { accessToken } = await this.tokenService.generateTokens(
+              user.sub,
+              tokenPayload,
+            );
+
+            // 세션 업데이트
+            await this.sessionService.updateSessionActivity(user.sub);
+
+            const accessTokenTtl =
+              this.configService.get('jwt.accessTokenTtl', { infer: true }) ||
+              this.ROLLING_PERIOD;
+            const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
+
+            response.cookie('accessToken', accessToken, {
+              httpOnly: true,
+              secure: true,
+              sameSite: 'none',
+              domain: '.fit-date.co.kr',
+              path: '/',
+              maxAge: accessTokenMaxAge,
+            });
+
+            this.logger.debug(
+              '[슬라이딩] 새로운 accessToken을 쿠키에 설정했습니다.',
             );
           }
-
-          const tokenPayload: TokenPayload = {
-            sub: user.sub,
-            role: user.role as UserRole,
-            type: 'access',
-            tokenId: uuidv4(),
-            sessionId: user.sessionId,
-          };
-
-          const { accessToken } = await this.tokenService.generateTokens(
-            user.sub,
-            tokenPayload,
-          );
-
-          // 세션 업데이트
-          await this.sessionService.updateSessionActivity(user.sub);
-
-          const accessTokenTtl =
-            this.configService.get('jwt.accessTokenTtl', { infer: true }) ||
-            this.ROLLING_PERIOD;
-          const accessTokenMaxAge = parseTimeToSeconds(accessTokenTtl) * 1000;
-
-          response.cookie('accessToken', accessToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            domain: '.fit-date.co.kr',
-            path: '/',
-            maxAge: accessTokenMaxAge,
-          });
-
-          this.logger.debug(
-            '[슬라이딩] 새로운 accessToken을 쿠키에 설정했습니다.',
-          );
         }
+      } catch (err) {
+        this.logger.error('[슬라이딩] accessToken 만료 시간 파싱 실패:', err);
       }
-    } catch (err) {
-      this.logger.error('[슬라이딩] accessToken 만료 시간 파싱 실패:', err);
-    }
 
-    return next.handle();
+      return next.handle();
+    } catch (error) {
+      this.logger.error('[Session] Error during session handling:', error);
+      throw new UnauthorizedException(
+        '세션 처리 중 오류가 발생했습니다. 다시 로그인해주세요.',
+      );
+    }
   }
 }
