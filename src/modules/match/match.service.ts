@@ -42,7 +42,10 @@ export class MatchService {
   ): User[] {
     const oppositeGender = gender === '남자' ? '여자' : '남자';
     return users.filter(
-      (user) => user.gender !== oppositeGender && user.id !== currentUserId,
+      (user) =>
+        user.gender !== oppositeGender &&
+        user.id !== currentUserId &&
+        user.isProfileComplete,
     );
   }
 
@@ -386,6 +389,9 @@ export class MatchService {
       .leftJoinAndSelect('selectedProfile.profileImage', 'selectedProfileImage')
       .where('selected.id = :selectedUserId', { selectedUserId })
       .orWhere('selector.id = :selectedUserId', { selectedUserId })
+      .andWhere('selector.isProfileComplete = :isProfileComplete', {
+        isProfileComplete: true,
+      })
       .getMany();
 
     return selectorsList;
