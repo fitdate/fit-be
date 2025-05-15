@@ -11,14 +11,16 @@ export class UserFilterService {
   constructor(private readonly userService: UserService) {}
 
   private mapUsersToResponse(users: UserEntity[]) {
-    return users.map((user) => ({
-      id: user.id,
-      nickname: user.nickname,
-      region: user.region,
-      likeCount: user.likeCount,
-      age: calculateAge(user.birthday),
-      profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
-    }));
+    return users
+      .filter((user) => user.isProfileComplete)
+      .map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+        region: user.region,
+        likeCount: user.likeCount,
+        age: calculateAge(user.birthday),
+        profileImage: user.profile?.profileImage?.[0]?.imageUrl ?? null,
+      }));
   }
 
   // 회원목록 조회 (로그인/비로그인인 통합)

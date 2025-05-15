@@ -18,7 +18,7 @@ export class SparkListService {
   async getLikeList(userId: string) {
     const likeList = await this.likeService.getLikeList(userId);
     const filteredLikeList = likeList
-      .filter((like) => like.user.id !== userId)
+      .filter((like) => like.user.id !== userId && like.user.isProfileComplete)
       .map((like) => {
         const profileImage = like.user.profile?.profileImage?.[0];
         return {
@@ -38,7 +38,11 @@ export class SparkListService {
     const coffeeChatList =
       await this.coffeeChatService.getReceivedCoffeeChatList(userId);
     const filteredCoffeeChatList = coffeeChatList
-      .filter((coffeeChat) => coffeeChat.sender.id !== userId)
+      .filter(
+        (coffeeChat) =>
+          coffeeChat.sender.id !== userId &&
+          coffeeChat.sender.isProfileComplete,
+      )
       .map((coffeeChat) => {
         const profileImage = coffeeChat.sender.profile?.profileImage?.[0];
         return {
@@ -68,7 +72,8 @@ export class SparkListService {
         // 로그인한 사용자가 선택받은 경우만 처리
         if (selection.selected.id === userId) {
           const matchedUser = selection.selector;
-          if (matchedUser.id === userId) return null;
+          if (matchedUser.id === userId || !matchedUser.isProfileComplete)
+            return null;
 
           const profileImage = matchedUser.profile?.profileImage?.[0];
 

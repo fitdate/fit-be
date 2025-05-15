@@ -66,10 +66,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   private logRequestInfo(context: ExecutionContext): void {
     const request = context.switchToHttp().getRequest<Request>();
-    this.logger.debug(`[인증 요청] Path: ${request.path}`);
-    this.logger.debug(`[인증 요청] Method: ${request.method}`);
-    this.logger.debug(`[인증 요청] Origin: ${request.headers.origin}`);
-    this.logger.debug(`[인증 요청] 쿠키: ${JSON.stringify(request.cookies)}`);
-    this.logger.debug(`[인증 요청] 헤더: ${JSON.stringify(request.headers)}`);
+    this.logger.debug(`요청 쿠키: ${JSON.stringify(request.cookies)}`);
+    this.logger.debug(`요청 헤더: ${JSON.stringify(request.headers)}`);
   }
 }

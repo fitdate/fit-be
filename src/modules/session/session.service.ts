@@ -43,6 +43,7 @@ export class SessionService {
   // 세션 검증(maxAge: 7일)
   async validateSession(
     userId: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     metadata: TokenMetadata,
   ): Promise<boolean> {
     const sessionKey = `session:${userId}`;

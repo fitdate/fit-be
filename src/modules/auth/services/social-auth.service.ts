@@ -242,6 +242,9 @@ export class SocialAuthService {
     code: string,
     redirectUri: string,
   ): Promise<{ email: string }> {
+    this.logger.debug(
+      `[네이버] 콜백 처리 시작 - code: ${code}, redirectUri: ${redirectUri}`,
+    );
     const tokenRes = await axios.post<SocialTokenResponse>(
       'https://nid.naver.com/oauth2.0/token',
       new URLSearchParams({
@@ -259,7 +262,7 @@ export class SocialAuthService {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
     );
     const tokenData = tokenRes.data;
-    this.logger.log(`네이버 tokenData: ${JSON.stringify(tokenData)}`);
+    this.logger.debug(`[네이버] 토큰 응답: ${JSON.stringify(tokenData)}`);
 
     const userRes = await axios.get<NaverUserInfo>(
       'https://openapi.naver.com/v1/nid/me',
@@ -301,6 +304,7 @@ export class SocialAuthService {
       this.logger.log(`기존 유저 발견: ${existingUser.id}`);
 
       // request.user 설정
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       (req as any).user = {
         sub: existingUser.id,
         role: existingUser.role,
@@ -398,6 +402,7 @@ export class SocialAuthService {
       this.logger.log(`신규 유저 생성 완료: ${newUser.id}`);
 
       // request.user 설정
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       (req as any).user = {
         sub: newUser.id,
         role: newUser.role,
