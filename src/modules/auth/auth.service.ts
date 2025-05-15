@@ -364,7 +364,7 @@ export class AuthService {
     const existingNickname = await this.userService.findUserByNickname(
       socialRegisterDto.nickname,
     );
-    if (existingNickname) {
+    if (existingNickname && existingNickname.id !== userId) {
       throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
     }
 
@@ -372,7 +372,7 @@ export class AuthService {
     const existingPhone = await this.userService.findUserByPhone(
       socialRegisterDto.phone,
     );
-    if (existingPhone) {
+    if (existingPhone && existingPhone.id !== userId) {
       throw new UnauthorizedException('이미 존재하는 전화번호입니다.');
     }
 
@@ -386,9 +386,9 @@ export class AuthService {
       const profile = await qr.manager.save<Profile>(new Profile());
       log(`Profile created successfully with ID: ${profile.id}`);
 
-      // 2. 유저 생성
-      log('Starting user creation');
-      const userCreated = await qr.manager.save(User, {
+      // 2. 유저 업데이트
+      log('Starting user update');
+      await qr.manager.update(User, userId, {
         nickname: socialRegisterDto.nickname,
         name: socialRegisterDto.name,
         birthday: socialRegisterDto.birthday,
@@ -396,22 +396,12 @@ export class AuthService {
         gender: socialRegisterDto.gender,
         region: socialRegisterDto.region,
         phone: socialRegisterDto.phone,
-        role: UserRole.USER,
         job: socialRegisterDto.job,
         profile: { id: profile.id },
       });
-      log(`User created successfully with ID: ${userCreated.id}`);
+      log(`User updated successfully with ID: ${userId}`);
 
       // 3. 프로필 이미지 저장
-      log(
-        `Checking socialRegisterDto.images: ${JSON.stringify(socialRegisterDto.images, null, 2)}`,
-      );
-      log(`socialRegisterDto.images type: ${typeof socialRegisterDto.images}`);
-      log(
-        `socialRegisterDto.images is array: ${Array.isArray(
-          socialRegisterDto.images,
-        )}`,
-      );
       if (socialRegisterDto.images?.length) {
         log(`Found ${socialRegisterDto.images.length} images to process`);
         log('Starting profile image processing');
@@ -422,49 +412,20 @@ export class AuthService {
             log,
           );
 
-        log(`Processed ${profileImages.length} images`);
         if (profileImages.length > 0) {
-          log('Saving profile images to database');
-          log(
-            `Profile images data before save: ${JSON.stringify(
-              profileImages,
-              null,
-              2,
-            )}`,
-          );
-
-          // 각 이미지 객체의 구조 확인
-          profileImages.forEach((img, index) => {
-            log(`Image ${index + 1} structure check:`);
-            log(`- profile.id: ${img.profile.id}`);
-            log(`- imageUrl: ${img.imageUrl}`);
-            log(`- key: ${img.key}`);
-            log(`- isMain: ${img.isMain}`);
-          });
-
           const savedImages = await qr.manager.save(
             ProfileImage,
             profileImages,
           );
-
           log(`Saved ${savedImages.length} profile images to database`);
-          log(
-            `Profile images after save: ${JSON.stringify(savedImages, null, 2)}`,
-          );
-          log(`Profile images saved successfully for user: ${userCreated.id}`);
 
-          // 프로필 이미지가 2장 미만인지 확인**
           if (savedImages.length < 2) {
-            log('Profile images are less than 2. Throwing error.');
             throw new UnauthorizedException(
               '프로필 이미지는 최소 2장 이상이어야 합니다.',
             );
           }
-        } else {
-          log('No profile images to save');
         }
       } else {
-        log('No images found in registerDto.images');
         throw new UnauthorizedException(
           '프로필 이미지는 최소 2장 이상이어야 합니다.',
         );
@@ -472,17 +433,14 @@ export class AuthService {
 
       // 4. MBTI 저장
       if (socialRegisterDto.mbti) {
-        log('Starting MBTI save');
         await qr.manager.save(Mbti, {
           mbti: socialRegisterDto.mbti,
           profile: { id: profile.id },
         });
-        log(`MBTI saved successfully for user: ${userCreated.id}`);
       }
 
       // 5. 자기소개 저장
       if (socialRegisterDto.selfintro?.length) {
-        log('Starting introduction save');
         const introductions = await Promise.all(
           socialRegisterDto.selfintro.map(async (introductionName) => {
             const existingIntroduction =
@@ -502,14 +460,10 @@ export class AuthService {
           introduction: { id: introduction.id },
         }));
         await qr.manager.save(UserIntroduction, userIntroductions);
-        log(
-          `User introductions saved successfully for user: ${userCreated.id}`,
-        );
       }
 
       // 6. 피드백 저장
       if (socialRegisterDto.listening?.length) {
-        log('Starting feedback save');
         const feedbacks = await Promise.all(
           socialRegisterDto.listening.map(async (feedbackName) => {
             const existingFeedback =
@@ -527,13 +481,10 @@ export class AuthService {
           feedback: { id: feedback.id },
         }));
         await qr.manager.save(UserFeedback, userFeedbacks);
-        log(`User feedbacks saved successfully for user: ${userCreated.id}`);
       }
 
       // 7. 관심사 저장
       if (socialRegisterDto.interests?.length) {
-        log('Starting interests save');
-
         const interestCategories = await Promise.all(
           socialRegisterDto.interests.map(async (interestName) => {
             const existingCategories =
@@ -541,7 +492,6 @@ export class AuthService {
                 interestName,
               );
             if (existingCategories.length > 0) {
-              log(`Found existing interest category: ${interestName}`);
               return existingCategories[0];
             }
             throw new UnauthorizedException(
@@ -549,28 +499,27 @@ export class AuthService {
             );
           }),
         );
-
         const userInterestCategories = interestCategories.map((category) => ({
           profile: { id: profile.id },
           interestCategory: { id: category.id },
         }));
-
         await qr.manager.save(UserInterestCategory, userInterestCategories);
-        log(`User interests saved successfully for user: ${userCreated.id}`);
       }
 
       // 8. 프로필 완성 상태 업데이트
       await qr.manager.update(
         User,
-        { id: userCreated.id },
+        { id: userId },
         { isProfileComplete: true },
       );
       log(
-        `User profile complete status updated successfully for user: ${userCreated.id}`,
+        `User profile complete status updated successfully for user: ${userId}`,
       );
 
       await qr.commitTransaction();
       log('Transaction committed successfully');
+
+      return { message: '소셜 회원가입이 완료되었습니다.' };
     } catch (error) {
       await qr.rollbackTransaction();
       log('Transaction rolled back due to error');
