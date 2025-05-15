@@ -300,26 +300,6 @@ export class SocialAuthService {
         ? `https://www.fit-date.co.kr/home`
         : `https://www.fit-date.co.kr/social-signup`;
 
-      // 기존 세션 및 토큰 삭제
-      await this.sessionService.deleteSession(existingUser.id);
-      await this.sessionService.deleteActiveSession(existingUser.id);
-
-      // 기존 토큰 삭제
-      const oldTokens = await this.redisService.keys(
-        `access_token:${existingUser.id}:*`,
-      );
-      for (const token of oldTokens) {
-        await this.redisService.del(token);
-      }
-      const oldRefreshTokens = await this.redisService.keys(
-        `refresh_token:${existingUser.id}:*`,
-      );
-      for (const token of oldRefreshTokens) {
-        await this.redisService.del(token);
-      }
-
-      this.logger.log(`기존 세션 및 토큰 삭제 완료: ${existingUser.id}`);
-
       // 새로운 세션 및 토큰 생성
       const sessionId = uuidv4();
       const tokenId = uuidv4();
