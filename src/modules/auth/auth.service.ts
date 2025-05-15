@@ -516,6 +516,11 @@ export class AuthService {
         `User profile complete status updated successfully for user: ${userId}`,
       );
 
+      // 세션 업데이트
+      await this.sessionService.updateSessionActivity(userId);
+      await this.sessionService.updateActiveSession(userId);
+      log(`Session updated successfully for user: ${userId}`);
+
       await qr.commitTransaction();
       log('Transaction committed successfully');
 
