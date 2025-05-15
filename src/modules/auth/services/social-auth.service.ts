@@ -309,6 +309,11 @@ export class SocialAuthService {
         sessionId,
       };
 
+      // 기존 세션 및 토큰 삭제
+      await this.sessionService.deleteSession(existingUser.id);
+      await this.sessionService.deleteActiveSession(existingUser.id);
+      this.logger.log(`기존 세션 및 토큰 삭제 완료: ${existingUser.id}`);
+
       // 새 세션 생성
       await this.sessionService.createSession(
         existingUser.id,
@@ -334,9 +339,15 @@ export class SocialAuthService {
       );
 
       // 쿠키 설정
-      res.cookie('accessToken', tokens.accessToken, tokens.accessOptions);
+      res.cookie('accessToken', tokens.accessToken, {
+        ...tokens.accessOptions,
+        domain: '.fit-date.co.kr',
+      });
       if (tokens.refreshToken && tokens.refreshOptions) {
-        res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
+        res.cookie('refreshToken', tokens.refreshToken, {
+          ...tokens.refreshOptions,
+          domain: '.fit-date.co.kr',
+        });
       }
       this.logger.log(`토큰 쿠키 설정 완료`);
 

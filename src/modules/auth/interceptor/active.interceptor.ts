@@ -71,7 +71,6 @@ export class ActiveInterceptor implements NestInterceptor {
     }
 
     const userAgentStr = request.headers['user-agent'] || 'unknown';
-    // 세션 ID 생성 또는 기존 세션 ID 사용
     const sessionId = user.sessionId || uuidv4();
 
     const metadata: TokenMetadata = {
@@ -91,18 +90,41 @@ export class ActiveInterceptor implements NestInterceptor {
         this.logger.warn(
           `[Session Validation] Invalid session for user ${user.sub}`,
         );
-        // 기존 세션 삭제
-        await this.sessionService.deleteSession(user.sub);
-        await this.sessionService.deleteActiveSession(user.sub);
-        this.logger.log(
-          `[Session] Existing sessions deleted for user ${user.sub}`,
-        );
 
         // 세션 재생성
         const tokenId = uuidv4();
         await this.sessionService.createSession(user.sub, tokenId, metadata);
         await this.sessionService.updateActiveSession(user.sub);
         this.logger.log(`[Session] New session created for user ${user.sub}`);
+
+        // 토큰 재발급
+        const tokenPayload: TokenPayload = {
+          sub: user.sub,
+          role: user.role as UserRole,
+          type: 'access',
+          tokenId,
+          sessionId,
+        };
+
+        const tokens = await this.tokenService.generateAndSetTokens(
+          user.sub,
+          tokenPayload,
+          request.headers.origin,
+        );
+
+        // 쿠키 설정
+        response.cookie(
+          'accessToken',
+          tokens.accessToken,
+          tokens.accessOptions,
+        );
+        if (tokens.refreshToken && tokens.refreshOptions) {
+          response.cookie(
+            'refreshToken',
+            tokens.refreshToken,
+            tokens.refreshOptions,
+          );
+        }
       } else {
         // 기존 세션 업데이트
         await this.sessionService.updateSessionActivity(user.sub);
