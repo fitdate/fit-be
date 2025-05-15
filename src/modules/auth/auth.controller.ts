@@ -235,7 +235,6 @@ export class AuthController {
 
   // 구글 소셜 로그인 콜백 (GET)
   @SkipProfileComplete()
-  @Public()
   @Get('google/callback')
   @ApiOperation({
     summary: '구글 소셜 로그인 콜백(GET, 소셜 로그인 서비스 리다이렉트)',
@@ -257,7 +256,6 @@ export class AuthController {
 
   // 구글 소셜 로그인 콜백 (POST)
   @SkipProfileComplete()
-  @Public()
   @Post('google/callback')
   @ApiOperation({ summary: '구글 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)' })
   @ApiBody({
@@ -292,7 +290,6 @@ export class AuthController {
 
   // 카카오 소셜 로그인 콜백
   @SkipProfileComplete()
-  @Public()
   @Post('kakao/callback')
   @ApiOperation({
     summary: '카카오 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)',
@@ -329,7 +326,6 @@ export class AuthController {
 
   // 카카오 소셜 로그인 콜백 (GET)
   @SkipProfileComplete()
-  @Public()
   @Get('kakao/callback')
   @ApiOperation({
     summary: '카카오 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)',
@@ -366,7 +362,6 @@ export class AuthController {
 
   // 네이버 소셜 로그인 콜백 (POST)
   @SkipProfileComplete()
-  @Public()
   @Post('naver/callback')
   @ApiOperation({
     summary: '네이버 소셜 로그인 콜백(POST, 프론트엔드 콜백 URL)',
@@ -402,7 +397,6 @@ export class AuthController {
 
   // 네이버 소셜 로그인 콜백 (POST)
   @SkipProfileComplete()
-  @Public()
   @Get('naver/callback')
   @ApiOperation({
     summary: '네이버 소셜 로그인 콜백(GET, 프론트엔드 콜백 URL)',

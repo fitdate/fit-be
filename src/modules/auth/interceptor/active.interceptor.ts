@@ -63,6 +63,20 @@ export class ActiveInterceptor implements NestInterceptor {
       .switchToHttp()
       .getRequest<RequestWithUser & RequestWithCookies>();
     const response = context.switchToHttp().getResponse<ResponseWithCookie>();
+    const path = request.path;
+
+    // 소셜 로그인 콜백 엔드포인트는 세션 검증 건너뛰기
+    if (
+      path.includes('/auth/kakao/callback') ||
+      path.includes('/auth/google/callback') ||
+      path.includes('/auth/naver/callback')
+    ) {
+      this.logger.debug(
+        '[Token Validation] Skipping session validation for social login callback',
+      );
+      return next.handle();
+    }
+
     const user = request.user;
 
     if (!user?.sub) {
