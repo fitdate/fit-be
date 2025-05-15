@@ -283,7 +283,12 @@ export class SocialAuthService {
     req: Request,
     res: Response,
   ): Promise<SocialLoginResponse> {
-    this.logger.log(`소셜 로그인 처리 시작: ${data.provider}`);
+    this.logger.log('=== Social Login Callback POST ===');
+    this.logger.log(`Provider: ${data.provider}`);
+    this.logger.log(`Code: ${data.code}`);
+    this.logger.log(`Redirect URI: ${data.redirectUri}`);
+    this.logger.log('Request Headers:', req.headers);
+    this.logger.log('Request Cookies:', req.cookies);
 
     // 소셜 로그인 토큰 및 사용자 정보 가져오기
     const userInfo = await this.getSocialUserInfo(data);
@@ -332,11 +337,21 @@ export class SocialAuthService {
         sessionId,
       };
 
+      // 토큰 생성 및 쿠키 설정
       const tokens = await this.tokenService.generateAndSetTokens(
         existingUser.id,
         tokenPayload,
         data.redirectUri,
       );
+
+      this.logger.log('Generated Tokens:', {
+        accessToken: tokens.accessToken ? 'exists' : 'missing',
+        refreshToken: tokens.refreshToken ? 'exists' : 'missing',
+      });
+      this.logger.log('Cookie Options:', {
+        accessOptions: tokens.accessOptions,
+        refreshOptions: tokens.refreshOptions,
+      });
 
       // 쿠키 설정
       res.cookie('accessToken', tokens.accessToken, {
@@ -349,7 +364,9 @@ export class SocialAuthService {
           domain: '.fit-date.co.kr',
         });
       }
-      this.logger.log(`토큰 쿠키 설정 완료`);
+
+      this.logger.log('Cookies set in response');
+      this.logger.log('Response Headers:', res.getHeaders());
 
       return {
         redirectUrl,
