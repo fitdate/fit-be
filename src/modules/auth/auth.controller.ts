@@ -42,6 +42,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ConfigService } from '@nestjs/config';
 import { FindEmailService } from './services/find-email.service';
 import { AuthProvider } from './types/oatuth.types';
+import { SocialRegisterDto } from './dto/social-register.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -70,6 +71,19 @@ export class AuthController {
       registerDto.images = files.images.map((file) => file.path);
     }
     return this.authService.register(registerDto);
+  }
+
+  // 소셜 회원 가입
+  @SkipProfileComplete()
+  @Public()
+  @Post('social-register')
+  @ApiOperation({ summary: '소셜 회원 가입' })
+  @ApiResponse({ status: 201, description: '소셜 회원 가입 성공' })
+  async socialRegister(
+    @UserId() userId: string,
+    @Body() socialRegisterDto: SocialRegisterDto,
+  ) {
+    return this.authService.socialRegister(userId, socialRegisterDto);
   }
 
   // 이메일 중복 확인

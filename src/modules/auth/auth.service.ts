@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from './hash/hash.service';
 import { AllConfig } from 'src/common/config/config.types';
@@ -40,6 +35,7 @@ import { SessionService } from '../session/session.service';
 import { TokenPayload } from '../token/types/token-payload.types';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtService } from '@nestjs/jwt';
+import { SocialRegisterDto } from './dto/social-register.dto';
 
 function isTokenPayload(obj: unknown): obj is TokenPayload {
   return !!obj && typeof obj === 'object' && 'sub' in obj && 'sessionId' in obj;
@@ -74,55 +70,27 @@ export class AuthService {
       this.logger.log(message);
     };
 
-    // 소셜 로그인 여부 확인
-    const isSocialUser =
-      registerDto.authProvider &&
-      (registerDto.authProvider === AuthProvider.KAKAO ||
-        registerDto.authProvider === AuthProvider.NAVER ||
-        registerDto.authProvider === AuthProvider.GOOGLE);
+    // log(`Attempting to register new user with email: ${registerDto.email}`);
 
-    log(
-      `Register attempt - isSocialUser: ${isSocialUser}, authProvider: ${registerDto.authProvider}`,
-    );
-
-    // 소셜 로그인 유저의 경우 이메일이 없으면 에러
-    if (isSocialUser && !registerDto.email) {
-      throw new BadRequestException('소셜 로그인 유저는 이메일이 필요합니다.');
-    }
+    // 이메일 인증 여부 확인
+    // const isEmailVerified = await this.emailAuthService.checkEmailVerification(
+    //   registerDto.email,
+    // );
+    // if (!isEmailVerified) {
+    //   throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    // }
 
     // 기존 유저 확인
     const existingUser = await this.userService.findUserByEmail(
       registerDto.email,
     );
-    log(
-      `Existing user check - email: ${registerDto.email}, existingUser: ${JSON.stringify(existingUser)}`,
-    );
-
     if (existingUser) {
-      // 소셜 로그인 유저가 프로필을 완성하려는 경우
-      if (
-        isSocialUser &&
-        existingUser.authProvider === registerDto.authProvider
-      ) {
-        log(`기존 소셜 유저 프로필 완성: ${existingUser.id}`);
-        if (!existingUser.isProfileComplete) {
-          return this.userService.completeUserProfile(
-            existingUser.id,
-            registerDto,
-          );
-        }
-        throw new UnauthorizedException('이미 가입된 사용자입니다.');
-      }
-      // 이메일로 가입된 사용자가 소셜 로그인을 시도하는 경우
-      if (existingUser.authProvider === AuthProvider.EMAIL) {
+      if (existingUser.authProvider !== AuthProvider.EMAIL) {
         throw new UnauthorizedException(
-          '이미 가입된 이메일입니다. 이메일 로그인을 이용해주세요.',
+          '소셜 로그인으로 가입한 유저입니다. 소셜 로그인 후 이용해주세요.',
         );
       }
-      // 다른 소셜 로그인으로 가입된 사용자가 다른 소셜 로그인을 시도하는 경우
-      throw new UnauthorizedException(
-        `이미 ${existingUser.authProvider}로 가입된 이메일입니다.`,
-      );
+      throw new UnauthorizedException('이미 존재하는 이메일입니다.');
     }
 
     // 닉네임 중복 확인
@@ -141,20 +109,13 @@ export class AuthService {
       throw new UnauthorizedException('이미 존재하는 전화번호입니다.');
     }
 
-    // 비밀번호 확인 (소셜 로그인이 아닌 경우에만)
-    if (!isSocialUser) {
-      if (registerDto.password !== registerDto.confirmPassword) {
-        throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
-      }
-      if (!registerDto.password) {
-        throw new UnauthorizedException('비밀번호를 입력해주세요.');
-      }
+    // 비밀번호 확인
+    if (registerDto.password !== registerDto.confirmPassword) {
+      throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
     }
 
-    // 비밀번호 해싱 (소셜 로그인이 아닌 경우에만)
-    const hashedPassword = isSocialUser
-      ? null
-      : await this.hashService.hash(registerDto.password);
+    // 비밀번호 해싱
+    const hashedPassword = await this.hashService.hash(registerDto.password);
 
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
@@ -168,39 +129,22 @@ export class AuthService {
 
       // 2. 유저 생성
       log('Starting user creation');
-      const userData = isSocialUser
-        ? {
-            email: registerDto.email,
-            authProvider: registerDto.authProvider,
-            nickname: registerDto.nickname,
-            name: registerDto.name,
-            birthday: registerDto.birthday,
-            height: registerDto.height,
-            gender: registerDto.gender,
-            region: registerDto.region,
-            phone: registerDto.phone,
-            job: registerDto.job,
-            isProfileComplete: false,
-            password: null as string | null,
-            profile: { id: profile.id },
-          }
-        : {
-            email: registerDto.email,
-            password: hashedPassword,
-            nickname: registerDto.nickname,
-            name: registerDto.name,
-            birthday: registerDto.birthday,
-            height: registerDto.height,
-            gender: registerDto.gender,
-            region: registerDto.region,
-            phone: registerDto.phone,
-            role: UserRole.USER,
-            isProfileComplete: false,
-            authProvider: AuthProvider.EMAIL,
-            job: registerDto.job,
-            profile: { id: profile.id },
-          };
-      const user = (await qr.manager.save(User, userData)) as User;
+      const user = await qr.manager.save(User, {
+        email: registerDto.email,
+        password: hashedPassword,
+        nickname: registerDto.nickname,
+        name: registerDto.name,
+        birthday: registerDto.birthday,
+        height: registerDto.height,
+        gender: registerDto.gender,
+        region: registerDto.region,
+        phone: registerDto.phone,
+        role: UserRole.USER,
+        isProfileComplete: false,
+        authProvider: AuthProvider.EMAIL,
+        job: registerDto.job,
+        profile: { id: profile.id },
+      });
       log(`User created successfully with ID: ${user.id}`);
 
       // 3. 프로필 이미지 저장
@@ -367,14 +311,12 @@ export class AuthService {
       await qr.commitTransaction();
       log('Transaction committed successfully');
 
-      if (!isSocialUser) {
-        // 회원가입 성공 시 Redis에서 인증 상태 삭제
-        // const verifiedKey = `email-verified:${registerDto.email}`;
-        // await this.redisService.del(verifiedKey);
-        // log(
-        //   `Email verification status deleted from Redis for: ${registerDto.email}`,
-        // );
-      }
+      // 회원가입 성공 시 Redis에서 인증 상태 삭제
+      // const verifiedKey = `email-verified:${registerDto.email}`;
+      // await this.redisService.del(verifiedKey);
+      // log(
+      //   `Email verification status deleted from Redis for: ${registerDto.email}`,
+      // );
 
       return { user, profile };
     } catch (error) {
@@ -386,6 +328,255 @@ export class AuthService {
       }
       throw new InternalServerErrorException(
         '회원가입 중 오류가 발생했습니다.',
+        { cause: error },
+      );
+    } finally {
+      await qr.release();
+      log('QueryRunner released');
+    }
+  }
+
+  // 소셜 회원가입
+  async socialRegister(userId: string, socialRegisterDto: SocialRegisterDto) {
+    const logBuffer: string[] = [];
+    const log = (message: string) => {
+      logBuffer.push(message);
+      this.logger.log(message);
+    };
+
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+    }
+
+    const existingUser = await this.userService.findUserByEmail(user.email);
+    if (existingUser) {
+      if (existingUser.isProfileComplete) {
+        throw new UnauthorizedException(
+          '이미 회원 가입이 완료된 유저입니다. 이메일 로그인 후 이용해주세요.',
+        );
+      }
+    }
+
+    // 닉네임 중복 확인
+    const existingNickname = await this.userService.findUserByNickname(
+      socialRegisterDto.nickname,
+    );
+    if (existingNickname) {
+      throw new UnauthorizedException('이미 존재하는 닉네임입니다.');
+    }
+
+    // 전화번호 중복 확인
+    const existingPhone = await this.userService.findUserByPhone(
+      socialRegisterDto.phone,
+    );
+    if (existingPhone) {
+      throw new UnauthorizedException('이미 존재하는 전화번호입니다.');
+    }
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+
+    try {
+      // 1. 프로필 생성
+      log('Starting profile creation');
+      const profile = await qr.manager.save<Profile>(new Profile());
+      log(`Profile created successfully with ID: ${profile.id}`);
+
+      // 2. 유저 생성
+      log('Starting user creation');
+      const user = await qr.manager.save(User, {
+        nickname: socialRegisterDto.nickname,
+        name: socialRegisterDto.name,
+        birthday: socialRegisterDto.birthday,
+        height: socialRegisterDto.height,
+        gender: socialRegisterDto.gender,
+        region: socialRegisterDto.region,
+        phone: socialRegisterDto.phone,
+        role: UserRole.USER,
+        isProfileComplete: socialRegisterDto.isProfileComplete,
+        job: socialRegisterDto.job,
+        profile: { id: profile.id },
+      });
+      log(`User created successfully with ID: ${user.id}`);
+
+      // 3. 프로필 이미지 저장
+      log(
+        `Checking socialRegisterDto.images: ${JSON.stringify(socialRegisterDto.images, null, 2)}`,
+      );
+      log(`socialRegisterDto.images type: ${typeof socialRegisterDto.images}`);
+      log(
+        `socialRegisterDto.images is array: ${Array.isArray(
+          socialRegisterDto.images,
+        )}`,
+      );
+      if (socialRegisterDto.images?.length) {
+        log(`Found ${socialRegisterDto.images.length} images to process`);
+        log('Starting profile image processing');
+        const profileImages =
+          await this.profileImageService.processImagesInChunks(
+            socialRegisterDto.images,
+            profile.id,
+            log,
+          );
+
+        log(`Processed ${profileImages.length} images`);
+        if (profileImages.length > 0) {
+          log('Saving profile images to database');
+          log(
+            `Profile images data before save: ${JSON.stringify(
+              profileImages,
+              null,
+              2,
+            )}`,
+          );
+
+          // 각 이미지 객체의 구조 확인
+          profileImages.forEach((img, index) => {
+            log(`Image ${index + 1} structure check:`);
+            log(`- profile.id: ${img.profile.id}`);
+            log(`- imageUrl: ${img.imageUrl}`);
+            log(`- key: ${img.key}`);
+            log(`- isMain: ${img.isMain}`);
+          });
+
+          const savedImages = await qr.manager.save(
+            ProfileImage,
+            profileImages,
+          );
+
+          log(`Saved ${savedImages.length} profile images to database`);
+          log(
+            `Profile images after save: ${JSON.stringify(savedImages, null, 2)}`,
+          );
+          log(`Profile images saved successfully for user: ${user.id}`);
+
+          // 프로필 이미지가 2장 미만인지 확인**
+          if (savedImages.length < 2) {
+            log('Profile images are less than 2. Throwing error.');
+            throw new UnauthorizedException(
+              '프로필 이미지는 최소 2장 이상이어야 합니다.',
+            );
+          }
+        } else {
+          log('No profile images to save');
+        }
+      } else {
+        log('No images found in registerDto.images');
+        throw new UnauthorizedException(
+          '프로필 이미지는 최소 2장 이상이어야 합니다.',
+        );
+      }
+
+      // 4. MBTI 저장
+      if (socialRegisterDto.mbti) {
+        log('Starting MBTI save');
+        await qr.manager.save(Mbti, {
+          mbti: socialRegisterDto.mbti,
+          profile: { id: profile.id },
+        });
+        log(`MBTI saved successfully for user: ${user.id}`);
+      }
+
+      // 5. 자기소개 저장
+      if (socialRegisterDto.selfintro?.length) {
+        log('Starting introduction save');
+        const introductions = await Promise.all(
+          socialRegisterDto.selfintro.map(async (introductionName) => {
+            const existingIntroduction =
+              await this.introductionService.searchIntroductions(
+                introductionName,
+              );
+            if (existingIntroduction.length > 0) {
+              return existingIntroduction[0];
+            }
+            throw new UnauthorizedException(
+              `존재하지 않는 자기소개입니다: ${introductionName}`,
+            );
+          }),
+        );
+        const userIntroductions = introductions.map((introduction) => ({
+          profile: { id: profile.id },
+          introduction: { id: introduction.id },
+        }));
+        await qr.manager.save(UserIntroduction, userIntroductions);
+        log(`User introductions saved successfully for user: ${user.id}`);
+      }
+
+      // 6. 피드백 저장
+      if (socialRegisterDto.listening?.length) {
+        log('Starting feedback save');
+        const feedbacks = await Promise.all(
+          socialRegisterDto.listening.map(async (feedbackName) => {
+            const existingFeedback =
+              await this.feedbackService.searchFeedbacks(feedbackName);
+            if (existingFeedback.length > 0) {
+              return existingFeedback[0];
+            }
+            throw new UnauthorizedException(
+              `존재하지 않는 피드백입니다: ${feedbackName}`,
+            );
+          }),
+        );
+        const userFeedbacks = feedbacks.map((feedback) => ({
+          profile: { id: profile.id },
+          feedback: { id: feedback.id },
+        }));
+        await qr.manager.save(UserFeedback, userFeedbacks);
+        log(`User feedbacks saved successfully for user: ${user.id}`);
+      }
+
+      // 7. 관심사 저장
+      if (socialRegisterDto.interests?.length) {
+        log('Starting interests save');
+
+        const interestCategories = await Promise.all(
+          socialRegisterDto.interests.map(async (interestName) => {
+            const existingCategories =
+              await this.interestCategoryService.searchInterestCategories(
+                interestName,
+              );
+            if (existingCategories.length > 0) {
+              log(`Found existing interest category: ${interestName}`);
+              return existingCategories[0];
+            }
+            throw new UnauthorizedException(
+              `존재하지 않는 관심사입니다: ${interestName}`,
+            );
+          }),
+        );
+
+        const userInterestCategories = interestCategories.map((category) => ({
+          profile: { id: profile.id },
+          interestCategory: { id: category.id },
+        }));
+
+        await qr.manager.save(UserInterestCategory, userInterestCategories);
+        log(`User interests saved successfully for user: ${user.id}`);
+      }
+
+      // 8. 프로필 완성 상태 업데이트
+      await qr.manager.update(
+        User,
+        { id: user.id },
+        { isProfileComplete: true },
+      );
+      log(
+        `User profile complete status updated successfully for user: ${user.id}`,
+      );
+
+      await qr.commitTransaction();
+      log('Transaction committed successfully');
+    } catch (error) {
+      await qr.rollbackTransaction();
+      log('Transaction rolled back due to error');
+      log(`${error instanceof Error ? error.message : '오류 확인해주세요'}`);
+      if (error instanceof Error && error.stack) {
+        log(`Error stack: ${error.stack}`);
+      }
+      throw new InternalServerErrorException(
+        '소셜 회원가입 중 오류가 발생했습니다.',
         { cause: error },
       );
     } finally {
