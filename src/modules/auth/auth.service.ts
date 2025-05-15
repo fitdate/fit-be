@@ -338,24 +338,22 @@ export class AuthService {
 
   // 소셜 회원가입
   async socialRegister(userId: string, socialRegisterDto: SocialRegisterDto) {
-    const logBuffer: string[] = [];
     const log = (message: string) => {
-      logBuffer.push(message);
       this.logger.log(message);
     };
 
+    log(`Starting social register for user ID: ${userId}`);
+
+    // 기존 유저 확인
     const user = await this.userService.findOne(userId);
     if (!user) {
       throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
     }
 
-    const existingUser = await this.userService.findUserByEmail(user.email);
-    if (existingUser) {
-      if (existingUser.isProfileComplete) {
-        throw new UnauthorizedException(
-          '이미 회원 가입이 완료된 유저입니다. 이메일 로그인 후 이용해주세요.',
-        );
-      }
+    if (user.isProfileComplete) {
+      throw new UnauthorizedException(
+        '이미 회원 가입이 완료된 유저입니다. 이메일 로그인 후 이용해주세요.',
+      );
     }
 
     // 닉네임 중복 확인
@@ -386,7 +384,7 @@ export class AuthService {
 
       // 2. 유저 생성
       log('Starting user creation');
-      const user = await qr.manager.save(User, {
+      const userCreated = await qr.manager.save(User, {
         nickname: socialRegisterDto.nickname,
         name: socialRegisterDto.name,
         birthday: socialRegisterDto.birthday,
@@ -398,7 +396,7 @@ export class AuthService {
         job: socialRegisterDto.job,
         profile: { id: profile.id },
       });
-      log(`User created successfully with ID: ${user.id}`);
+      log(`User created successfully with ID: ${userCreated.id}`);
 
       // 3. 프로필 이미지 저장
       log(
@@ -449,7 +447,7 @@ export class AuthService {
           log(
             `Profile images after save: ${JSON.stringify(savedImages, null, 2)}`,
           );
-          log(`Profile images saved successfully for user: ${user.id}`);
+          log(`Profile images saved successfully for user: ${userCreated.id}`);
 
           // 프로필 이미지가 2장 미만인지 확인**
           if (savedImages.length < 2) {
@@ -475,7 +473,7 @@ export class AuthService {
           mbti: socialRegisterDto.mbti,
           profile: { id: profile.id },
         });
-        log(`MBTI saved successfully for user: ${user.id}`);
+        log(`MBTI saved successfully for user: ${userCreated.id}`);
       }
 
       // 5. 자기소개 저장
@@ -500,7 +498,9 @@ export class AuthService {
           introduction: { id: introduction.id },
         }));
         await qr.manager.save(UserIntroduction, userIntroductions);
-        log(`User introductions saved successfully for user: ${user.id}`);
+        log(
+          `User introductions saved successfully for user: ${userCreated.id}`,
+        );
       }
 
       // 6. 피드백 저장
@@ -523,7 +523,7 @@ export class AuthService {
           feedback: { id: feedback.id },
         }));
         await qr.manager.save(UserFeedback, userFeedbacks);
-        log(`User feedbacks saved successfully for user: ${user.id}`);
+        log(`User feedbacks saved successfully for user: ${userCreated.id}`);
       }
 
       // 7. 관심사 저장
@@ -552,17 +552,17 @@ export class AuthService {
         }));
 
         await qr.manager.save(UserInterestCategory, userInterestCategories);
-        log(`User interests saved successfully for user: ${user.id}`);
+        log(`User interests saved successfully for user: ${userCreated.id}`);
       }
 
       // 8. 프로필 완성 상태 업데이트
       await qr.manager.update(
         User,
-        { id: user.id },
+        { id: userCreated.id },
         { isProfileComplete: true },
       );
       log(
-        `User profile complete status updated successfully for user: ${user.id}`,
+        `User profile complete status updated successfully for user: ${userCreated.id}`,
       );
 
       await qr.commitTransaction();
