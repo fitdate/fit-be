@@ -72,7 +72,7 @@ export class ActiveInterceptor implements NestInterceptor {
       path.includes('/auth/naver/callback')
     ) {
       this.logger.debug(
-        '[Token Validation] Skipping session validation for social login callback',
+        '[Token Validation] Social login callback detected, proceeding with normal flow',
       );
       return next.handle();
     }

@@ -300,6 +300,13 @@ export class SocialAuthService {
     if (existingUser) {
       this.logger.log(`기존 유저 발견: ${existingUser.id}`);
 
+      // request.user 설정
+      (req as any).user = {
+        sub: existingUser.id,
+        role: existingUser.role,
+        token: null,
+      };
+
       // 프로필 완성 여부에 따라 리다이렉트 URL 결정
       const redirectUrl = existingUser.isProfileComplete
         ? `https://www.fit-date.co.kr/home`
@@ -389,6 +396,13 @@ export class SocialAuthService {
 
       const newUser = await this.userService.createSocialUser(createUserDto);
       this.logger.log(`신규 유저 생성 완료: ${newUser.id}`);
+
+      // request.user 설정
+      (req as any).user = {
+        sub: newUser.id,
+        role: newUser.role,
+        token: null,
+      };
 
       return {
         redirectUrl: `https://www.fit-date.co.kr/social-signup`,
