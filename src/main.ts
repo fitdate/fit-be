@@ -20,14 +20,15 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      'https://api.fit-date.co.kr',
-      'https://fit-date.co.kr',
       'https://www.fit-date.co.kr',
+      'https://fit-date.co.kr',
       'http://localhost:3000',
-      'http://localhost:3001',
-    ], // 정확한 origin 명시
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      'http://api.fit-date.co.kr',
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   app.setGlobalPrefix('api/v1', {
