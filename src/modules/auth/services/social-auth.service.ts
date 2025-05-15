@@ -298,7 +298,12 @@ export class SocialAuthService {
         ? `https://www.fit-date.co.kr/home`
         : `https://www.fit-date.co.kr/social-signup`;
 
-      // 세션 및 토큰 생성
+      // 기존 세션 삭제
+      await this.sessionService.deleteSession(existingUser.id);
+      await this.sessionService.deleteActiveSession(existingUser.id);
+      this.logger.log(`기존 세션 삭제 완료: ${existingUser.id}`);
+
+      // 새로운 세션 및 토큰 생성
       const sessionId = uuidv4();
       const tokenId = uuidv4();
       const metadata: TokenMetadata = {
@@ -307,13 +312,14 @@ export class SocialAuthService {
         sessionId,
       };
 
-      // 세션 생성
+      // 새 세션 생성
       await this.sessionService.createSession(
         existingUser.id,
         tokenId,
         metadata,
       );
       await this.sessionService.updateActiveSession(existingUser.id);
+      this.logger.log(`새 세션 생성 완료: ${sessionId}`);
 
       // 토큰 생성
       const tokenPayload: TokenPayload = {
@@ -335,6 +341,7 @@ export class SocialAuthService {
       if (tokens.refreshToken && tokens.refreshOptions) {
         res.cookie('refreshToken', tokens.refreshToken, tokens.refreshOptions);
       }
+      this.logger.log(`토큰 쿠키 설정 완료`);
 
       return {
         redirectUrl,
