@@ -33,12 +33,8 @@ export class PassService {
   }
 
   // 호감페이지에서 매칭 요청을 거절할 때 호출
-  async passMatchRequest(
-    userId: string,
-    passedUserId: string,
-  ): Promise<{ isSuccess: boolean }> {
+  async passMatchRequest(userId: string, passedUserId: string): Promise<void> {
     await this.createPass(userId, passedUserId, PassType.MATCH);
-    return { isSuccess: false };
   }
 
   // 호감페이지에서 커피챗 요청을 거절할 때 호출

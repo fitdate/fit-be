@@ -105,7 +105,7 @@ export class ChatService {
       '매칭 수락',
       '상대방이 매칭을 수락했습니다. 매칭 결과를 확인해보세요!',
     );
-    return { ...chatRoom, isSuccess: true };
+    return chatRoom;
   }
 
   // 날짜를 "오전/오후 HH:mm" 형식으로 변환
