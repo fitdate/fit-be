@@ -55,6 +55,9 @@ export class TokenService {
         `[Token Generation] Generated tokenId: ${tokenPayload.tokenId}`,
       );
 
+      // [단일 세션 정책] 기존 refresh token 전체 삭제
+      await this.redisService.del(`refresh_token:${userId}:*`);
+
       // 1. 토큰 생성
       const accessToken = this.generateAccessToken(
         userId,
