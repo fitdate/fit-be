@@ -62,13 +62,12 @@ export class PassController {
   @ApiResponse({
     status: 200,
     description: '매칭 거절 완료',
-    type: PassResponseDto,
   })
   async passMatchRequest(
     @UserId() userId: string,
     @Param('passedUserId') passedUserId: string,
-  ): Promise<PassResponseDto> {
-    return await this.passService.passMatchRequest(userId, passedUserId);
+  ): Promise<void> {
+    await this.passService.passMatchRequest(userId, passedUserId);
   }
 
   // 호감페이지에서 커피챗 요청 거절
