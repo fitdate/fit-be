@@ -32,4 +32,7 @@ export class MatchResultResponseDto {
 
   @ApiProperty({ type: MatchResultUserDto })
   selectedUser: MatchResultUserDto;
+
+  @ApiProperty({ description: '매칭 성공 여부', example: true })
+  isSuccess: boolean;
 }
