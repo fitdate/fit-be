@@ -192,7 +192,10 @@ export class UserService {
 
   async getUserCoffee(userId: string) {
     const user = await this.userRepository.findOne({
-      where: { id: userId },
+      where: {
+        id: userId,
+        isProfileComplete: true,
+      },
     });
     return user?.coffee;
   }
