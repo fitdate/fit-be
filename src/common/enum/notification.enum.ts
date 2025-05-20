@@ -6,4 +6,5 @@ export enum NotificationType {
   COFFEE_CHAT_ACCEPT = 'COFFEE_CHAT_ACCEPT', // 커피챗 수락
   CHAT = 'CHAT',
   SYSTEM = 'SYSTEM',
+  WORLD_CUP = 'WORLD_CUP',
 }
