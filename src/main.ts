@@ -24,6 +24,7 @@ async function bootstrap() {
       'https://fit-date.co.kr',
       'http://localhost:3000',
       'https://api.fit-date.co.kr',
+      'https://refactor.fit-date.co.kr',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
