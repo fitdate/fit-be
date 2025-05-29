@@ -24,8 +24,8 @@ export class UserStatisticsService {
   async getGenderStatistics(): Promise<GenderStatistics> {
     const users = await this.userRepository.find();
     const total = users.length;
-    const maleCount = users.filter((user) => user.gender === '남자').length;
-    const femaleCount = users.filter((user) => user.gender === '여자').length;
+    const maleCount = users.filter((user) => user.gender === 'male').length;
+    const femaleCount = users.filter((user) => user.gender === 'female').length;
 
     return {
       total,

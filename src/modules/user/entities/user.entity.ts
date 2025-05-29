@@ -44,7 +44,7 @@ export class User extends BaseTable {
   location: string;
 
   @Column({ nullable: true })
-  gender: '남자' | '여자';
+  gender: 'male' | 'female';
 
   @Column({ nullable: true })
   region?: string;

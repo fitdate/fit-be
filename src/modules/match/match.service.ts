@@ -40,7 +40,7 @@ export class MatchService {
     gender: string,
     currentUserId: string,
   ): User[] {
-    const oppositeGender = gender === '남자' ? '여자' : '남자';
+    const oppositeGender = gender === 'male' ? 'female' : 'male';
     return users.filter(
       (user) =>
         user.gender !== oppositeGender &&
@@ -102,7 +102,7 @@ export class MatchService {
     const allUsers = await this.userService.getAllUserInfo();
     const oppositeGenderUsers = this.filterUsersByGender(
       allUsers,
-      currentUser.gender === '남자' ? '여자' : '남자',
+      currentUser.gender === 'male' ? 'female' : 'male',
       userId,
     );
 
@@ -144,8 +144,8 @@ export class MatchService {
   }> {
     try {
       const allUsers = await this.userService.getAllUserInfo();
-      const maleUsers = this.filterUsersByGender(allUsers, '남자', '');
-      const femaleUsers = this.filterUsersByGender(allUsers, '여자', '');
+      const maleUsers = this.filterUsersByGender(allUsers, 'male', '');
+      const femaleUsers = this.filterUsersByGender(allUsers, 'female', '');
 
       const selectedMaleUsers = this.selectRandomUsers(maleUsers, 2);
       const selectedFemaleUsers = this.selectRandomUsers(femaleUsers, 2);

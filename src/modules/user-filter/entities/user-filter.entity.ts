@@ -11,8 +11,8 @@ export class UserFilter extends BaseTable {
   @OneToOne(() => User, (user) => user.userFilter)
   user: User;
 
-  @Column({ default: '여자' })
-  gender: '남자' | '여자';
+  @Column({ default: 'female' })
+  gender: 'male' | 'female';
 
   @Column({ default: 20 })
   @Min(20)

@@ -74,11 +74,11 @@ export class RegisterDto {
 
   @ApiProperty({
     description: '성별',
-    example: '남자',
+    example: 'male',
   })
-  @IsIn(['남자', '여자'])
+  @IsIn(['male', 'female'])
   @IsNotEmpty()
-  gender: '남자' | '여자';
+  gender: 'male' | 'female';
 
   @ApiProperty({
     description: '전화번호',

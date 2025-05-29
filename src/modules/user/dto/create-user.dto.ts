@@ -79,13 +79,13 @@ export class CreateUserDto extends BaseTable {
   birthday: string;
 
   @ApiProperty({
-    description: '성별 (남자, 여자)',
-    example: '남자',
+    description: '성별 (male, female)',
+    example: 'male',
   })
   @Expose()
-  @IsEnum(['남자', '여자'])
+  @IsEnum(['male', 'female'])
   @IsNotEmpty()
-  gender: '남자' | '여자';
+  gender: 'male' | 'female';
 
   @ApiProperty({
     description: '전화번호',

@@ -530,7 +530,7 @@ export class UserService {
       .where('user.id != :userId', { userId: currentUserId })
       .andWhere('user.deletedAt IS NULL');
 
-    const oppositeGender = currentUser.gender === '남자' ? '여자' : '남자';
+    const oppositeGender = currentUser.gender === 'male' ? 'female' : 'male';
     this.logger.debug(
       `필터 조건: user.id != ${currentUserId}, user.gender = ${oppositeGender}`,
     );
@@ -625,7 +625,7 @@ export class UserService {
 
     // 로그인 유저일 때만 본인 제외, 성별 필터 적용
     if (currentUser) {
-      const oppositeGender = currentUser.gender === '남자' ? '여자' : '남자';
+      const oppositeGender = currentUser.gender === 'male' ? 'female' : 'male';
       this.logger.debug(
         `필터 조건: user.id != ${userId}, user.gender = ${oppositeGender}`,
       );
@@ -716,11 +716,11 @@ export class UserService {
 
     if (currentUser) {
       this.logger.debug(
-        `getUserList 필터 조건: user.id != ${currentUser.id}, user.gender = ${currentUser.gender === '남자' ? '여자' : '남자'}`,
+        `getUserList 필터 조건: user.id != ${currentUser.id}, user.gender = ${currentUser.gender === 'male' ? 'female' : 'male'}`,
       );
       qb.andWhere('user.id != :userId', { userId: currentUser.id });
       qb.andWhere('user.gender = :gender', {
-        gender: currentUser.gender === '남자' ? '여자' : '남자',
+        gender: currentUser.gender === 'male' ? 'female' : 'male',
       });
     }
 
