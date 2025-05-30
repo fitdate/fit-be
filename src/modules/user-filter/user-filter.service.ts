@@ -21,7 +21,6 @@ export class UserFilterService {
     }));
   }
 
-  // 회원목록 조회 (로그인/비로그인인 통합)
   async getUserList(userId: string, cursorPaginationDto?: CursorPaginationDto) {
     this.logger.log(`사용자 목록을 조회합니다. userId: ${userId}`);
     const safeCursorDto: CursorPaginationDto = {

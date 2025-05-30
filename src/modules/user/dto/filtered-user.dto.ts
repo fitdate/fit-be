@@ -43,6 +43,19 @@ export class FilteredUsersDto {
   minLikes?: number;
 
   @ApiProperty({
+    description: '최대 좋아요 수',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @Transform(({ value }) =>
+    value === undefined || value === null ? 100 : Number(value),
+  )
+  @IsInt()
+  @Min(0)
+  maxLikes?: number;
+
+  @ApiProperty({
     description: '지역',
     required: false,
   })

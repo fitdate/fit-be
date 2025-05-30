@@ -589,7 +589,7 @@ export class UserService {
       )}`,
     );
 
-    const { ageMin, ageMax, minLikes, region } = filteredUsersDto;
+    const { ageMin, ageMax, minLikes, maxLikes, region } = filteredUsersDto;
     const today = new Date();
 
     let currentUser: User | undefined = undefined;
@@ -669,6 +669,11 @@ export class UserService {
     if (minLikes) {
       this.logger.debug(`필터 조건: user.likeCount >= ${minLikes}`);
       qb.andWhere('user.likeCount >= :minLikes', { minLikes });
+    }
+
+    if (maxLikes) {
+      this.logger.debug(`필터 조건: user.likeCount <= ${maxLikes}`);
+      qb.andWhere('user.likeCount <= :maxLikes', { maxLikes });
     }
 
     const { nextCursor } =

@@ -36,4 +36,12 @@ export class UserFilterDto {
   @IsNumber()
   @Min(0)
   minLikes: number = 0;
+
+  @ApiProperty({
+    description: '최대 좋아요 수',
+    example: 100,
+    maximum: 100,
+  })
+  @IsNumber()
+  maxLikes: number;
 }
