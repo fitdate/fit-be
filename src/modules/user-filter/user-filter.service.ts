@@ -93,7 +93,7 @@ export class UserFilterService {
       `비로그인 필터된 사용자 목록을 조회합니다. filter: ${JSON.stringify(userFilterDto)}`,
     );
     const safeCursorDto: CursorPaginationDto = {
-      cursor: null,
+      cursor: cursorPaginationDto?.cursor ?? null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
       take: cursorPaginationDto?.take ?? 10,
       seed: cursorPaginationDto?.seed,
