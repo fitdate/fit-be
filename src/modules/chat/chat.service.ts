@@ -149,31 +149,56 @@ export class ChatService {
   // 사용자의 채팅방 목록 조회
   async getRooms(userId: string) {
     try {
+      this.logger.debug(`채팅방 목록 조회 시작 - userId: ${userId}`);
+
+      // 1. 먼저 사용자의 채팅방 ID 목록을 조회
+      const userRooms = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .select('chatRoom.id')
+        .innerJoin('chatRoom.users', 'users')
+        .where('users.id = :userId', { userId })
+        .andWhere('chatRoom.deletedAt IS NULL')
+        .getMany();
+
+      this.logger.debug(
+        `사용자의 채팅방 ID 목록: ${JSON.stringify(userRooms.map((r) => r.id))}`,
+      );
+
+      if (!userRooms.length) {
+        this.logger.debug('사용자의 채팅방이 없습니다.');
+        return [];
+      }
+
+      // 2. 채팅방 상세 정보 조회
       const rooms = await this.chatRoomRepository
         .createQueryBuilder('chatRoom')
-        .innerJoinAndSelect('chatRoom.users', 'users', 'users.id != :userId', {
-          userId,
-        })
+        .innerJoinAndSelect('chatRoom.users', 'users')
         .leftJoinAndSelect('users.profile', 'profile')
-        .leftJoinAndSelect(
-          'profile.profileImage',
-          'profileImage',
-          'profileImage.isMain = :isMain',
-          { isMain: true },
-        )
-        .where(
-          'EXISTS (SELECT 1 FROM chat_room_users WHERE chat_room_id = chatRoom.id AND user_id = :userId)',
-          { userId },
-        )
+        .leftJoinAndSelect('profile.profileImage', 'profileImage')
+        .where('chatRoom.id IN (:...roomIds)', {
+          roomIds: userRooms.map((room) => room.id),
+        })
         .andWhere('chatRoom.deletedAt IS NULL')
         .orderBy('chatRoom.updatedAt', 'DESC')
         .getMany();
 
+      this.logger.debug(`조회된 채팅방 수: ${rooms.length}`);
+
       const chatRooms = await Promise.all(
         rooms.map(async (room) => {
           try {
-            const partner = room.users[0];
-            if (!partner) return null;
+            // 파트너 찾기 (현재 사용자가 아닌 다른 사용자)
+            const partner = room.users.find((user) => user.id !== userId);
+            if (!partner) {
+              this.logger.debug(
+                `채팅방 ${room.id}에서 파트너를 찾을 수 없습니다.`,
+              );
+              return null;
+            }
+
+            this.logger.debug(
+              `채팅방 ${room.id} 처리 중 - 파트너: ${partner.name}`,
+            );
 
             const mainImage = partner.profile?.profileImage?.find(
               (img) => img.isMain,
@@ -243,7 +268,9 @@ export class ChatService {
         }),
       );
 
-      return chatRooms.filter(Boolean);
+      const result = chatRooms.filter(Boolean);
+      this.logger.debug(`최종 반환되는 채팅방 수: ${result.length}`);
+      return result;
     } catch (error) {
       this.logger.error(
         `채팅방 목록 조회 중 오류 발생: ${error instanceof Error ? error.message : error}`,
