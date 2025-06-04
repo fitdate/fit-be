@@ -147,9 +147,11 @@ export class ChatService {
   }
 
   // 사용자의 채팅방 목록 조회
-  async getRooms(userId: string) {
+  async getRooms(userId: string, page: number = 1, pageSize: number = 5) {
     try {
-      this.logger.debug(`채팅방 목록 조회 시작 - userId: ${userId}`);
+      this.logger.debug(
+        `채팅방 목록 조회 시작 - userId: ${userId}, page: ${page}, pageSize: ${pageSize}`,
+      );
 
       // 먼저 사용자의 채팅방 ID 목록을 조회
       const userRooms = await this.chatRoomRepository
@@ -166,10 +168,23 @@ export class ChatService {
 
       if (!userRooms.length) {
         this.logger.debug('사용자의 채팅방이 없습니다.');
-        return [];
+        return {
+          rooms: [],
+          totalCount: 0,
+          currentPage: page,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        };
       }
 
-      // 채팅방 상세 정보 조회
+      // 전체 채팅방 수 계산
+      const totalCount = userRooms.length;
+      const totalPages = Math.ceil(totalCount / pageSize);
+      const hasNextPage = page < totalPages;
+      const hasPreviousPage = page > 1;
+
+      // 채팅방 상세 정보 조회 (페이지네이션 적용)
       const rooms = await this.chatRoomRepository
         .createQueryBuilder('chatRoom')
         .innerJoinAndSelect('chatRoom.users', 'users')
@@ -180,6 +195,8 @@ export class ChatService {
         })
         .andWhere('chatRoom.deletedAt IS NULL')
         .orderBy('chatRoom.updatedAt', 'DESC')
+        .skip((page - 1) * pageSize)
+        .take(pageSize)
         .getMany();
 
       this.logger.debug(`조회된 채팅방 수: ${rooms.length}`);
@@ -270,7 +287,15 @@ export class ChatService {
 
       const result = chatRooms.filter(Boolean);
       this.logger.debug(`최종 반환되는 채팅방 수: ${result.length}`);
-      return result;
+
+      return {
+        rooms: result,
+        totalCount,
+        currentPage: page,
+        totalPages,
+        hasNextPage,
+        hasPreviousPage,
+      };
     } catch (error) {
       this.logger.error(
         `채팅방 목록 조회 중 오류 발생: ${error instanceof Error ? error.message : error}`,

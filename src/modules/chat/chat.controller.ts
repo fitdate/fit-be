@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserId } from '../../common/decorator/get-user.decorator';
@@ -99,12 +107,55 @@ export class ChatController {
 
   @ApiOperation({
     summary: '채팅방 목록 조회',
-    description: '사용자의 채팅방 목록을 조회합니다.',
+    description: '사용자의 채팅방 목록을 페이지네이션하여 조회합니다.',
   })
-  @ApiResponse({ status: 200, description: '채팅방 목록 조회 성공' })
+  @ApiResponse({
+    status: 200,
+    description: '채팅방 목록 조회 성공',
+    schema: {
+      properties: {
+        rooms: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              userId: { type: 'string' },
+              partner: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  age: { type: 'number' },
+                  region: { type: 'string', nullable: true },
+                  profileImage: { type: 'string', nullable: true },
+                  isOnline: { type: 'boolean' },
+                  lastMessage: { type: 'string', nullable: true },
+                  lastMessageTime: { type: 'string', nullable: true },
+                  isUnread: { type: 'boolean' },
+                },
+              },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+        totalCount: { type: 'number' },
+        currentPage: { type: 'number' },
+        totalPages: { type: 'number' },
+        hasNextPage: { type: 'boolean' },
+        hasPreviousPage: { type: 'boolean' },
+      },
+    },
+  })
   @Get('chatRooms')
-  async getRooms(@UserId() userId: string) {
-    return this.chatService.getRooms(userId);
+  async getRooms(
+    @UserId() userId: string,
+    @Query('page') page: number = 1,
+    @Query('pageSize') pageSize: number = 5,
+  ) {
+    return this.chatService.getRooms(userId, page, pageSize);
   }
 
   @ApiOperation({
