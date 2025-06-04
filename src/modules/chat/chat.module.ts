@@ -9,12 +9,14 @@ import { UserModule } from '../user/user.module';
 import { NotificationModule } from '../notification/notification.module';
 import { User } from '../user/entities/user.entity';
 import { ProfileImage } from '../profile/profile-image/entities/profile-image.entity';
+import { SessionModule } from '../session/session.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChatMessage, ChatRoom, User, ProfileImage]),
     UserModule,
     NotificationModule,
+    SessionModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

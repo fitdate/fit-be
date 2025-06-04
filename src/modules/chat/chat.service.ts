@@ -7,6 +7,7 @@ import { User } from '../user/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../../common/enum/notification.enum';
 import { calculateAge } from '../../common/util/age-calculator.util';
+import { SessionService } from '../session/session.service';
 
 @Injectable()
 export class ChatService {
@@ -18,6 +19,7 @@ export class ChatService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly notificationService: NotificationService,
+    private readonly sessionService: SessionService,
   ) {}
 
   // 매칭 결과 페이지에서 매칭 성공 시 새로운 채팅방 생성
@@ -164,8 +166,8 @@ export class ChatService {
       .orderBy('chatRoom.updatedAt', 'DESC')
       .getMany();
 
-    return rooms
-      .map((room) => {
+    const chatRooms = await Promise.all(
+      rooms.map(async (room) => {
         const partner = room.users[0];
         if (!partner) return null;
 
@@ -176,6 +178,32 @@ export class ChatService {
         const profileImage =
           mainImage?.imageUrl || firstImage?.imageUrl || null;
 
+        // 마지막 메시지 조회
+        const lastMessage = await this.messageRepository
+          .createQueryBuilder('message')
+          .where('message.chatRoomId = :chatRoomId', { chatRoomId: room.id })
+          .orderBy('message.createdAt', 'DESC')
+          .take(1)
+          .getOne();
+
+        // 읽지 않은 메시지 수 조회
+        const unreadCount = await this.messageRepository
+          .createQueryBuilder('message')
+          .where('message.chatRoomId = :chatRoomId', { chatRoomId: room.id })
+          .andWhere('message.userId != :userId', { userId })
+          .andWhere(
+            'message.createdAt > (SELECT COALESCE(MAX(createdAt), :defaultDate) FROM chat_message WHERE chatRoomId = :chatRoomId AND userId = :userId)',
+            {
+              chatRoomId: room.id,
+              userId,
+              defaultDate: new Date(0),
+            },
+          )
+          .getCount();
+
+        // 파트너의 온라인 상태 확인
+        const isOnline = await this.sessionService.isActiveSession(partner.id);
+
         return {
           id: room.id,
           name: room.name,
@@ -184,14 +212,22 @@ export class ChatService {
             id: partner.id,
             name: partner.name,
             age: calculateAge(partner.birthday),
-            height: partner.height || null,
-            profileImage,
+            region: partner.region || null,
+            imageUrl: profileImage,
+            isOnline,
+            lastMessage: lastMessage?.content || null,
+            lastMessageTime: lastMessage?.createdAt
+              ? this.formatTime(lastMessage.createdAt)
+              : null,
+            isUnread: unreadCount > 0,
           },
           createdAt: room.createdAt,
           updatedAt: room.updatedAt,
         };
-      })
-      .filter(Boolean);
+      }),
+    );
+
+    return chatRooms.filter(Boolean);
   }
 
   // 채팅방의 메시지 조회
