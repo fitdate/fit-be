@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -9,8 +9,15 @@ import { NotificationType } from '../../common/enum/notification.enum';
 import { calculateAge } from '../../common/util/age-calculator.util';
 import { SessionService } from '../session/session.service';
 
+interface UnreadCountResult {
+  chatRoomId: string;
+  unreadCount: string;
+}
+
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     @InjectRepository(ChatMessage)
     private readonly messageRepository: Repository<ChatMessage>,
@@ -146,28 +153,101 @@ export class ChatService {
 
   // 사용자의 채팅방 목록 조회
   async getRooms(userId: string) {
-    const rooms = await this.chatRoomRepository
-      .createQueryBuilder('chatRoom')
-      .innerJoinAndSelect('chatRoom.users', 'users', 'users.id != :userId', {
-        userId,
-      })
-      .leftJoinAndSelect('users.profile', 'profile')
-      .leftJoinAndSelect(
-        'profile.profileImage',
-        'profileImage',
-        'profileImage.isMain = :isMain',
-        { isMain: true },
-      )
-      .where(
-        'EXISTS (SELECT 1 FROM chat_room_users WHERE chat_room_id = chatRoom.id AND user_id = :userId)',
-        { userId },
-      )
-      .andWhere('chatRoom.deletedAt IS NULL')
-      .orderBy('chatRoom.updatedAt', 'DESC')
-      .getMany();
+    try {
+      // 1. 채팅방 기본 정보와 파트너 정보 조회
+      const rooms = await this.chatRoomRepository
+        .createQueryBuilder('chatRoom')
+        .innerJoinAndSelect('chatRoom.users', 'users', 'users.id != :userId', {
+          userId,
+        })
+        .leftJoinAndSelect('users.profile', 'profile')
+        .leftJoinAndSelect(
+          'profile.profileImage',
+          'profileImage',
+          'profileImage.isMain = :isMain',
+          { isMain: true },
+        )
+        .where(
+          'EXISTS (SELECT 1 FROM chat_room_users WHERE chat_room_id = chatRoom.id AND user_id = :userId)',
+          { userId },
+        )
+        .andWhere('chatRoom.deletedAt IS NULL')
+        .orderBy('chatRoom.updatedAt', 'DESC')
+        .getMany();
 
-    const chatRooms = await Promise.all(
-      rooms.map(async (room) => {
+      if (!rooms.length) {
+        return [];
+      }
+
+      // 2. 모든 채팅방의 마지막 메시지와 읽지 않은 메시지 수를 한 번에 조회
+      const roomIds = rooms.map((room) => room.id);
+      const [lastMessages, unreadCounts] = await Promise.all([
+        // 마지막 메시지 조회
+        this.messageRepository
+          .createQueryBuilder('message')
+          .select([
+            'message.chatRoomId',
+            'message.content',
+            'message.createdAt',
+            'message.userId',
+          ])
+          .where('message.chatRoomId IN (:...roomIds)', { roomIds })
+          .andWhere((qb) => {
+            const subQuery = qb
+              .subQuery()
+              .select('MAX(m2.createdAt)')
+              .from('chat_message', 'm2')
+              .where('m2.chatRoomId = message.chatRoomId')
+              .getQuery();
+            return 'message.createdAt = ' + subQuery;
+          })
+          .getMany(),
+
+        // 읽지 않은 메시지 수 조회
+        this.messageRepository
+          .createQueryBuilder('message')
+          .select('message.chatRoomId', 'chatRoomId')
+          .addSelect('COUNT(*)', 'unreadCount')
+          .where('message.chatRoomId IN (:...roomIds)', { roomIds })
+          .andWhere('message.userId != :userId', { userId })
+          .andWhere(
+            'message.createdAt > (SELECT COALESCE(MAX(createdAt), :defaultDate) FROM chat_message WHERE chatRoomId = message.chatRoomId AND userId = :userId)',
+            {
+              userId,
+              defaultDate: new Date(0),
+            },
+          )
+          .groupBy('message.chatRoomId')
+          .getRawMany(),
+      ]);
+
+      // 3. 파트너들의 온라인 상태를 한 번에 조회
+      const partnerIds = rooms.map((room) => room.users[0]?.id).filter(Boolean);
+      const onlineStatuses = await Promise.all(
+        partnerIds.map((partnerId) =>
+          this.sessionService
+            .isActiveSession(partnerId)
+            .then((isOnline) => ({ partnerId, isOnline }))
+            .catch(() => ({ partnerId, isOnline: false })),
+        ),
+      );
+      const onlineStatusMap = new Map(
+        onlineStatuses.map((status) => [status.partnerId, status.isOnline]),
+      );
+
+      // 4. 마지막 메시지와 읽지 않은 메시지 수를 Map으로 변환
+      const lastMessageMap = new Map(
+        lastMessages.map((msg) => [msg.chatRoomId, msg]),
+      );
+      const unreadCountMap = new Map(
+        (unreadCounts as UnreadCountResult[]).map((count) => [
+          count.chatRoomId,
+          parseInt(count.unreadCount),
+        ]),
+      );
+
+      // 5. 최종 결과 구성
+      const chatRooms = rooms.map((room) => {
         const partner = room.users[0];
         if (!partner) return null;
 
@@ -178,31 +258,9 @@ export class ChatService {
         const profileImage =
           mainImage?.imageUrl || firstImage?.imageUrl || null;
 
-        // 마지막 메시지 조회
-        const lastMessage = await this.messageRepository
-          .createQueryBuilder('message')
-          .where('message.chatRoomId = :chatRoomId', { chatRoomId: room.id })
-          .orderBy('message.createdAt', 'DESC')
-          .take(1)
-          .getOne();
-
-        // 읽지 않은 메시지 수 조회
-        const unreadCount = await this.messageRepository
-          .createQueryBuilder('message')
-          .where('message.chatRoomId = :chatRoomId', { chatRoomId: room.id })
-          .andWhere('message.userId != :userId', { userId })
-          .andWhere(
-            'message.createdAt > (SELECT COALESCE(MAX(createdAt), :defaultDate) FROM chat_message WHERE chatRoomId = :chatRoomId AND userId = :userId)',
-            {
-              chatRoomId: room.id,
-              userId,
-              defaultDate: new Date(0),
-            },
-          )
-          .getCount();
-
-        // 파트너의 온라인 상태 확인
-        const isOnline = await this.sessionService.isActiveSession(partner.id);
+        const lastMessage = lastMessageMap.get(room.id);
+        const unreadCount = unreadCountMap.get(room.id) || 0;
+        const isOnline = onlineStatusMap.get(partner.id) || false;
 
         return {
           id: room.id,
@@ -224,10 +282,15 @@ export class ChatService {
           createdAt: room.createdAt,
           updatedAt: room.updatedAt,
         };
-      }),
-    );
+      });
 
-    return chatRooms.filter(Boolean);
+      return chatRooms.filter(Boolean);
+    } catch (error) {
+      this.logger.error(
+        `채팅방 목록 조회 중 오류 발생: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new Error('채팅방 목록을 조회하는 중 오류가 발생했습니다.');
+    }
   }
 
   // 채팅방의 메시지 조회
