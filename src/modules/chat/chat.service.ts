@@ -151,7 +151,7 @@ export class ChatService {
     try {
       this.logger.debug(`채팅방 목록 조회 시작 - userId: ${userId}`);
 
-      // 1. 먼저 사용자의 채팅방 ID 목록을 조회
+      // 먼저 사용자의 채팅방 ID 목록을 조회
       const userRooms = await this.chatRoomRepository
         .createQueryBuilder('chatRoom')
         .select('chatRoom.id')
@@ -169,7 +169,7 @@ export class ChatService {
         return [];
       }
 
-      // 2. 채팅방 상세 정보 조회
+      // 채팅방 상세 정보 조회
       const rooms = await this.chatRoomRepository
         .createQueryBuilder('chatRoom')
         .innerJoinAndSelect('chatRoom.users', 'users')
@@ -248,7 +248,7 @@ export class ChatService {
                 name: partner.name,
                 age: calculateAge(partner.birthday),
                 region: partner.region || null,
-                imageUrl: profileImage,
+                profileImage: profileImage,
                 isOnline,
                 lastMessage: lastMessage?.content || null,
                 lastMessageTime: lastMessage?.createdAt
