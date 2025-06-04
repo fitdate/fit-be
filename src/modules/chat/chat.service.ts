@@ -225,7 +225,7 @@ export class ChatService {
               })
               .andWhere('message.userId != :userId', { userId })
               .andWhere(
-                'message.createdAt > (SELECT COALESCE(MAX(m.createdAt), :defaultDate) FROM chat_message m WHERE m.chatRoomId = :chatRoomId AND m.userId = :userId)',
+                'message."createdAt" > (SELECT COALESCE(MAX(m."createdAt"), :defaultDate) FROM "chat_message" m WHERE m."chatRoomId" = :chatRoomId AND m."userId" = :userId)',
                 {
                   chatRoomId: room.id,
                   userId,
