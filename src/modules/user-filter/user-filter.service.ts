@@ -109,7 +109,7 @@ export class UserFilterService {
           : undefined,
     };
     const safeCursorDto: CursorPaginationDto = {
-      cursor: null,
+      cursor: cursorPaginationDto?.cursor ?? null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
       take: cursorPaginationDto?.take ?? 10,
       seed: cursorPaginationDto?.seed,
