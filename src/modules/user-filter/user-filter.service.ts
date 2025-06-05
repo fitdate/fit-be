@@ -66,6 +66,14 @@ export class UserFilterService {
     this.logger.log(
       `필터된 사용자 목록을 조회합니다. userId: ${userId}, filter: ${JSON.stringify(userFilterDto)}`,
     );
+    // maxLikes가 100 이상이면 undefined
+    const filteredDto = {
+      ...userFilterDto,
+      maxLikes:
+        userFilterDto.maxLikes !== undefined && userFilterDto.maxLikes < 100
+          ? userFilterDto.maxLikes
+          : undefined,
+    };
     const safeCursorDto: CursorPaginationDto = {
       cursor: cursorPaginationDto?.cursor ?? null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
@@ -74,7 +82,7 @@ export class UserFilterService {
     };
     const { users, nextCursor } = await this.userService.getFilteredUsers(
       userId,
-      userFilterDto,
+      filteredDto,
       safeCursorDto,
     );
 
@@ -92,6 +100,14 @@ export class UserFilterService {
     this.logger.log(
       `비로그인 필터된 사용자 목록을 조회합니다. filter: ${JSON.stringify(userFilterDto)}`,
     );
+    // maxLikes가 100 이상이면 undefined
+    const filteredDto = {
+      ...userFilterDto,
+      maxLikes:
+        userFilterDto.maxLikes !== undefined && userFilterDto.maxLikes < 100
+          ? userFilterDto.maxLikes
+          : undefined,
+    };
     const safeCursorDto: CursorPaginationDto = {
       cursor: null,
       order: cursorPaginationDto?.order ?? ['id_DESC'],
@@ -100,7 +116,7 @@ export class UserFilterService {
     };
     const { users, nextCursor } = await this.userService.getFilteredUsers(
       undefined,
-      userFilterDto,
+      filteredDto,
       safeCursorDto,
     );
 

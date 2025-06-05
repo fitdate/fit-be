@@ -671,7 +671,7 @@ export class UserService {
       qb.andWhere('user.likeCount >= :minLikes', { minLikes });
     }
 
-    if (maxLikes) {
+    if (maxLikes && maxLikes < 100) {
       this.logger.debug(`필터 조건: user.likeCount <= ${maxLikes}`);
       qb.andWhere('user.likeCount <= :maxLikes', { maxLikes });
     }
