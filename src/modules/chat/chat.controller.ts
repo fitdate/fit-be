@@ -128,6 +128,7 @@ export class ChatController {
                   id: { type: 'string' },
                   name: { type: 'string' },
                   age: { type: 'number' },
+                  height: { type: 'number', nullable: true },
                   region: { type: 'string', nullable: true },
                   profileImage: { type: 'string', nullable: true },
                   isOnline: { type: 'boolean' },

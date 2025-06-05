@@ -264,6 +264,7 @@ export class ChatService {
                 id: partner.id,
                 name: partner.name,
                 age: calculateAge(partner.birthday),
+                height: partner.height || null,
                 region: partner.region || null,
                 profileImage: profileImage,
                 isOnline,
